@@ -62,8 +62,7 @@ fn main02() {
         log::debug!("console = log");
         console.set("log", &console_log);
         log::debug!("call console.log");
-        let r = ctx
-            .eval("console.log('Hello, world!')", "<input>", QjEvalFlags::TYPE_GLOBAL)
+        ctx.eval("console.log('Hello, world!')", "<input>", QjEvalFlags::TYPE_GLOBAL)
             .unwrap();
         println!("END")
     });
