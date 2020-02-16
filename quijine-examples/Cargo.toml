@@ -1,5 +1,5 @@
 [package]
-name = "quijine-example"
+name = "quijine-examples"
 version = "0.1.0"
 authors = ["taskie <t@skie.jp>"]
 edition = "2018"
