@@ -9,9 +9,9 @@ use quijine::{Qj, QjAny, QjEvalFlags, QjVec};
 
 fn main() {
     env_logger::init();
-    // main01();
+    main01();
     main02();
-    // main03();
+    main03();
 }
 
 fn main01() {
