@@ -1,0 +1,353 @@
+use crate::{
+    core::{Context, Value},
+    string::QjCString,
+    types::{QjAny, QjBool, QjFloat64, QjInt, QjNull, QjObject, QjReference, QjString, QjUndefined, QjValue},
+    QjContext,
+};
+use std::{fmt, marker::PhantomData, sync::atomic};
+
+static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
+
+macro_rules! call_with_context {
+    ($self: expr, $name: ident) => {
+        $self.value.$name($self.context)
+    };
+}
+
+pub struct Qj<'q, T> {
+    value: Value<'q>,
+    context: Context<'q>,
+    _debug_count: u16,
+    _type: PhantomData<T>,
+}
+
+impl<'q, T> Qj<'q, T> {
+    pub(crate) fn from<X>(value: Value<'q>, context: Context<'q>) -> Qj<'q, X> {
+        let count = DEBUG_GLOBAL_COUNT.fetch_add(1, atomic::Ordering::SeqCst);
+        let qj = Qj {
+            value,
+            context,
+            _debug_count: count,
+            _type: PhantomData,
+        };
+        qj.debug_trace("from");
+        qj
+    }
+
+    #[inline]
+    pub(crate) fn transmute<X>(&self) -> &Qj<'q, X> {
+        unsafe { std::mem::transmute(self) }
+    }
+
+    // property
+
+    #[inline]
+    pub(crate) fn as_value(&self) -> Value<'q> {
+        self.value
+    }
+
+    #[inline]
+    pub(crate) fn context(&self) -> Context<'q> {
+        self.context
+    }
+
+    // memory
+
+    #[inline]
+    pub(crate) unsafe fn free(this: &Self) {
+        this.debug_trace("freeing");
+        this.context.free_value(this.value);
+        this.debug_trace("free");
+    }
+
+    #[inline]
+    pub(crate) fn dup(this: &Self) {
+        this.context.dup_value(this.value);
+        this.debug_trace("dup");
+    }
+
+    #[inline]
+    pub(crate) fn detach(self) {
+        Self::dup(&self)
+    }
+
+    fn debug_trace(&self, name: &str) {
+        if let Some(rc) = self.value.ref_count() {
+            log::debug!("{}: {:?} (rc: {})", name, self, rc);
+        } else {
+            log::debug!("{}: {:?} (value)", name, self);
+        }
+    }
+
+    // type
+
+    #[inline]
+    pub fn is_null(&self) -> bool {
+        self.value.is_null()
+    }
+
+    #[inline]
+    #[doc(hidden)]
+    pub fn is_exception(&self) -> bool {
+        self.value.is_exception()
+    }
+
+    #[inline]
+    pub fn is_undefined(&self) -> bool {
+        self.value.is_undefined()
+    }
+
+    #[inline]
+    pub fn is_uninitialized(&self) -> bool {
+        self.value.is_uninitialized()
+    }
+
+    // conversion
+
+    #[inline]
+    pub fn to_bool(&self) -> Option<bool> {
+        call_with_context!(self, to_bool)
+    }
+
+    #[inline]
+    pub fn to_i32(&self) -> Option<i32> {
+        call_with_context!(self, to_i32)
+    }
+
+    #[inline]
+    pub fn to_i64(&self) -> Option<i64> {
+        call_with_context!(self, to_i64)
+    }
+
+    #[inline]
+    pub fn to_f64(&self) -> Option<f64> {
+        call_with_context!(self, to_f64)
+    }
+
+    #[inline]
+    pub fn to_c_string(&self) -> Option<QjCString> {
+        self.value
+            .to_c_string(self.context)
+            .map(|v| QjCString::from(v, self.context))
+    }
+
+    #[inline]
+    pub fn to_string(&self) -> Option<String> {
+        self.to_c_string().and_then(|v| v.to_string())
+    }
+
+    // object
+
+    #[inline]
+    pub fn get<K>(&self, key: K) -> Qj<'q, QjAny>
+    where
+        K: AsRef<str>,
+    {
+        Qj::<QjAny>::from(self.value.property(self.context, key), self.context)
+    }
+
+    #[inline]
+    pub fn set<K, V>(&self, key: K, val: V)
+    where
+        K: AsRef<str>,
+        V: AsRef<Qj<'q, QjAny>>,
+    {
+        let val = val.as_ref();
+        Qj::dup(val);
+        self.value.set_property(self.context, key, val.as_value())
+    }
+}
+
+impl<T> Drop for Qj<'_, T> {
+    fn drop(&mut self) {
+        unsafe { Self::free(self) }
+    }
+}
+
+impl<T> Clone for Qj<'_, T> {
+    fn clone(&self) -> Self {
+        let qj = Qj {
+            value: self.value,
+            context: self.context,
+            _debug_count: self._debug_count,
+            _type: PhantomData,
+        };
+        Qj::dup(&qj);
+        qj
+    }
+}
+
+impl<T> fmt::Debug for Qj<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        f.write_str(format!("Qj({}, {:?})", self._debug_count, self.value).as_str())
+    }
+}
+
+pub struct QjVec<'q, T> {
+    values: Vec<Value<'q>>,
+    context: Context<'q>,
+    _debug_count: u16,
+    _type: PhantomData<T>,
+}
+
+impl<'q, T> QjVec<'q, T> {
+    pub(crate) fn from<X>(values: &[Value<'q>], context: Context<'q>) -> QjVec<'q, X> {
+        let count = DEBUG_GLOBAL_COUNT.fetch_add(1, atomic::Ordering::SeqCst);
+        let qjs = QjVec {
+            values: values.to_vec(),
+            context,
+            _debug_count: count,
+            _type: PhantomData,
+        };
+        qjs.debug_trace("from");
+        qjs
+    }
+
+    pub fn empty(ctx: QjContext<'q>) -> QjVec<'q, T> {
+        Self::from(&[], ctx.into())
+    }
+
+    pub fn from_qj_ref_slice(qjs: &[&Qj<'q, T>], ctx: QjContext<'q>) -> Option<QjVec<'q, T>> {
+        let ctx = ctx.into();
+        let mut vec = Vec::with_capacity(qjs.len());
+        for qj in qjs {
+            if qj.context != ctx {
+                return None;
+            }
+            vec.push(qj.value);
+            Qj::dup(qj)
+        }
+        Some(Self::from(vec.as_slice(), ctx))
+    }
+
+    pub fn from_qj_slice(qjs: &[Qj<'q, T>], ctx: QjContext<'q>) -> Option<QjVec<'q, T>> {
+        let vec: Vec<&Qj<'q, T>> = qjs.iter().map(|v| v).collect();
+        Self::from_qj_ref_slice(vec.as_slice(), ctx)
+    }
+
+    // property
+
+    #[inline]
+    pub(crate) fn as_vec(&self) -> &Vec<Value<'q>> {
+        &self.values
+    }
+
+    #[inline]
+    pub(crate) fn as_slice(&self) -> &[Value<'q>] {
+        self.values.as_slice()
+    }
+
+    #[inline]
+    pub(crate) fn context(&self) -> Context<'q> {
+        self.context
+    }
+
+    // memory
+
+    #[inline]
+    pub(crate) unsafe fn free(this: &Self) {
+        for value in &this.values {
+            this.context.free_value(*value)
+        }
+        this.debug_trace("free");
+    }
+
+    #[inline]
+    pub(crate) fn dup(this: &Self) {
+        for value in &this.values {
+            this.context.dup_value(*value)
+        }
+        this.debug_trace("dup");
+    }
+
+    #[inline]
+    pub(crate) fn detach(self) {
+        Self::dup(&self)
+    }
+
+    fn debug_trace(&self, name: &str) {
+        log::debug!("{}: {:?} (Vec)", name, self);
+    }
+
+    // elements
+
+    pub fn get(&self, idx: usize) -> Qj<'q, T> {
+        let qj = Qj::<T>::from(self.values[idx], self.context);
+        Qj::dup(&qj);
+        qj
+    }
+}
+
+impl<T> Drop for QjVec<'_, T> {
+    fn drop(&mut self) {
+        unsafe { Self::free(self) }
+    }
+}
+
+impl<T> Clone for QjVec<'_, T> {
+    fn clone(&self) -> Self {
+        let qjs = QjVec {
+            values: self.values.clone(),
+            context: self.context,
+            _debug_count: self._debug_count,
+            _type: PhantomData,
+        };
+        QjVec::dup(&qjs);
+        qjs
+    }
+}
+
+impl<'q, T> Into<Vec<Qj<'q, T>>> for QjVec<'q, T> {
+    fn into(self) -> Vec<Qj<'q, T>> {
+        QjVec::dup(&self);
+        self.values.iter().map(|v| Qj::<T>::from(*v, self.context)).collect()
+    }
+}
+
+impl<T> fmt::Debug for QjVec<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        f.write_str(format!("QjVec({}, {:?})", self._debug_count, self.values).as_str())
+    }
+}
+
+macro_rules! qj_type_map {
+    ($from: ty: $($to: ty),*) => {
+        impl<'q> ::std::convert::AsRef<$crate::Qj<'q, $from>> for $crate::Qj<'q, $from> {
+            #[inline]
+            fn as_ref(&self) -> &Qj<'q, $from> {
+                self.transmute()
+            }
+        }
+
+        $(
+        impl<'q> ::std::convert::AsRef<$crate::Qj<'q, $to>> for $crate::Qj<'q, $from> {
+            #[inline]
+            fn as_ref(&self) -> &Qj<'q, $to> {
+                self.transmute()
+            }
+        }
+
+        impl<'q> ::std::convert::From<$crate::Qj<'q, $from>> for $crate::Qj<'q, $to> {
+            #[inline]
+            fn from(x: Qj<'q, $from>) -> Self {
+                $crate::Qj::dup(&x);
+                $crate::Qj::<$to>::from(x.as_value(), x.context())
+            }
+        }
+        )*
+    };
+}
+
+qj_type_map!(QjAny: );
+
+qj_type_map!(QjValue: QjAny);
+qj_type_map!(QjReference: QjAny);
+
+qj_type_map!(QjString: QjAny, QjReference);
+qj_type_map!(QjObject: QjAny, QjReference);
+
+qj_type_map!(QjInt: QjAny, QjValue);
+qj_type_map!(QjBool: QjAny, QjValue);
+qj_type_map!(QjNull: QjAny, QjValue);
+qj_type_map!(QjUndefined: QjAny, QjValue);
+qj_type_map!(QjFloat64: QjAny, QjValue);
