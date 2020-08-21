@@ -4,7 +4,7 @@ QuickJS-Rust binder (experimental)
 
 ## Usage
 
-* see [Examples](https://github.com/taskie/quijine/blob/master/quijine-examples/src/main.rs)
+* see [Examples](tests/examples.rs)
 
 ## License
 
