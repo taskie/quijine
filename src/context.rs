@@ -76,6 +76,11 @@ impl<'q> QjContext<'q> {
     }
 
     #[inline]
+    pub fn new_float64(self, v: f64) -> Qj<'q, QjInt> {
+        self.wrap_result(self.0.new_float64(v)).unwrap()
+    }
+
+    #[inline]
     pub fn new_string(self, v: &str) -> Qj<'q, QjString> {
         self.wrap_result(self.0.new_string(v)).unwrap()
     }

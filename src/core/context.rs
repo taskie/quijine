@@ -148,6 +148,12 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
+    pub fn new_float64(self, v: f64) -> Value<'q> {
+        let value = unsafe { ffi::JS_NewFloat64(self.as_ptr(), v) };
+        Value::from_raw(value, self)
+    }
+
+    #[inline]
     pub fn new_string_from_bytes(self, v: &[u8]) -> Value<'q> {
         let value = unsafe { ffi::JS_NewStringLen(self.as_ptr(), v.as_ptr() as *const c_char, v.len() as u64) };
         Value::from_raw(value, self)
