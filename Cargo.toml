@@ -9,7 +9,7 @@ log = "0.4.0"
 bitflags = { version = "1.2.1" }
 
 [dependencies.libquickjs-sys]
-version = "0.4.0"
+version = "0.7.0"
 #path = "./libquickjs-sys"
 #features = ["system"]
 #default-features = false

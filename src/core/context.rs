@@ -88,7 +88,7 @@ impl<'q> Context<'q> {
             ffi::JS_Eval(
                 self.as_ptr(),
                 c_code.as_ptr(),
-                c_code.as_bytes().len(),
+                c_code.as_bytes().len() as u64,
                 c_filename.as_ptr(),
                 eval_flags.bits() as i32,
             )
@@ -149,7 +149,7 @@ impl<'q> Context<'q> {
 
     #[inline]
     pub fn new_string_from_bytes(self, v: &[u8]) -> Value<'q> {
-        let value = unsafe { ffi::JS_NewStringLen(self.as_ptr(), v.as_ptr() as *const c_char, v.len()) };
+        let value = unsafe { ffi::JS_NewStringLen(self.as_ptr(), v.as_ptr() as *const c_char, v.len() as u64) };
         Value::from_raw(value, self)
     }
 
@@ -244,7 +244,7 @@ impl<'q> Context<'q> {
     }
 
     pub(crate) unsafe fn new_array_buffer_copy(self, t: &[u8]) -> Value<'q> {
-        let value = ffi::JS_NewArrayBufferCopy(self.as_ptr(), t.as_ptr(), t.len());
+        let value = ffi::JS_NewArrayBufferCopy(self.as_ptr(), t.as_ptr(), t.len() as u64);
         Value::from_raw(value, self)
     }
 
@@ -259,7 +259,7 @@ impl<'q> Context<'q> {
         if bs.is_null() {
             return None;
         }
-        Some(slice::from_raw_parts(bs, len))
+        Some(slice::from_raw_parts(bs, len as usize))
     }
 
     pub(crate) unsafe fn array_buffer_to_sized<'v, T>(self, v: &'v Value<'q>) -> Option<&'v T> {
@@ -268,7 +268,7 @@ impl<'q> Context<'q> {
         if bs.is_null() {
             return None;
         }
-        assert_eq!(size_of::<T>(), len);
+        assert_eq!(size_of::<T>(), len as usize);
         Some(&*(bs as *const T))
     }
 }

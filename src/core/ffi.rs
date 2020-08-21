@@ -133,6 +133,26 @@ pub unsafe fn JS_NewInt32(_ctx: *mut JSContext, val: i32) -> JSValue {
     JS_MKVAL!(JS_TAG_INT, val)
 }
 
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_NewInt64(ctx: *mut JSContext, val: i64) -> JSValue {
+    let cast = val as i32;
+    if val == cast as i64 {
+        JS_NewInt32(ctx, cast)
+    } else {
+        JS_NewFloat64(ctx, val as f64)
+    }
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_NewFloat64(_ctx: *mut JSContext, val: f64) -> JSValue {
+    JSValue {
+        u: JSValueUnion { float64: val },
+        tag: JS_TAG_FLOAT64 as i64,
+    }
+}
+
 pub const JS_NULL: JSValue = JS_MKVAL!(JS_TAG_NULL, 0);
 pub const JS_FALSE: JSValue = JS_MKVAL!(JS_TAG_BOOL, 0);
 pub const JS_TRUE: JSValue = JS_MKVAL!(JS_TAG_BOOL, 1);

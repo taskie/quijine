@@ -36,6 +36,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cc"
+version = "1.0.59"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66120af515773fb005778dc07c261bd201ec8ce50bd6e7144c927753fe013381"
+
+[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -116,10 +122,11 @@ checksum = "d515b1f41455adea1313a4a2ac8a8a477634fbae63cc6100e3aebb207ce61558"
 
 [[package]]
 name = "libquickjs-sys"
-version = "0.4.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44b511fe25aec1f3a867d51eeca30d00fdf4e7dec98085ebd79de6607475d8b2"
+checksum = "38d43af2a564bc49edb5200ec019fa9e8993e1b25c43e5b613290b23110e4fe9"
 dependencies = [
+ "cc",
  "copy_dir",
 ]
 
