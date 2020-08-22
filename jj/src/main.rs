@@ -1,4 +1,4 @@
-use quijine::{self, QjAnyVec, QjError, QjErrorValue, QjEvalFlags};
+use quijine::{self, QjError, QjErrorValue, QjEvalFlags};
 use std::{
     convert::From,
     fmt::Formatter,
@@ -93,14 +93,10 @@ fn main() -> Result<(), Box<JjError>> {
             "<input>",
             QjEvalFlags::TYPE_GLOBAL | QjEvalFlags::FLAG_COMPILE_ONLY,
         )?;
-        let json = ctx.global_object().get("JSON");
-        let json_parse = json.get("parse");
-        let json_stringify = json.get("stringify");
         let stdin = io::stdin();
         for (i, line) in stdin.lock().lines().enumerate() {
             let line = line?;
-            let args = QjAnyVec::from_ref_slice(&[ctx.new_string(&line).as_ref()], ctx).unwrap();
-            let result = ctx.call(&json_parse, ctx.undefined(), &args)?;
+            let result = ctx.parse_json(&line, "<input>")?;
             ctx.global_object().set("$_", &result);
             ctx.global_object().set("$L", ctx.new_int64(i as i64));
             let result = ctx.eval(script, "<input>", QjEvalFlags::TYPE_GLOBAL)?;
@@ -113,8 +109,7 @@ fn main() -> Result<(), Box<JjError>> {
                         continue;
                     }
                 }
-                let args = QjAnyVec::from_ref_slice(&[result.as_ref()], ctx).unwrap();
-                let v = ctx.call(&json_stringify, ctx.undefined(), &args)?;
+                let v = ctx.json_stringify(result, ctx.undefined().into(), ctx.undefined().into())?;
                 println!("{}", v.to_string().unwrap())
             }
         }
