@@ -1,6 +1,6 @@
 use crate::{
     core::{conversion::AsJSValue, ffi, Context, Value},
-    err::{QjErr, QjErrValue, QjResult},
+    error::{QjError, QjErrorValue, QjResult},
     instance::QjVec,
     runtime::QjRuntime,
     tags::{QjAnyTag, QjIntTag, QjNullTag, QjObjectTag, QjStringTag, QjUndefinedTag},
@@ -25,7 +25,7 @@ impl<'q> QjContext<'q> {
     #[inline]
     fn wrap_result<T>(self, val: Value<'q>) -> QjResult<'q, Qj<'q, T>> {
         if val.is_exception() {
-            Err(QjErr::from_value(Qj::<QjAnyTag>::from(self.0.exception(), self.0)))
+            Err(QjError::from_value(Qj::<QjAnyTag>::from(self.0.exception(), self.0)))
         } else {
             Ok(Qj::<QjAnyTag>::from(val, self.0))
         }
@@ -135,9 +135,9 @@ impl<'q> QjContext<'q> {
                 Err(e) => {
                     let v = e.value;
                     match v {
-                        QjErrValue::None => ctx.0.throw(ctx.0.new_string("some error occured")),
-                        QjErrValue::String(s) => ctx.0.throw(ctx.0.new_string(s)),
-                        QjErrValue::Value(v) => {
+                        QjErrorValue::None => ctx.0.throw(ctx.0.new_string("some error occured")),
+                        QjErrorValue::String(s) => ctx.0.throw(ctx.0.new_string(s)),
+                        QjErrorValue::Value(v) => {
                             Qj::dup(&v);
                             ctx.0.throw(v.as_value())
                         }

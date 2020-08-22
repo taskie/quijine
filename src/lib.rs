@@ -6,7 +6,7 @@ mod core;
 mod aliases;
 mod context;
 mod conversion;
-mod err;
+mod error;
 mod instance;
 mod runtime;
 mod string;

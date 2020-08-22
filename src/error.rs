@@ -4,19 +4,19 @@ use std::{
     fmt::{Error, Formatter},
 };
 
-pub enum QjErrValue<'q> {
+pub enum QjErrorValue<'q> {
     None,
     String(String),
     Value(Qj<'q, QjAnyTag>),
 }
 
-impl fmt::Display for QjErrValue<'_> {
+impl fmt::Display for QjErrorValue<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         let default = "some error occured";
         match self {
-            QjErrValue::None => f.write_str(default),
-            QjErrValue::String(s) => f.write_str(s),
-            QjErrValue::Value(v) => {
+            QjErrorValue::None => f.write_str(default),
+            QjErrorValue::String(s) => f.write_str(s),
+            QjErrorValue::Value(v) => {
                 let s = v.to_string().unwrap_or(default.into());
                 f.write_str(s.as_str())
             }
@@ -24,45 +24,45 @@ impl fmt::Display for QjErrValue<'_> {
     }
 }
 
-impl fmt::Debug for QjErrValue<'_> {
+impl fmt::Debug for QjErrorValue<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         fmt::Display::fmt(self, f)
     }
 }
 
-pub struct QjErr<'q> {
-    pub value: QjErrValue<'q>,
+pub struct QjError<'q> {
+    pub value: QjErrorValue<'q>,
 }
 
-impl<'q> QjErr<'q> {
-    pub fn from_str<T: AsRef<str>>(message: T) -> QjErr<'static> {
-        QjErr {
-            value: QjErrValue::String(message.as_ref().to_string()),
+impl<'q> QjError<'q> {
+    pub fn from_str<T: AsRef<str>>(message: T) -> QjError<'static> {
+        QjError {
+            value: QjErrorValue::String(message.as_ref().to_string()),
         }
     }
 
-    pub fn from_value(val: Qj<'q, QjAnyTag>) -> QjErr<'q> {
-        QjErr {
-            value: QjErrValue::Value(val),
+    pub fn from_value(val: Qj<'q, QjAnyTag>) -> QjError<'q> {
+        QjError {
+            value: QjErrorValue::Value(val),
         }
     }
 }
 
-pub type QjResult<'q, T> = std::result::Result<T, QjErr<'q>>;
+pub type QjResult<'q, T> = std::result::Result<T, QjError<'q>>;
 
-impl std::convert::From<QjErr<'_>> for std::io::Error {
-    fn from(err: QjErr) -> Self {
+impl std::convert::From<QjError<'_>> for std::io::Error {
+    fn from(err: QjError) -> Self {
         std::io::Error::new(std::io::ErrorKind::Other, format!("error: {:?}", err))
     }
 }
 
-impl fmt::Display for QjErr<'_> {
+impl fmt::Display for QjError<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         self.value.fmt(f)
     }
 }
 
-impl fmt::Debug for QjErr<'_> {
+impl fmt::Debug for QjError<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         fmt::Display::fmt(self, f)
     }
