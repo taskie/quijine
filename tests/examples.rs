@@ -1,9 +1,7 @@
+use quijine::{QjAny, QjAnyVec, QjEvalFlags};
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
-
 use std::cell::RefCell;
-
-use quijine::{Qj, QjAnyTag, QjEvalFlags, QjVec};
 
 #[test]
 fn example_call_js_func_from_rust() {
@@ -16,8 +14,7 @@ fn example_call_js_func_from_rust() {
         .unwrap();
         let global = ctx.global_object();
         let foo = global.get("foo");
-        let args =
-            QjVec::<QjAnyTag>::from_qj_ref_slice(&[ctx.new_int32(5).as_ref(), ctx.new_int32(3).as_ref()], ctx).unwrap();
+        let args = QjAnyVec::from_qj_ref_slice(&[ctx.new_int32(5).as_ref(), ctx.new_int32(3).as_ref()], ctx).unwrap();
         let result = ctx.call(&foo, &global, &args).unwrap();
         assert_eq!(8, result.to_i32().unwrap(), "call foo (JS) from Rust");
     });
@@ -29,7 +26,7 @@ fn example_call_rust_func_from_js() {
         let global = ctx.global_object();
         let foo = ctx.new_function(
             |ctx, _this, args| {
-                let args: Vec<Qj<QjAnyTag>> = args.into();
+                let args: Vec<QjAny> = args.into();
                 let x = args[0].to_f64().unwrap();
                 let y = args[1].to_f64().unwrap();
                 Ok(ctx.new_float64(x + y).into())
@@ -53,7 +50,7 @@ fn example_use_rust_rand_from_js() {
             0,
         );
         let t = ctx.new_object();
-        let args = &QjVec::empty(ctx);
+        let args = QjAnyVec::empty(ctx);
         let mut sum = 0i64;
         for _i in 1..10 {
             let x = ctx.call(&r, &t, &args).unwrap();
