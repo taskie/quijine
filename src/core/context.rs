@@ -276,6 +276,57 @@ impl<'q> Context<'q> {
         assert_eq!(size_of::<T>(), len as usize);
         Some(&*(bs as *const T))
     }
+
+    // json
+
+    /*
+    JSValue JS_ParseJSON(JSContext *ctx, const char *buf, size_t buf_len,
+    const char *filename)
+    */
+
+    #[inline]
+    pub fn parse_json(self, buf: &str, filename: &str) -> Value<'q> {
+        let c_buf = CString::new(buf).expect("buf");
+        let c_filename = CString::new(filename).expect("filename");
+        let value = unsafe {
+            ffi::JS_ParseJSON(
+                self.as_ptr(),
+                c_buf.as_ptr(),
+                c_buf.as_bytes().len() as u64,
+                c_filename.as_ptr(),
+            )
+        };
+        Value::from_raw(value, self)
+    }
+
+    #[inline]
+    pub fn parse_json2(self, buf: &str, filename: &str, flags: ParseJSONFlags) -> Value<'q> {
+        let c_buf = CString::new(buf).expect("buf");
+        let c_filename = CString::new(filename).expect("filename");
+        let value = unsafe {
+            ffi::JS_ParseJSON2(
+                self.as_ptr(),
+                c_buf.as_ptr(),
+                c_buf.as_bytes().len() as u64,
+                c_filename.as_ptr(),
+                flags.bits() as i32,
+            )
+        };
+        Value::from_raw(value, self)
+    }
+
+    #[inline]
+    pub fn json_stringify(self, obj: Value<'q>, replacer: Value<'q>, space0: Value<'q>) -> Value<'q> {
+        let value = unsafe {
+            ffi::JS_JSONStringify(
+                self.as_ptr(),
+                obj.as_js_value(),
+                replacer.as_js_value(),
+                space0.as_js_value(),
+            )
+        };
+        Value::from_raw(value, self)
+    }
 }
 
 impl fmt::Debug for Context<'_> {
@@ -310,6 +361,12 @@ bitflags! {
         /// JS_TAG_FUNCTION_BYTECODE or JS_TAG_MODULE tag. It can be executed
         /// with JS_EvalFunction().
         const FLAG_COMPILE_ONLY = ffi::JS_EVAL_FLAG_COMPILE_ONLY;
+    }
+}
+
+bitflags! {
+    pub struct ParseJSONFlags: u32 {
+        const EXT = 0b0001;
     }
 }
 

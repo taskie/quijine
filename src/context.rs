@@ -167,6 +167,24 @@ impl<'q> QjContext<'q> {
     pub fn null(self) -> Qj<'q, QjNullTag> {
         Qj::<QjNullTag>::from(Value::null(), self.0)
     }
+
+    // json
+
+    pub fn parse_json(self, buf: &str, filename: &str) -> QjResult<'q, Qj<'q, QjAnyTag>> {
+        self.wrap_result(self.0.parse_json(buf, filename))
+    }
+
+    pub fn json_stringify(
+        self,
+        obj: Qj<'q, QjAnyTag>,
+        replacer: Qj<'q, QjAnyTag>,
+        space0: Qj<'q, QjAnyTag>,
+    ) -> QjResult<'q, Qj<'q, QjStringTag>> {
+        self.wrap_result(
+            self.0
+                .json_stringify(obj.as_value(), replacer.as_value(), space0.as_value()),
+        )
+    }
 }
 
 pub struct QjContextGuard<'r>(QjContext<'r>);
