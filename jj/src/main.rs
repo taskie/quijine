@@ -1,4 +1,4 @@
-use quijine::{self, QjAnyTag, QjEvalFlags, QjVec};
+use quijine::{self, QjAnyVec, QjEvalFlags};
 use std::{
     convert::From,
     fmt::Formatter,
@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<JjError>> {
         let stdin = io::stdin();
         for (i, line) in stdin.lock().lines().enumerate() {
             let line = line?;
-            let args = QjVec::<QjAnyTag>::from_qj_ref_slice(&[ctx.new_string(&line).as_ref()], ctx).unwrap();
+            let args = QjAnyVec::from_qj_ref_slice(&[ctx.new_string(&line).as_ref()], ctx).unwrap();
             let result = match ctx.call(&json_parse, ctx.undefined(), &args) {
                 Ok(v) => v,
                 Err(e) => {
@@ -104,7 +104,7 @@ fn main() -> Result<(), Box<JjError>> {
                         continue;
                     }
                 }
-                let args = QjVec::<QjAnyTag>::from_qj_ref_slice(&[result.as_ref()], ctx).unwrap();
+                let args = QjAnyVec::from_qj_ref_slice(&[result.as_ref()], ctx).unwrap();
                 match ctx.call(&json_stringify, ctx.undefined(), &args) {
                     Ok(v) => println!("{}", v.to_string().unwrap()),
                     Err(e) => {
