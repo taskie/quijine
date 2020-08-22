@@ -10,7 +10,8 @@ mod err;
 mod instance;
 mod runtime;
 mod string;
-mod types;
+
+pub mod tags;
 
 pub use crate::core::EvalFlags as QjEvalFlags;
 
@@ -18,7 +19,6 @@ pub use aliases::*;
 pub use context::{QjContext, QjContextGuard};
 pub use instance::{Qj, QjVec};
 pub use runtime::{QjRuntime, QjRuntimeGuard};
-pub use types::*;
 
 #[inline]
 pub fn new_runtime_guard() -> QjRuntimeGuard {

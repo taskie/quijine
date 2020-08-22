@@ -1,6 +1,6 @@
 use crate::{
     instance::{Qj, QjVec},
-    types::{
+    tags::{
         QjAnyTag, QjBigDecimalTag, QjBigFloatTag, QjBigIntTag, QjBoolTag, QjCatchOffsetTag, QjExceptionTag,
         QjFloat64Tag, QjFunctionBytecodeTag, QjIntTag, QjModuleTag, QjNullTag, QjObjectTag, QjReferenceTag,
         QjStringTag, QjSymbolTag, QjUndefinedTag, QjUninitializedTag, QjValueTag,

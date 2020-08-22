@@ -3,8 +3,8 @@ use crate::{
     err::{QjErr, QjErrValue, QjResult},
     instance::QjVec,
     runtime::QjRuntime,
-    types::{QjAnyTag, QjIntTag, QjObjectTag, QjStringTag},
-    Qj, QjEvalFlags, QjNullTag, QjRuntimeGuard, QjUndefinedTag,
+    tags::{QjAnyTag, QjIntTag, QjNullTag, QjObjectTag, QjStringTag, QjUndefinedTag},
+    Qj, QjEvalFlags, QjRuntimeGuard,
 };
 use std::{fmt, os::raw::c_int};
 

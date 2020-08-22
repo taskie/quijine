@@ -1,4 +1,4 @@
-use crate::{types::QjAnyTag, Qj};
+use crate::{tags::QjAnyTag, Qj};
 use std::{
     fmt,
     fmt::{Error, Formatter},
