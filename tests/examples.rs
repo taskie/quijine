@@ -14,7 +14,7 @@ fn example_call_js_func_from_rust() {
         .unwrap();
         let global = ctx.global_object();
         let foo = global.get("foo");
-        let args = QjAnyVec::from_ref_slice(&[ctx.new_int32(5).as_ref(), ctx.new_int32(3).as_ref()], ctx).unwrap();
+        let args = QjAnyVec::from_slice(&[ctx.new_int32(5).into(), ctx.new_int32(3).into()], ctx).unwrap();
         let result = ctx.call(&foo, &global, &args).unwrap();
         assert_eq!(8, result.to_i32().unwrap(), "call foo (JS) from Rust");
     });
