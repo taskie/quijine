@@ -9,7 +9,7 @@ macro_rules! js_c_function {
         ) -> $crate::core::ffi::JSValue {
             use ::std::ptr::NonNull;
             let ctx = $crate::core::QjContext::new(NonNull::new(ctx).unwrap());
-            let this_val = $crate::core::QjValue::new(this_val);
+            let this_val = $crate::core::QjValueTag::new(this_val);
             let values = $crate::core::util::to_args(ctx, argc, argv);
             let ret = $f(ctx, this_val, values);
             $crate::core::conversion::AsJSValue::as_js_value(&ret)
@@ -24,7 +24,7 @@ macro_rules! js_class_finalizer {
         unsafe extern "C" fn wrap(rt: *mut $crate::core::ffi::JSRuntime, val: $crate::core::ffi::JSValue) {
             use ::std::ptr::NonNull;
             let rt = $crate::core::QjRuntime::new(NonNull::new(rt).unwrap());
-            let val = $crate::core::QjValue::new(val);
+            let val = $crate::core::QjValueTag::new(val);
             $f(rt, val)
         }
         Some(wrap)
@@ -41,7 +41,7 @@ macro_rules! js_class_gc_mark {
         ) {
             use ::std::ptr::NonNull;
             let rt = $crate::core::QjRuntime::new(NonNull::new(rt).unwrap());
-            let val = $crate::core::QjValue::new(val);
+            let val = $crate::core::QjValueTag::new(val);
             $f(rt, val, mark_func)
         }
         Some(wrap)
@@ -62,8 +62,8 @@ macro_rules! js_class_call {
         ) -> $crate::core::ffi::JSValue {
             use ::std::ptr::NonNull;
             let ctx = $crate::core::QjContext::new(NonNull::new(ctx).unwrap());
-            let func_obj = $crate::core::QjValue::new(func_obj);
-            let this_val = $crate::core::QjValue::new(this_val);
+            let func_obj = $crate::core::QjValueTag::new(func_obj);
+            let this_val = $crate::core::QjValueTag::new(this_val);
             let values = $crate::core::util::to_args(ctx, argc, argv);
             let ret = $f(ctx, func_obj, this_val, values, flags);
             $crate::core::conversion::AsJSValue::as_js_value(&ret)

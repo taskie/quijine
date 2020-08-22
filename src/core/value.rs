@@ -192,6 +192,6 @@ impl fmt::Debug for Value<'_> {
         for x in util::to_vec(self.0) {
             repr.push_str(format!("{:02x}", x).as_str())
         }
-        f.write_str(format!("QjValue(tag={}, {})", tag, repr).as_str())
+        f.write_str(format!("QjValueTag(tag={}, {})", tag, repr).as_str())
     }
 }

@@ -1,4 +1,4 @@
-use crate::{types::QjAny, Qj};
+use crate::{types::QjAnyTag, Qj};
 use std::{
     fmt,
     fmt::{Error, Formatter},
@@ -7,7 +7,7 @@ use std::{
 pub enum QjErrValue<'q> {
     None,
     String(String),
-    Value(Qj<'q, QjAny>),
+    Value(Qj<'q, QjAnyTag>),
 }
 
 impl fmt::Display for QjErrValue<'_> {
@@ -41,7 +41,7 @@ impl<'q> QjErr<'q> {
         }
     }
 
-    pub fn from_value(val: Qj<'q, QjAny>) -> QjErr<'q> {
+    pub fn from_value(val: Qj<'q, QjAnyTag>) -> QjErr<'q> {
         QjErr {
             value: QjErrValue::Value(val),
         }

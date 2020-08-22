@@ -1,7 +1,10 @@
 use crate::{
     core::{Context, Value},
     string::QjCString,
-    types::{QjAny, QjBool, QjFloat64, QjInt, QjNull, QjObject, QjReference, QjString, QjUndefined, QjValue},
+    types::{
+        QjAnyTag, QjBoolTag, QjFloat64Tag, QjIntTag, QjNullTag, QjObjectTag, QjReferenceTag, QjStringTag,
+        QjUndefinedTag, QjValueTag,
+    },
     QjContext,
 };
 use std::{fmt, marker::PhantomData, sync::atomic};
@@ -139,18 +142,18 @@ impl<'q, T> Qj<'q, T> {
     // object
 
     #[inline]
-    pub fn get<K>(&self, key: K) -> Qj<'q, QjAny>
+    pub fn get<K>(&self, key: K) -> Qj<'q, QjAnyTag>
     where
         K: AsRef<str>,
     {
-        Qj::<QjAny>::from(self.value.property(self.context, key), self.context)
+        Qj::<QjAnyTag>::from(self.value.property(self.context, key), self.context)
     }
 
     #[inline]
     pub fn set<K, V>(&self, key: K, val: V)
     where
         K: AsRef<str>,
-        V: AsRef<Qj<'q, QjAny>>,
+        V: AsRef<Qj<'q, QjAnyTag>>,
     {
         let val = val.as_ref();
         Qj::dup(val);
@@ -338,16 +341,16 @@ macro_rules! qj_type_map {
     };
 }
 
-qj_type_map!(QjAny: );
+qj_type_map!(QjAnyTag: );
 
-qj_type_map!(QjValue: QjAny);
-qj_type_map!(QjReference: QjAny);
+qj_type_map!(QjValueTag: QjAnyTag);
+qj_type_map!(QjReferenceTag: QjAnyTag);
 
-qj_type_map!(QjString: QjAny, QjReference);
-qj_type_map!(QjObject: QjAny, QjReference);
+qj_type_map!(QjStringTag: QjAnyTag, QjReferenceTag);
+qj_type_map!(QjObjectTag: QjAnyTag, QjReferenceTag);
 
-qj_type_map!(QjInt: QjAny, QjValue);
-qj_type_map!(QjBool: QjAny, QjValue);
-qj_type_map!(QjNull: QjAny, QjValue);
-qj_type_map!(QjUndefined: QjAny, QjValue);
-qj_type_map!(QjFloat64: QjAny, QjValue);
+qj_type_map!(QjIntTag: QjAnyTag, QjValueTag);
+qj_type_map!(QjBoolTag: QjAnyTag, QjValueTag);
+qj_type_map!(QjNullTag: QjAnyTag, QjValueTag);
+qj_type_map!(QjUndefinedTag: QjAnyTag, QjValueTag);
+qj_type_map!(QjFloat64Tag: QjAnyTag, QjValueTag);

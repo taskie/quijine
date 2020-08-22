@@ -1,26 +1,26 @@
 // any
-pub struct QjAny;
+pub struct QjAnyTag;
 
 // references
-pub struct QjReference;
+pub struct QjReferenceTag;
 
-pub struct QjBigDecimal;
-pub struct QjBigInt;
-pub struct QjBigFloat;
-pub struct QjSymbol;
-pub struct QjString;
-pub struct QjModule;
-pub struct QjFunctionBytecode;
-pub struct QjObject;
+pub struct QjBigDecimalTag;
+pub struct QjBigIntTag;
+pub struct QjBigFloatTag;
+pub struct QjSymbolTag;
+pub struct QjStringTag;
+pub struct QjModuleTag;
+pub struct QjFunctionBytecodeTag;
+pub struct QjObjectTag;
 
 // values
-pub struct QjValue;
+pub struct QjValueTag;
 
-pub struct QjInt;
-pub struct QjBool;
-pub struct QjNull;
-pub struct QjUndefined;
-pub struct QjUninitialized;
-pub struct QjCatchOffset;
-pub struct QjException;
-pub struct QjFloat64;
+pub struct QjIntTag;
+pub struct QjBoolTag;
+pub struct QjNullTag;
+pub struct QjUndefinedTag;
+pub struct QjUninitializedTag;
+pub struct QjCatchOffsetTag;
+pub struct QjExceptionTag;
+pub struct QjFloat64Tag;

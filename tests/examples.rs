@@ -3,7 +3,7 @@ use rand_xorshift::XorShiftRng;
 
 use std::cell::RefCell;
 
-use quijine::{Qj, QjAny, QjEvalFlags, QjVec};
+use quijine::{Qj, QjAnyTag, QjEvalFlags, QjVec};
 
 #[test]
 fn example_call_js_func_from_rust() {
@@ -17,7 +17,7 @@ fn example_call_js_func_from_rust() {
         let global = ctx.global_object();
         let foo = global.get("foo");
         let args =
-            QjVec::<QjAny>::from_qj_ref_slice(&[ctx.new_int32(5).as_ref(), ctx.new_int32(3).as_ref()], ctx).unwrap();
+            QjVec::<QjAnyTag>::from_qj_ref_slice(&[ctx.new_int32(5).as_ref(), ctx.new_int32(3).as_ref()], ctx).unwrap();
         let result = ctx.call(&foo, &global, &args).unwrap();
         assert_eq!(8, result.to_i32().unwrap(), "call foo (JS) from Rust");
     });
@@ -29,7 +29,7 @@ fn example_call_rust_func_from_js() {
         let global = ctx.global_object();
         let foo = ctx.new_function(
             |ctx, _this, args| {
-                let args: Vec<Qj<QjAny>> = args.into();
+                let args: Vec<Qj<QjAnyTag>> = args.into();
                 let x = args[0].to_f64().unwrap();
                 let y = args[1].to_f64().unwrap();
                 Ok(ctx.new_float64(x + y).into())
