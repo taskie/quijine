@@ -212,7 +212,7 @@ impl<'q, T> QjVec<'q, T> {
         Self::from(&[], ctx.into())
     }
 
-    pub fn from_qj_ref_slice(qjs: &[&Qj<'q, T>], ctx: QjContext<'q>) -> Option<QjVec<'q, T>> {
+    pub fn from_ref_slice(qjs: &[&Qj<'q, T>], ctx: QjContext<'q>) -> Option<QjVec<'q, T>> {
         let ctx = ctx.into();
         let mut vec = Vec::with_capacity(qjs.len());
         for qj in qjs {
@@ -225,9 +225,9 @@ impl<'q, T> QjVec<'q, T> {
         Some(Self::from(vec.as_slice(), ctx))
     }
 
-    pub fn from_qj_slice(qjs: &[Qj<'q, T>], ctx: QjContext<'q>) -> Option<QjVec<'q, T>> {
+    pub fn from_slice(qjs: &[Qj<'q, T>], ctx: QjContext<'q>) -> Option<QjVec<'q, T>> {
         let vec: Vec<&Qj<'q, T>> = qjs.iter().map(|v| v).collect();
-        Self::from_qj_ref_slice(vec.as_slice(), ctx)
+        Self::from_ref_slice(vec.as_slice(), ctx)
     }
 
     // property

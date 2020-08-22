@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<JjError>> {
         let stdin = io::stdin();
         for (i, line) in stdin.lock().lines().enumerate() {
             let line = line?;
-            let args = QjAnyVec::from_qj_ref_slice(&[ctx.new_string(&line).as_ref()], ctx).unwrap();
+            let args = QjAnyVec::from_ref_slice(&[ctx.new_string(&line).as_ref()], ctx).unwrap();
             let result = ctx.call(&json_parse, ctx.undefined(), &args)?;
             ctx.global_object().set("$_", &result);
             ctx.global_object().set("$L", ctx.new_int64(i as i64));
@@ -106,7 +106,7 @@ fn main() -> Result<(), Box<JjError>> {
                         continue;
                     }
                 }
-                let args = QjAnyVec::from_qj_ref_slice(&[result.as_ref()], ctx).unwrap();
+                let args = QjAnyVec::from_ref_slice(&[result.as_ref()], ctx).unwrap();
                 let v = ctx.call(&json_stringify, ctx.undefined(), &args)?;
                 println!("{}", v.to_string().unwrap())
             }
