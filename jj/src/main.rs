@@ -1,4 +1,4 @@
-use quijine::{self, QjAnyVec, QjEvalFlags};
+use quijine::{self, QjAnyVec, QjError, QjErrorValue, QjEvalFlags};
 use std::{
     convert::From,
     fmt::Formatter,
@@ -14,6 +14,7 @@ pub struct JjError {
 #[derive(Debug)]
 pub enum JjErrorKind {
     Io(io::Error),
+    Qj(String),
     Other(String),
     #[doc(hidden)]
     __Nonexhaustive,
@@ -25,6 +26,8 @@ impl std::fmt::Display for JjError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.kind {
             JjErrorKind::Io(ref e) => e.fmt(f),
+            JjErrorKind::Qj(ref s) => f.write_str(s.as_str()),
+            JjErrorKind::Other(ref s) => f.write_str(s.as_str()),
             _ => f.write_str("internal error"),
         }
     }
@@ -34,6 +37,19 @@ impl From<std::io::Error> for std::boxed::Box<JjError> {
     fn from(e: io::Error) -> Self {
         Box::new(JjError {
             kind: JjErrorKind::Io(e),
+        })
+    }
+}
+
+impl<'q> From<QjError<'q>> for std::boxed::Box<JjError> {
+    fn from(e: QjError) -> Self {
+        let s: Option<String> = match e.value {
+            QjErrorValue::String(s) => Some(s.clone()),
+            QjErrorValue::Value(v) => v.to_string(),
+            _ => None,
+        };
+        Box::new(JjError {
+            kind: JjErrorKind::Qj(s.unwrap_or("internal error".to_owned())),
         })
     }
 }
@@ -77,24 +93,10 @@ fn main() -> Result<(), Box<JjError>> {
         for (i, line) in stdin.lock().lines().enumerate() {
             let line = line?;
             let args = QjAnyVec::from_qj_ref_slice(&[ctx.new_string(&line).as_ref()], ctx).unwrap();
-            let result = match ctx.call(&json_parse, ctx.undefined(), &args) {
-                Ok(v) => v,
-                Err(e) => {
-                    return Err(Box::new(JjError {
-                        kind: JjErrorKind::Other(format!("Input error: {}", e.to_string())),
-                    }));
-                }
-            };
+            let result = ctx.call(&json_parse, ctx.undefined(), &args)?;
             ctx.global_object().set("$_", &result);
             ctx.global_object().set("$L", ctx.new_int64(i as i64));
-            let result = match ctx.eval(&opt.script.as_str(), "<input>", QjEvalFlags::TYPE_GLOBAL) {
-                Ok(v) => v,
-                Err(e) => {
-                    return Err(Box::new(JjError {
-                        kind: JjErrorKind::Other(format!("Script error: {}", e.to_string())),
-                    }));
-                }
-            };
+            let result = ctx.eval(&opt.script.as_str(), "<input>", QjEvalFlags::TYPE_GLOBAL)?;
             if !opt.silent {
                 if result.is_null() || result.is_undefined() {
                     continue;
@@ -105,14 +107,8 @@ fn main() -> Result<(), Box<JjError>> {
                     }
                 }
                 let args = QjAnyVec::from_qj_ref_slice(&[result.as_ref()], ctx).unwrap();
-                match ctx.call(&json_stringify, ctx.undefined(), &args) {
-                    Ok(v) => println!("{}", v.to_string().unwrap()),
-                    Err(e) => {
-                        return Err(Box::new(JjError {
-                            kind: JjErrorKind::Other(format!("Script error: {}", e.to_string())),
-                        }));
-                    }
-                };
+                let v = ctx.call(&json_stringify, ctx.undefined(), &args)?;
+                println!("{}", v.to_string().unwrap())
             }
         }
         Ok(())
