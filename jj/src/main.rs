@@ -86,6 +86,13 @@ fn main() -> Result<(), Box<JjError>> {
     env_logger::init();
     let opt = Opt::from_args();
     quijine::run_with_context(move |ctx| {
+        let script = opt.script.as_str();
+        // check a syntax error
+        ctx.eval(
+            script,
+            "<input>",
+            QjEvalFlags::TYPE_GLOBAL | QjEvalFlags::FLAG_COMPILE_ONLY,
+        )?;
         let json = ctx.global_object().get("JSON");
         let json_parse = json.get("parse");
         let json_stringify = json.get("stringify");
@@ -96,7 +103,7 @@ fn main() -> Result<(), Box<JjError>> {
             let result = ctx.call(&json_parse, ctx.undefined(), &args)?;
             ctx.global_object().set("$_", &result);
             ctx.global_object().set("$L", ctx.new_int64(i as i64));
-            let result = ctx.eval(&opt.script.as_str(), "<input>", QjEvalFlags::TYPE_GLOBAL)?;
+            let result = ctx.eval(script, "<input>", QjEvalFlags::TYPE_GLOBAL)?;
             if !opt.silent {
                 if result.is_null() || result.is_undefined() {
                     continue;
