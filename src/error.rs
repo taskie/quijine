@@ -1,8 +1,5 @@
 use crate::{tags::QjAnyTag, Qj};
-use std::{
-    fmt,
-    fmt::{Error, Formatter},
-};
+use std::{error, fmt, io};
 
 pub enum QjErrorValue<'q> {
     None,
@@ -11,7 +8,7 @@ pub enum QjErrorValue<'q> {
 }
 
 impl fmt::Display for QjErrorValue<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         let default = "some error occured";
         match self {
             QjErrorValue::None => f.write_str(default),
@@ -25,7 +22,7 @@ impl fmt::Display for QjErrorValue<'_> {
 }
 
 impl fmt::Debug for QjErrorValue<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         fmt::Display::fmt(self, f)
     }
 }
@@ -50,20 +47,22 @@ impl<'q> QjError<'q> {
 
 pub type QjResult<'q, T> = std::result::Result<T, QjError<'q>>;
 
-impl std::convert::From<QjError<'_>> for std::io::Error {
+impl<'q> error::Error for QjError<'q> {}
+
+impl std::convert::From<QjError<'_>> for io::Error {
     fn from(err: QjError) -> Self {
-        std::io::Error::new(std::io::ErrorKind::Other, format!("error: {:?}", err))
+        io::Error::new(io::ErrorKind::Other, format!("error: {:?}", err))
     }
 }
 
 impl fmt::Display for QjError<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         self.value.fmt(f)
     }
 }
 
 impl fmt::Debug for QjError<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         fmt::Display::fmt(self, f)
     }
 }

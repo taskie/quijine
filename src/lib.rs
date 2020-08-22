@@ -17,6 +17,7 @@ pub use crate::core::EvalFlags as QjEvalFlags;
 
 pub use aliases::*;
 pub use context::{QjContext, QjContextGuard};
+pub use error::{QjError, QjErrorValue, QjResult};
 pub use instance::{Qj, QjVec};
 pub use runtime::{QjRuntime, QjRuntimeGuard};
 
