@@ -17,6 +17,7 @@ macro_rules! call_with_context {
     };
 }
 
+/// `Qj` is a value holder with a context.
 pub struct Qj<'q, T> {
     value: Value<'q>,
     context: Context<'q>,
@@ -186,6 +187,7 @@ impl<T> fmt::Debug for Qj<'_, T> {
     }
 }
 
+/// `QjVec` is a value vector with a context.
 pub struct QjVec<'q, T> {
     values: Vec<Value<'q>>,
     context: Context<'q>,

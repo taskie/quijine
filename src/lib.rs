@@ -3,6 +3,7 @@ extern crate bitflags;
 
 mod core;
 
+mod aliases;
 mod context;
 mod conversion;
 mod err;
@@ -13,6 +14,7 @@ mod types;
 
 pub use crate::core::EvalFlags as QjEvalFlags;
 
+pub use aliases::*;
 pub use context::{QjContext, QjContextGuard};
 pub use instance::{Qj, QjVec};
 pub use runtime::{QjRuntime, QjRuntimeGuard};
