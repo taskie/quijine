@@ -1,6 +1,5 @@
-use std::{ffi::CStr, marker::PhantomData, os::raw::c_char};
-
 use crate::core::marker::Invariant;
+use std::{ffi::CStr, marker::PhantomData, os::raw::c_char};
 
 #[derive(Clone, Copy, Debug)]
 pub struct CString<'q>(*const c_char, Invariant<'q>);

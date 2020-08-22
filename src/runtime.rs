@@ -1,9 +1,8 @@
-use std::fmt;
-
 use crate::{
     context::{QjContext, QjContextGuard},
     core::Runtime,
 };
+use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct QjRuntime<'r>(Runtime<'r>);

@@ -1,5 +1,4 @@
 pub use libquickjs_sys::*;
-
 use std::{
     os::raw::{c_char, c_int, c_void},
     ptr::null_mut,

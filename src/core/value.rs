@@ -1,5 +1,3 @@
-use std::{fmt, marker::PhantomData};
-
 use crate::core::{
     class::ClassID,
     context::{AsJSContextPointer, Context},
@@ -9,7 +7,11 @@ use crate::core::{
     string::CString as CoreCString,
     util, Runtime,
 };
-use std::ffi::{c_void, CString};
+use std::{
+    ffi::{c_void, CString},
+    fmt,
+    marker::PhantomData,
+};
 
 #[derive(Clone, Copy)]
 pub struct Value<'q>(ffi::JSValue, Covariant<'q>);

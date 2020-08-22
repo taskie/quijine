@@ -1,10 +1,9 @@
+use quijine::{self, QjAny, QjEvalFlags, QjVec};
 use std::{
     convert::From,
     fmt::Formatter,
     io::{self, BufRead},
 };
-
-use quijine::{self, QjAny, QjEvalFlags, QjVec};
 use structopt::{clap, StructOpt};
 
 #[derive(Debug)]
@@ -33,13 +32,17 @@ impl std::fmt::Display for JjError {
 
 impl From<std::io::Error> for std::boxed::Box<JjError> {
     fn from(e: io::Error) -> Self {
-        Box::new(JjError { kind: JjErrorKind::Io(e) })
+        Box::new(JjError {
+            kind: JjErrorKind::Io(e),
+        })
     }
 }
 
 impl From<Box<dyn std::error::Error>> for std::boxed::Box<JjError> {
     fn from(e: Box<dyn std::error::Error>) -> Self {
-        Box::new(JjError { kind: JjErrorKind::Other(e.to_string()) })
+        Box::new(JjError {
+            kind: JjErrorKind::Other(e.to_string()),
+        })
     }
 }
 
@@ -59,7 +62,6 @@ pub struct Opt {
 
     // #[structopt(short, long, default_value = "jsonl")]
     // to: String,
-
     #[structopt(name = "SCRIPT")]
     script: String,
 }
@@ -115,9 +117,4 @@ fn main() -> Result<(), Box<JjError>> {
         }
         Ok(())
     })
-}
-
-#[test]
-fn test() {
-
 }

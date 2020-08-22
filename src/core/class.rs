@@ -1,6 +1,5 @@
-use std::{ffi::CString, ptr::null_mut};
-
 use crate::core::ffi;
+use std::{ffi::CString, ptr::null_mut};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ClassID(u32);

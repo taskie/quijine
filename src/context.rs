@@ -1,17 +1,12 @@
-use std::fmt;
-
-use crate::core::{ffi, Context, Value};
-
 use crate::{
+    core::{conversion::AsJSValue, ffi, Context, Value},
     err::{QjErr, QjErrValue, QjResult},
     instance::QjVec,
     runtime::QjRuntime,
     types::{QjAny, QjInt, QjObject, QjString},
     Qj, QjEvalFlags, QjNull, QjRuntimeGuard, QjUndefined,
 };
-use std::os::raw::c_int;
-
-use crate::core::conversion::AsJSValue;
+use std::{fmt, os::raw::c_int};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct QjContext<'q>(Context<'q>);

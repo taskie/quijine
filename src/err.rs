@@ -1,6 +1,8 @@
 use crate::{types::QjAny, Qj};
-use bitflags::_core::fmt::{Error, Formatter};
-use std::fmt;
+use std::{
+    fmt,
+    fmt::{Error, Formatter},
+};
 
 pub enum QjErrValue<'q> {
     None,

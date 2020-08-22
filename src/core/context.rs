@@ -1,13 +1,3 @@
-use std::{
-    ffi::CString,
-    fmt,
-    marker::PhantomData,
-    mem::size_of,
-    os::raw::{c_char, c_int},
-    ptr::NonNull,
-    slice,
-};
-
 use crate::core::{
     class::ClassID,
     conversion::AsJSValue,
@@ -17,6 +7,15 @@ use crate::core::{
     string::CString as CoreCString,
     util,
     value::Value,
+};
+use std::{
+    ffi::CString,
+    fmt,
+    marker::PhantomData,
+    mem::size_of,
+    os::raw::{c_char, c_int},
+    ptr::NonNull,
+    slice,
 };
 
 pub trait AsJSContextPointer<'q> {
