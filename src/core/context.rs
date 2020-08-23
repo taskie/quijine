@@ -279,11 +279,6 @@ impl<'q> Context<'q> {
 
     // json
 
-    /*
-    JSValue JS_ParseJSON(JSContext *ctx, const char *buf, size_t buf_len,
-    const char *filename)
-    */
-
     #[inline]
     pub fn parse_json(self, buf: &str, filename: &str) -> Value<'q> {
         let c_buf = CString::new(buf).expect("buf");

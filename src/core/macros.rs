@@ -7,11 +7,11 @@ macro_rules! js_c_function {
             argc: ::std::os::raw::c_int,
             argv: *mut $crate::core::ffi::JSValue,
         ) -> $crate::core::ffi::JSValue {
-            use ::std::ptr::NonNull;
-            let ctx = $crate::core::QjContext::new(NonNull::new(ctx).unwrap());
-            let this_val = $crate::core::QjValueTag::new(this_val);
-            let values = $crate::core::util::to_args(ctx, argc, argv);
-            let ret = $f(ctx, this_val, values);
+            let ctx = $crate::core::Context::from_ptr(ctx);
+            let this_val = $crate::core::Value::from_raw(this_val, ctx);
+            let values = ::std::slice::from_raw_parts(argv, argc as usize);
+            let values: Vec<Value> = values.iter().map(|v| Value::from_raw(*v, ctx)).collect();
+            let ret = $f(ctx, this_val, values.as_slice());
             $crate::core::conversion::AsJSValue::as_js_value(&ret)
         }
         Some(wrap)
@@ -22,9 +22,8 @@ macro_rules! js_c_function {
 macro_rules! js_class_finalizer {
     ($f: expr) => {{
         unsafe extern "C" fn wrap(rt: *mut $crate::core::ffi::JSRuntime, val: $crate::core::ffi::JSValue) {
-            use ::std::ptr::NonNull;
-            let rt = $crate::core::QjRuntime::new(NonNull::new(rt).unwrap());
-            let val = $crate::core::QjValueTag::new(val);
+            let rt = $crate::core::Runtime::from_ptr(rt);
+            let val = $crate::core::Value::from_raw_with_runtime(val, rt);
             $f(rt, val)
         }
         Some(wrap)
@@ -39,9 +38,8 @@ macro_rules! js_class_gc_mark {
             val: $crate::core::ffi::JSValue,
             mark_func: $crate::core::ffi::JS_MarkFunc,
         ) {
-            use ::std::ptr::NonNull;
-            let rt = $crate::core::QjRuntime::new(NonNull::new(rt).unwrap());
-            let val = $crate::core::QjValueTag::new(val);
+            let rt = $crate::core::Runtime::from_ptr(rt);
+            let val = $crate::core::Value::from_raw_with_runtime(val, rt);
             $f(rt, val, mark_func)
         }
         Some(wrap)
@@ -60,12 +58,12 @@ macro_rules! js_class_call {
             argv: *mut $crate::core::ffi::JSValue,
             flags: ::std::os::raw::c_int,
         ) -> $crate::core::ffi::JSValue {
-            use ::std::ptr::NonNull;
-            let ctx = $crate::core::QjContext::new(NonNull::new(ctx).unwrap());
-            let func_obj = $crate::core::QjValueTag::new(func_obj);
-            let this_val = $crate::core::QjValueTag::new(this_val);
-            let values = $crate::core::util::to_args(ctx, argc, argv);
-            let ret = $f(ctx, func_obj, this_val, values, flags);
+            let ctx = $crate::core::Context::from_ptr(ctx);
+            let func_obj = $crate::core::Value::from_raw(func_obj, ctx);
+            let this_val = $crate::core::Value::from_raw(this_val, ctx);
+            let values = ::std::slice::from_raw_parts(argv, argc as usize);
+            let values: Vec<Value> = values.iter().map(|v| Value::from_raw(*v, ctx)).collect();
+            let ret = $f(ctx, func_obj, this_val, values.as_slice(), flags);
             $crate::core::conversion::AsJSValue::as_js_value(&ret)
         }
         Some(wrap)

@@ -50,3 +50,75 @@ impl Default for ClassDef {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::core::{ClassDef, ClassID, Context, EvalFlags, Runtime, Value};
+    use crate::{js_c_function, js_class_finalizer};
+    use std::cell::RefCell;
+    use std::ffi::c_void;
+    use std::ptr::null_mut;
+
+    struct S1 {
+        name: String,
+        pos: (i32, i32),
+    }
+
+    thread_local! {
+        static S1_CLASS_ID: RefCell<ClassID> = RefCell::new(ClassID::new(0));
+    }
+
+    unsafe fn new_s1<'q, 'a>(ctx: Context<'q>, this_val: Value<'q>, values: &'a [Value<'q>]) -> Value<'q> {
+        let obj = S1_CLASS_ID.with(|id| ctx.new_object_class(*id.borrow()));
+        let s1 = Box::new(S1 {
+            name: "Hello!".to_owned(),
+            pos: (3, 4),
+        });
+        let s1_ptr = Box::into_raw(s1) as *mut c_void;
+        obj.set_opaque(s1_ptr);
+        obj
+    }
+
+    unsafe fn finalize_s1(rt: Runtime, val: Value) {
+        let s1_ptr = S1_CLASS_ID.with(|id| val.opaque(*id.borrow()) as *mut S1);
+        Box::from_raw(s1_ptr);
+    }
+
+    #[test]
+    fn test() {
+        let rt = Runtime::new();
+        let ctx = Context::new(rt);
+        S1_CLASS_ID.with(|id| {
+            *id.borrow_mut() = rt.new_class_id();
+            rt.new_class(
+                *id.borrow(),
+                &ClassDef {
+                    class_name: "S1".to_owned(),
+                    finalizer: js_class_finalizer!(finalize_s1),
+                    ..Default::default()
+                },
+            );
+            let s1_proto = ctx.new_object();
+            ctx.set_class_proto(*id.borrow(), s1_proto);
+        });
+        let global = ctx.global_object();
+        global.set_property(ctx, "S1", unsafe {
+            ctx.new_c_function(js_c_function!(new_s1), "S1", 0)
+        });
+        let ret = ctx.eval(
+            "const s1 = S1(); const s2 = s1; const s3 = s2; s3",
+            "<input>",
+            EvalFlags::TYPE_GLOBAL,
+        );
+        assert_eq!(false, ctx.exception().is_exception(), "no exception");
+        S1_CLASS_ID.with(|id| {
+            assert_ne!(null_mut(), ret.opaque(*id.borrow()), "valid class_id");
+        });
+        unsafe {
+            ctx.free_value(ret);
+            ctx.free_value(global);
+            Context::free(ctx);
+            Runtime::free(rt);
+        }
+    }
+}
