@@ -1,3 +1,3 @@
 # jj
 
-genuine JavaScript Object Notation processor
+Genuine JavaScript Object Notation processor
