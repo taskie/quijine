@@ -1,9 +1,9 @@
 use crate::{
-    core::{Context, Value},
+    core::{ffi, Context, Value},
     string::QjCString,
     tags::{
-        QjAnyTag, QjBoolTag, QjFloat64Tag, QjIntTag, QjNullTag, QjObjectTag, QjReferenceTag, QjStringTag,
-        QjUndefinedTag, QjValueTag,
+        QjAnyTag, QjBigDecimalTag, QjBigFloatTag, QjBigIntTag, QjBoolTag, QjFloat64Tag, QjIntTag, QjNullTag,
+        QjObjectTag, QjReferenceTag, QjStringTag, QjSymbolTag, QjUndefinedTag, QjValueTag, QjVariant,
     },
     QjContext,
 };
@@ -107,6 +107,26 @@ impl<'q, T> Qj<'q, T> {
     }
 
     // conversion
+
+    pub(crate) fn to_var(&self) -> QjVariant<'_> {
+        match self.value.tag() {
+            ffi::JS_TAG_BIG_DECIMAL => QjVariant::BigDecimal(self.transmute::<QjBigDecimalTag>().clone()),
+            ffi::JS_TAG_BIG_INT => QjVariant::BigInt(self.transmute::<QjBigIntTag>().clone()),
+            ffi::JS_TAG_BIG_FLOAT => QjVariant::BigFloat(self.transmute::<QjBigFloatTag>().clone()),
+            ffi::JS_TAG_SYMBOL => QjVariant::Symbol(self.transmute::<QjSymbolTag>().clone()),
+            ffi::JS_TAG_STRING => QjVariant::String(self.transmute::<QjStringTag>().clone()),
+            ffi::JS_TAG_OBJECT => QjVariant::Object(self.transmute::<QjObjectTag>().clone()),
+            ffi::JS_TAG_INT => QjVariant::Int(self.to_i32().unwrap()),
+            ffi::JS_TAG_BOOL => QjVariant::Bool(self.to_bool().unwrap()),
+            ffi::JS_TAG_NULL => QjVariant::Null,
+            ffi::JS_TAG_UNDEFINED => QjVariant::Undefined,
+            ffi::JS_TAG_UNINITIALIZED => QjVariant::Uninitialized,
+            ffi::JS_TAG_CATCH_OFFSET => QjVariant::CatchOffset,
+            ffi::JS_TAG_EXCEPTION => QjVariant::Exception,
+            ffi::JS_TAG_FLOAT64 => QjVariant::Float64(self.to_f64().unwrap()),
+            _ => panic!("invalid state"),
+        }
+    }
 
     #[inline]
     pub fn to_bool(&self) -> Option<bool> {

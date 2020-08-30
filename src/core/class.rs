@@ -53,11 +53,11 @@ impl Default for ClassDef {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{ClassDef, ClassID, Context, EvalFlags, Runtime, Value};
-    use crate::{js_c_function, js_class_finalizer};
-    use std::cell::RefCell;
-    use std::ffi::c_void;
-    use std::ptr::null_mut;
+    use crate::{
+        core::{ClassDef, ClassID, Context, EvalFlags, Runtime, Value},
+        js_c_function, js_class_finalizer,
+    };
+    use std::{cell::RefCell, ffi::c_void, ptr::null_mut};
 
     struct S1 {
         name: String,
@@ -68,7 +68,7 @@ mod tests {
         static S1_CLASS_ID: RefCell<ClassID> = RefCell::new(ClassID::new(0));
     }
 
-    unsafe fn new_s1<'q, 'a>(ctx: Context<'q>, this_val: Value<'q>, values: &'a [Value<'q>]) -> Value<'q> {
+    unsafe fn new_s1<'q, 'a>(ctx: Context<'q>, _this_val: Value<'q>, _values: &'a [Value<'q>]) -> Value<'q> {
         let obj = S1_CLASS_ID.with(|id| ctx.new_object_class(*id.borrow()));
         let s1 = Box::new(S1 {
             name: "Hello!".to_owned(),
@@ -79,7 +79,7 @@ mod tests {
         obj
     }
 
-    unsafe fn finalize_s1(rt: Runtime, val: Value) {
+    unsafe fn finalize_s1(_rt: Runtime, val: Value) {
         let s1_ptr = S1_CLASS_ID.with(|id| val.opaque(*id.borrow()) as *mut S1);
         Box::from_raw(s1_ptr);
     }

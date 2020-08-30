@@ -2,8 +2,8 @@ use crate::{
     instance::{Qj, QjVec},
     tags::{
         QjAnyTag, QjBigDecimalTag, QjBigFloatTag, QjBigIntTag, QjBoolTag, QjCatchOffsetTag, QjExceptionTag,
-        QjFloat64Tag, QjFunctionBytecodeTag, QjIntTag, QjModuleTag, QjNullTag, QjObjectTag, QjReferenceTag,
-        QjStringTag, QjSymbolTag, QjUndefinedTag, QjUninitializedTag, QjValueTag,
+        QjFloat64Tag, QjIntTag, QjNullTag, QjObjectTag, QjReferenceTag, QjStringTag, QjSymbolTag, QjUndefinedTag,
+        QjUninitializedTag, QjValueTag,
     },
 };
 
@@ -28,8 +28,8 @@ qj_define_aliases!(QjBigIntTag, QjBigInt);
 qj_define_aliases!(QjBigFloatTag, QjBigFloat);
 qj_define_aliases!(QjSymbolTag, QjSymbol);
 qj_define_aliases!(QjStringTag, QjString);
-qj_define_aliases!(QjModuleTag, QjModule);
-qj_define_aliases!(QjFunctionBytecodeTag, QjFunctionBytecode);
+// qj_define_aliases!(QjModuleTag, QjModule);
+// qj_define_aliases!(QjFunctionBytecodeTag, QjFunctionBytecode);
 qj_define_aliases!(QjObjectTag, QjObject);
 
 // values
