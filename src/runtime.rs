@@ -2,7 +2,11 @@ use crate::{
     context::{QjContext, QjContextGuard},
     core::Runtime,
 };
-use std::fmt;
+use std::{ffi::c_void, fmt, ptr::null_mut};
+
+pub struct QjRuntimeOpaque {
+    extra: *mut c_void,
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct QjRuntime<'r>(Runtime<'r>);
@@ -27,6 +31,16 @@ impl<'r> QjRuntime<'r> {
     pub fn run_gc(self) {
         self.0.run_gc();
     }
+
+    #[inline]
+    pub(crate) fn opaque(&self) -> &QjRuntimeOpaque {
+        unsafe { &*(self.0.opaque() as *mut QjRuntimeOpaque) }
+    }
+
+    #[inline]
+    pub(crate) fn opaque_mut(&mut self) -> &mut QjRuntimeOpaque {
+        unsafe { &mut *(self.0.opaque() as *mut QjRuntimeOpaque) }
+    }
 }
 
 pub struct QjRuntimeGuard(QjRuntime<'static>);
@@ -34,7 +48,10 @@ pub struct QjRuntimeGuard(QjRuntime<'static>);
 impl QjRuntimeGuard {
     #[inline]
     pub fn new() -> Self {
-        QjRuntimeGuard(QjRuntime::from(Runtime::new()))
+        let rt = Runtime::new();
+        let opaque = Box::new(QjRuntimeOpaque { extra: null_mut() });
+        rt.set_opaque(Box::into_raw(opaque) as *mut c_void);
+        QjRuntimeGuard(QjRuntime::from(rt))
     }
 
     #[inline]
@@ -69,7 +86,10 @@ unsafe impl Send for QjRuntimeGuard {}
 
 impl Drop for QjRuntimeGuard {
     fn drop(&mut self) {
-        unsafe { Runtime::free(self.0.into()) }
+        unsafe {
+            Box::from_raw((self.0).0.opaque() as *mut QjRuntimeOpaque);
+            Runtime::free(self.0.into())
+        }
     }
 }
 

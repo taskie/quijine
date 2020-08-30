@@ -1,4 +1,4 @@
-use std::{fmt, marker::PhantomData, ptr::NonNull};
+use std::{ffi::c_void, fmt, marker::PhantomData, ptr::NonNull};
 
 use crate::core::ffi;
 
@@ -84,6 +84,16 @@ impl<'q> Runtime<'q> {
         unsafe {
             ffi::JS_NewClass(self.as_ptr(), ClassID::raw(id), &class_def.c_def());
         }
+    }
+
+    #[inline]
+    pub fn opaque(self) -> *mut c_void {
+        unsafe { ffi::JS_GetRuntimeOpaque(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn set_opaque(self, opaque: *mut c_void) {
+        unsafe { ffi::JS_SetRuntimeOpaque(self.as_ptr(), opaque) }
     }
 }
 
