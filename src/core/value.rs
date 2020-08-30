@@ -1,5 +1,5 @@
 use crate::core::{
-    class::ClassID,
+    class::ClassId,
     context::{AsJSContextPointer, Context},
     conversion::AsJSValue,
     ffi,
@@ -175,8 +175,8 @@ impl<'q> Value<'q> {
     // class
 
     #[inline]
-    pub fn opaque(self, clz: ClassID) -> *mut c_void {
-        unsafe { ffi::JS_GetOpaque(self.0, ClassID::raw(clz)) }
+    pub fn opaque(self, clz: ClassId) -> *mut c_void {
+        unsafe { ffi::JS_GetOpaque(self.0, ClassId::raw(clz)) }
     }
 
     #[inline]

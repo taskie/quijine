@@ -1,5 +1,5 @@
 use crate::core::{
-    class::ClassID,
+    class::ClassId,
     conversion::AsJSValue,
     ffi,
     marker::Covariant,
@@ -124,14 +124,14 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn new_object_class(self, clz: ClassID) -> Value<'q> {
-        let value = unsafe { ffi::JS_NewObjectClass(self.as_ptr(), ClassID::raw(clz) as i32) };
+    pub fn new_object_class(self, clz: ClassId) -> Value<'q> {
+        let value = unsafe { ffi::JS_NewObjectClass(self.as_ptr(), ClassId::raw(clz) as i32) };
         Value::from_raw(value, self)
     }
 
     #[inline]
-    pub fn set_class_proto(self, clz: ClassID, proto: Value<'q>) {
-        unsafe { ffi::JS_SetClassProto(self.as_ptr(), ClassID::raw(clz), proto.as_js_value()) }
+    pub fn set_class_proto(self, clz: ClassId, proto: Value<'q>) {
+        unsafe { ffi::JS_SetClassProto(self.as_ptr(), ClassId::raw(clz), proto.as_js_value()) }
     }
 
     #[inline]

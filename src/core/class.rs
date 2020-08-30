@@ -2,12 +2,12 @@ use crate::core::ffi;
 use std::{ffi::CString, ptr::null_mut};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ClassID(u32);
+pub struct ClassId(u32);
 
-impl ClassID {
+impl ClassId {
     #[inline]
-    pub fn new(id: u32) -> ClassID {
-        ClassID(id)
+    pub fn new(id: u32) -> ClassId {
+        ClassId(id)
     }
 
     #[inline]
@@ -54,7 +54,7 @@ impl Default for ClassDef {
 #[cfg(test)]
 mod tests {
     use crate::{
-        core::{ClassDef, ClassID, Context, EvalFlags, Runtime, Value},
+        core::{ClassDef, ClassId, Context, EvalFlags, Runtime, Value},
         js_c_function, js_class_finalizer,
     };
     use std::{cell::RefCell, ffi::c_void, ptr::null_mut};
@@ -65,7 +65,7 @@ mod tests {
     }
 
     thread_local! {
-        static S1_CLASS_ID: RefCell<ClassID> = RefCell::new(ClassID::new(0));
+        static S1_CLASS_ID: RefCell<ClassId> = RefCell::new(ClassId::new(0));
     }
 
     unsafe fn new_s1<'q, 'a>(ctx: Context<'q>, _this_val: Value<'q>, _values: &'a [Value<'q>]) -> Value<'q> {

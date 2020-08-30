@@ -3,7 +3,7 @@ use std::{ffi::c_void, fmt, marker::PhantomData, ptr::NonNull};
 use crate::core::ffi;
 
 use crate::core::{
-    class::{ClassDef, ClassID},
+    class::{ClassDef, ClassId},
     conversion::AsJSValue,
     marker::Covariant,
     value::Value,
@@ -71,18 +71,18 @@ impl<'q> Runtime<'q> {
     }
 
     #[inline]
-    pub fn new_class_id(self) -> ClassID {
+    pub fn new_class_id(self) -> ClassId {
         let mut id = 0;
         unsafe {
             ffi::JS_NewClassID(&mut id);
         };
-        ClassID::new(id)
+        ClassId::new(id)
     }
 
     #[inline]
-    pub fn new_class(self, id: ClassID, class_def: &ClassDef) {
+    pub fn new_class(self, id: ClassId, class_def: &ClassDef) {
         unsafe {
-            ffi::JS_NewClass(self.as_ptr(), ClassID::raw(id), &class_def.c_def());
+            ffi::JS_NewClass(self.as_ptr(), ClassId::raw(id), &class_def.c_def());
         }
     }
 
