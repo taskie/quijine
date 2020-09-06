@@ -1,5 +1,5 @@
 use crate::{conversion::AsJSValue, ffi, Context, Value};
-use std::{ffi::c_void, os::raw::c_int};
+use std::{ffi::c_void, os::raw::c_int, slice};
 
 macro_rules! def_unpack_closure {
     ($name: ident $(, $param: ident : $type: ident)*) => {
@@ -68,4 +68,18 @@ where
     }
     let value = unsafe { ffi::JS_MKPTR(ffi::JS_TAG_NULL, closure as *mut F as *mut std::ffi::c_void) };
     (Some(trampoline::<F>), value)
+}
+
+#[inline]
+pub unsafe fn convert_arguments<'q>(
+    ctx: *mut ffi::JSContext,
+    js_this: ffi::JSValue,
+    argc: c_int,
+    argv: *mut ffi::JSValue,
+) -> (Context<'q>, Value<'q>, Vec<Value<'q>>) {
+    let ctx = Context::from_ptr(ctx);
+    let this = Value::from_raw(js_this, ctx);
+    let args = slice::from_raw_parts(argv, argc as usize);
+    let args: Vec<Value> = args.into_iter().map(|v| Value::from_raw(*v, ctx)).collect();
+    (ctx, this, args)
 }

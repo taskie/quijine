@@ -11,6 +11,9 @@ use std::{
     ffi::{c_void, CString},
     fmt,
     marker::PhantomData,
+    mem::size_of,
+    os::raw::c_int,
+    slice,
 };
 
 #[derive(Clone, Copy)]
@@ -66,11 +69,6 @@ impl<'q> Value<'q> {
     #[inline]
     pub unsafe fn from_static_raw(value: ffi::JSValue) -> Value<'static> {
         Value(value, PhantomData)
-    }
-
-    #[inline]
-    pub fn raw(this: Self) -> ffi::JSValue {
-        this.0
     }
 
     // memory
@@ -205,6 +203,34 @@ impl<'q> Value<'q> {
     pub fn set_opaque(self, opaque: *mut c_void) {
         unsafe { ffi::JS_SetOpaque(self.0, opaque) }
     }
+
+    // array buffer
+
+    pub unsafe fn array_buffer(self, ctx: Context<'q>) -> Option<&[u8]> {
+        let mut len = 0;
+        let bs: *const u8 = ffi::JS_GetArrayBuffer(ctx.as_ptr(), &mut len, self.0);
+        if bs.is_null() {
+            return None;
+        }
+        Some(slice::from_raw_parts(bs, len as usize))
+    }
+
+    pub unsafe fn array_buffer_to_sized<T>(self, ctx: Context<'q>) -> Option<&T> {
+        let mut len = 0;
+        let bs: *const u8 = ffi::JS_GetArrayBuffer(ctx.as_ptr(), &mut len, self.0);
+        if bs.is_null() {
+            return None;
+        }
+        assert_eq!(size_of::<T>(), len as usize);
+        Some(&*(bs as *const T))
+    }
+
+    // C property
+
+    #[inline]
+    pub fn set_property_function_list(self, ctx: Context, tab: &[ffi::JSCFunctionListEntry]) {
+        unsafe { ffi::JS_SetPropertyFunctionList(ctx.as_ptr(), self.0, tab.as_ptr(), tab.len() as c_int) }
+    }
 }
 
 impl fmt::Debug for Value<'_> {
@@ -220,6 +246,6 @@ impl fmt::Debug for Value<'_> {
 
 impl<'q> AsJSValue<'q> for Value<'q> {
     fn as_js_value(&self) -> ffi::JSValue {
-        Value::raw(*self)
+        self.0
     }
 }

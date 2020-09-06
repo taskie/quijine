@@ -1,9 +1,9 @@
 use crate::{
     class::ClassId,
-    conversion::{AsJSContextPointer, AsJSRuntimePointer, AsJSValue},
+    conversion::{AsJSContextPointer, AsJSRuntimePointer, AsJSValue, AsValue},
     ffi,
     flags::{EvalFlags, ParseJSONFlags},
-    function::unpack_closure_to_c_function_data,
+    function::convert_arguments,
     marker::Covariant,
     runtime::Runtime,
     string::CString as CoreCString,
@@ -11,7 +11,7 @@ use crate::{
     value::Value,
 };
 use std::{
-    ffi::CString,
+    ffi::{c_void, CString},
     fmt,
     marker::PhantomData,
     mem::size_of,
@@ -21,17 +21,15 @@ use std::{
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
 pub struct Context<'q>(NonNull<ffi::JSContext>, Covariant<'q>);
 
 impl<'q> Context<'q> {
+    // lifecycle
+
     #[inline]
     pub unsafe fn from_ptr(ptr: *mut ffi::JSContext) -> Context<'q> {
         Context(NonNull::new(ptr).unwrap(), PhantomData)
-    }
-
-    #[inline]
-    pub(crate) unsafe fn from_ptr_unchecked(ptr: *mut ffi::JSContext) -> Context<'q> {
-        Context(NonNull::new_unchecked(ptr), PhantomData)
     }
 
     #[inline]
@@ -45,8 +43,20 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub unsafe fn raw(this: Self) -> *mut ffi::JSContext {
-        this.0.as_ptr()
+    pub fn dup(this: Self) -> Context<'q> {
+        unsafe { Context::from_ptr(ffi::JS_DupContext(this.0.as_ptr())) }
+    }
+
+    // basic
+
+    #[inline]
+    pub fn opaque(self) -> *mut c_void {
+        unsafe { ffi::JS_GetContextOpaque(self.0.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn set_opaque(self, opaque: *mut c_void) {
+        unsafe { ffi::JS_SetContextOpaque(self.0.as_ptr(), opaque) }
     }
 
     #[inline]
@@ -55,82 +65,23 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub unsafe fn free_value(self, value: Value<'q>) {
-        ffi::JS_FreeValue(self.as_ptr(), value.as_js_value());
-    }
-
-    #[inline]
-    pub fn dup_value(self, value: Value<'q>) {
-        unsafe {
-            ffi::JS_DupValue(self.as_ptr(), value.as_js_value());
-        }
-    }
-
-    #[inline]
-    pub unsafe fn free_c_string(self, str: CoreCString<'q>) {
-        ffi::JS_FreeCString(self.as_ptr(), CoreCString::raw(str));
-    }
-
-    #[inline]
-    pub fn eval(self, code: &str, filename: &str, eval_flags: EvalFlags) -> Value<'q> {
-        let c_code = CString::new(code).expect("code");
-        let c_filename = CString::new(filename).expect("filename");
-        let value = unsafe {
-            ffi::JS_Eval(
-                self.as_ptr(),
-                c_code.as_ptr(),
-                c_code.as_bytes().len() as u64,
-                c_filename.as_ptr(),
-                eval_flags.bits() as i32,
-            )
-        };
-        unsafe { Value::from_raw(value, self) }
-    }
-
-    #[inline]
-    pub fn call(self, func_obj: Value, this_obj: Value, args: &[Value]) -> Value<'q> {
-        let mut c_args = Vec::with_capacity(args.len());
-        for arg in args {
-            c_args.push(arg.as_js_value())
-        }
-        let value = unsafe {
-            ffi::JS_Call(
-                self.as_ptr(),
-                func_obj.as_js_value(),
-                this_obj.as_js_value(),
-                c_args.len() as i32,
-                c_args.as_mut_ptr(),
-            )
-        };
-        unsafe { Value::from_raw(value, self) }
-    }
-
-    #[inline]
-    pub fn global_object(self) -> Value<'q> {
-        unsafe { Value::from_raw(ffi::JS_GetGlobalObject(self.as_ptr()), self) }
-    }
-
-    #[inline]
-    pub fn new_object(self) -> Value<'q> {
-        unsafe { Value::from_raw(ffi::JS_NewObject(self.as_ptr()), self) }
-    }
-
-    #[inline]
-    pub fn new_object_class(self, clz: ClassId) -> Value<'q> {
-        unsafe {
-            let value = ffi::JS_NewObjectClass(self.as_ptr(), ClassId::raw(clz) as i32);
-            Value::from_raw(value, self)
-        }
-    }
-
-    #[inline]
     pub fn set_class_proto(self, clz: ClassId, proto: Value<'q>) {
         unsafe { ffi::JS_SetClassProto(self.as_ptr(), ClassId::raw(clz), proto.as_js_value()) }
     }
 
     #[inline]
-    pub fn set_property_function_list(self, obj: Value<'q>, tab: &[ffi::JSCFunctionListEntry]) {
-        unsafe { ffi::JS_SetPropertyFunctionList(self.as_ptr(), obj.as_js_value(), tab.as_ptr(), tab.len() as c_int) }
+    pub fn class_proto(self, clz: ClassId) -> Value<'q> {
+        unsafe { Value::from_raw(ffi::JS_GetClassProto(self.as_ptr(), ClassId::raw(clz)), self) }
+    }
+
+    // value
+
+    #[inline]
+    pub fn new_bool(self, v: bool) -> Value<'q> {
+        unsafe {
+            let value = ffi::JS_NewBool(self.as_ptr(), v as ffi::JS_BOOL);
+            Value::from_raw(value, self)
+        }
     }
 
     #[inline]
@@ -157,6 +108,40 @@ impl<'q> Context<'q> {
         }
     }
 
+    // exception
+
+    #[inline]
+    pub fn throw(self, obj: Value<'q>) -> Value<'q> {
+        unsafe {
+            let value = unsafe { ffi::JS_Throw(self.as_ptr(), obj.as_js_value()) };
+            Value::from_raw(value, self)
+        }
+    }
+
+    #[inline]
+    pub fn exception(self) -> Value<'q> {
+        unsafe {
+            let value = ffi::JS_GetException(self.as_ptr());
+            Value::from_raw(value, self)
+        }
+    }
+
+    // lifecycle (value)
+
+    #[inline]
+    pub unsafe fn free_value(self, value: Value<'q>) {
+        ffi::JS_FreeValue(self.as_ptr(), value.as_js_value());
+    }
+
+    #[inline]
+    pub fn dup_value(self, value: Value<'q>) {
+        unsafe {
+            ffi::JS_DupValue(self.as_ptr(), value.as_js_value());
+        }
+    }
+
+    // string
+
     #[inline]
     pub fn new_string_from_bytes(self, v: &[u8]) -> Value<'q> {
         unsafe {
@@ -173,119 +158,78 @@ impl<'q> Context<'q> {
         self.new_string_from_bytes(s.as_ref().as_bytes())
     }
 
-    // exception
+    #[inline]
+    pub unsafe fn free_c_string(self, str: CoreCString<'q>) {
+        ffi::JS_FreeCString(self.as_ptr(), CoreCString::raw(str));
+    }
+
+    // object
 
     #[inline]
-    pub fn exception(self) -> Value<'q> {
+    pub fn new_object_proto_class(self, proto: Value, clz: ClassId) -> Value<'q> {
         unsafe {
-            let value = ffi::JS_GetException(self.as_ptr());
+            let value = ffi::JS_NewObjectProtoClass(self.as_ptr(), proto.as_js_value(), ClassId::raw(clz) as u32);
             Value::from_raw(value, self)
         }
     }
 
     #[inline]
-    pub fn throw(self, obj: Value<'q>) -> Value<'q> {
+    pub fn new_object_class(self, clz: ClassId) -> Value<'q> {
         unsafe {
-            let value = unsafe { ffi::JS_Throw(self.as_ptr(), obj.as_js_value()) };
+            let value = ffi::JS_NewObjectClass(self.as_ptr(), ClassId::raw(clz) as i32);
             Value::from_raw(value, self)
         }
     }
 
-    // callback
-
-    pub fn new_function<F>(self, func: F, name: &str, length: i32) -> Value<'q>
-    where
-        F: 'static + Send + Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q>,
-    {
-        self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), name, length)
+    #[inline]
+    pub fn new_object_proto(self, proto: Value) -> Value<'q> {
+        unsafe {
+            let value = ffi::JS_NewObjectProto(self.as_ptr(), proto.as_js_value());
+            Value::from_raw(value, self)
+        }
     }
 
-    pub fn new_callback(self, func: Callback<'q, 'static>, _name: &str, length: i32) -> Value<'q> {
-        unsafe extern "C" fn call(
-            ctx: *mut ffi::JSContext,
-            js_this: ffi::JSValue,
-            argc: c_int,
-            argv: *mut ffi::JSValue,
-            _magic: c_int,
-            func_data: *mut ffi::JSValue,
-        ) -> ffi::JSValue {
-            let ctx = Context::from_ptr(ctx);
-            let this = Value::from_raw(js_this, ctx);
-            let mut args: Vec<Value> = Vec::with_capacity(argc as usize);
-            for i in 0..argc {
-                let p = argv.offset(i as isize);
-                let any = Value::from_raw(*p, ctx);
-                args.push(any);
-            }
-            let cb = Value::from_raw(*func_data, ctx);
-            log::debug!("load pointer from ArrayBuffer");
-            let func = ctx.array_buffer_to_sized::<Callback>(&cb).unwrap();
-            let any = (*func)(ctx, this, args.as_slice());
-            (&any).as_js_value()
+    #[inline]
+    pub fn new_object(self) -> Value<'q> {
+        unsafe { Value::from_raw(ffi::JS_NewObject(self.as_ptr()), self) }
+    }
+
+    // call
+
+    #[inline]
+    pub fn call(self, func_obj: Value, this_obj: Value, args: &[Value]) -> Value<'q> {
+        let mut c_args: Vec<_> = args.iter().map(|v| v.as_js_value()).collect();
+        let value = unsafe {
+            ffi::JS_Call(
+                self.as_ptr(),
+                func_obj.as_js_value(),
+                this_obj.as_js_value(),
+                c_args.len() as i32,
+                c_args.as_mut_ptr(),
+            )
         };
-        unsafe {
-            log::debug!("save pointer to ArrayBuffer");
-            let cb = self.new_array_buffer_copy_from_sized::<Callback>(func);
-            log::debug!("new c function data");
-            self.new_c_function_data(Some(call), length, 0, vec![cb])
-        }
+        unsafe { Value::from_raw(value, self) }
     }
 
-    pub unsafe fn new_c_function(self, func: ffi::JSCFunction, name: &str, length: i32) -> Value<'q> {
-        let c_name = CString::new(name).unwrap();
-        let value = ffi::JS_NewCFunction(self.as_ptr(), func, c_name.as_ptr(), length);
-        Value::from_raw(value, self)
+    #[inline]
+    pub fn eval(self, code: &str, filename: &str, eval_flags: EvalFlags) -> Value<'q> {
+        let c_code = CString::new(code).expect("code");
+        let c_filename = CString::new(filename).expect("filename");
+        let value = unsafe {
+            ffi::JS_Eval(
+                self.as_ptr(),
+                c_code.as_ptr(),
+                c_code.as_bytes().len() as u64,
+                c_filename.as_ptr(),
+                eval_flags.bits() as i32,
+            )
+        };
+        unsafe { Value::from_raw(value, self) }
     }
 
-    pub unsafe fn new_c_function_data(
-        self,
-        func: ffi::JSCFunctionData,
-        length: i32,
-        magic: i32,
-        data: Vec<Value<'q>>,
-    ) -> Value<'q> {
-        let mut js_data = Vec::with_capacity(data.len());
-        for datum in &data {
-            js_data.push(datum.as_js_value());
-        }
-        let value = ffi::JS_NewCFunctionData(
-            self.as_ptr(),
-            func,
-            length,
-            magic,
-            data.len() as i32,
-            js_data.as_mut_ptr(),
-        );
-        Value::from_raw(value, self)
-    }
-
-    pub unsafe fn new_array_buffer_copy(self, t: &[u8]) -> Value<'q> {
-        let value = ffi::JS_NewArrayBufferCopy(self.as_ptr(), t.as_ptr(), t.len() as u64);
-        Value::from_raw(value, self)
-    }
-
-    pub unsafe fn new_array_buffer_copy_from_sized<T>(self, t: T) -> Value<'q> {
-        let buf = util::to_vec(t);
-        self.new_array_buffer_copy(buf.as_slice())
-    }
-
-    pub unsafe fn array_buffer<'v>(self, v: &'v Value<'q>) -> Option<&'v [u8]> {
-        let mut len = 0;
-        let bs: *const u8 = ffi::JS_GetArrayBuffer(self.as_ptr(), &mut len, v.as_js_value());
-        if bs.is_null() {
-            return None;
-        }
-        Some(slice::from_raw_parts(bs, len as usize))
-    }
-
-    pub unsafe fn array_buffer_to_sized<'v, T>(self, v: &'v Value<'q>) -> Option<&'v T> {
-        let mut len = 0;
-        let bs: *const u8 = ffi::JS_GetArrayBuffer(self.as_ptr(), &mut len, v.as_js_value());
-        if bs.is_null() {
-            return None;
-        }
-        assert_eq!(size_of::<T>(), len as usize);
-        Some(&*(bs as *const T))
+    #[inline]
+    pub fn global_object(self) -> Value<'q> {
+        unsafe { Value::from_raw(ffi::JS_GetGlobalObject(self.as_ptr()), self) }
     }
 
     // json
@@ -333,6 +277,83 @@ impl<'q> Context<'q> {
             Value::from_raw(value, self)
         }
     }
+
+    // array buffer
+
+    #[inline]
+    pub fn new_array_buffer_copy(self, t: &[u8]) -> Value<'q> {
+        unsafe {
+            let value = ffi::JS_NewArrayBufferCopy(self.as_ptr(), t.as_ptr(), t.len() as u64);
+            Value::from_raw(value, self)
+        }
+    }
+
+    #[inline]
+    pub fn new_array_buffer_copy_from_sized<T: 'q>(self, t: T) -> Value<'q> {
+        unsafe {
+            let buf = util::to_vec(t);
+            self.new_array_buffer_copy(buf.as_slice())
+        }
+    }
+
+    // callback
+
+    pub fn new_function<F>(self, func: F, name: &str, length: i32) -> Value<'q>
+    where
+        F: 'static + Send + Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q>,
+    {
+        self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), name, length)
+    }
+
+    pub fn new_callback(self, mut func: Box<Callback<'q, 'static>>, _name: &str, length: i32) -> Value<'q> {
+        unsafe extern "C" fn call(
+            ctx: *mut ffi::JSContext,
+            js_this: ffi::JSValue,
+            argc: c_int,
+            argv: *mut ffi::JSValue,
+            _magic: c_int,
+            func_data: *mut ffi::JSValue,
+        ) -> ffi::JSValue {
+            let (ctx, this, args) = convert_arguments(ctx, js_this, argc, argv);
+            let cb = Value::from_raw(*func_data, ctx);
+            log::trace!("load pointer from ArrayBuffer");
+            let func = cb.array_buffer_to_sized::<*mut Callback>(ctx).unwrap();
+            let any = (**func)(ctx, this, args.as_slice());
+            (&any).as_js_value()
+        };
+        unsafe {
+            log::trace!("save pointer to ArrayBuffer");
+            let cb = self.new_array_buffer_copy_from_sized::<*mut Callback>(func.as_mut());
+            log::trace!("new c function data");
+            self.new_c_function_data(Some(call), length, 0, vec![cb])
+        }
+    }
+
+    pub fn new_c_function(self, func: ffi::JSCFunction, name: &str, length: i32) -> Value<'q> {
+        let c_name = CString::new(name).unwrap();
+        unsafe {
+            let value = ffi::JS_NewCFunction(self.as_ptr(), func, c_name.as_ptr(), length);
+            Value::from_raw(value, self)
+        }
+    }
+
+    pub fn new_c_function_data<D>(self, func: ffi::JSCFunctionData, length: i32, magic: i32, data: D) -> Value<'q>
+    where
+        D: Into<Vec<Value<'q>>>,
+    {
+        let mut js_data: Vec<_> = data.into().into_iter().map(|v| v.as_js_value()).collect();
+        unsafe {
+            let value = ffi::JS_NewCFunctionData(
+                self.as_ptr(),
+                func,
+                length,
+                magic,
+                js_data.len() as i32,
+                js_data.as_mut_ptr(),
+            );
+            Value::from_raw(value, self)
+        }
+    }
 }
 
 impl fmt::Debug for Context<'_> {
@@ -347,4 +368,4 @@ impl<'q> AsJSContextPointer<'q> for Context<'q> {
     }
 }
 
-pub(crate) type Callback<'q, 'a> = Box<dyn Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q> + 'a>;
+pub(crate) type Callback<'q, 'a> = dyn Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q> + 'a;

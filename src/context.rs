@@ -123,7 +123,7 @@ impl<'q> QjContext<'q> {
             }
             let cb = Value::from_raw(*func_data, ctx);
             log::debug!("load pointer from ArrayBuffer");
-            let func = ctx.array_buffer_to_sized::<QjCallback>(&cb).unwrap();
+            let func = cb.array_buffer_to_sized::<QjCallback>(ctx).unwrap();
 
             log::debug!("this");
             let this = Qj::<QjAnyTag>::from(this, ctx);

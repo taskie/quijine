@@ -69,7 +69,7 @@ pub(crate) fn register_class<T: QjClass + 'static>(rt: Runtime, clz: ClassId) {
     );
     let proto = ctx.new_object();
     rctx.set_class_proto(clz, proto.as_value());
-    rctx.set_property_function_list(proto.as_value(), &[]);
+    proto.as_value().set_property_function_list(rctx, &[]);
     let mut methods = Methods {
         context: ctx,
         proto: &proto,
