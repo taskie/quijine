@@ -1,7 +1,7 @@
 use crate::{
     class::{QjClass, QjClassMethods},
     tags::{QjAnyTag, QjObjectTag},
-    Qj, QjContext, QjResult, QjRuntime, QjValue, QjVec,
+    Qj, QjContext, QjResult, QjRuntime, QjVec,
 };
 use log::trace;
 use quilt::{self, ffi, ClassDef, ClassId, Context, Runtime, Value};
@@ -89,7 +89,6 @@ mod tests {
         tags::QjObjectTag,
         Qj, QjContext, QjEvalFlags, QjResult,
     };
-    use log::trace;
 
     struct S1 {
         name: String,
@@ -102,7 +101,9 @@ mod tests {
         }
 
         fn add_methods<'q, T: QjClassMethods<'q, Self>>(methods: &mut T) {
-            methods.add_method("name", |ctx, t, this, args| Ok(ctx.new_string(t.name.as_str()).into()));
+            methods.add_method("name", |ctx, t, _this, _args| {
+                Ok(ctx.new_string(t.name.as_str()).into())
+            });
         }
     }
 
@@ -114,7 +115,7 @@ mod tests {
             global.set(
                 "S1",
                 ctx.new_function(
-                    |ctx, this, args| {
+                    |ctx, _this, _args| {
                         let mut obj = ctx.new_object_class::<S1>();
                         let s1 = S1 {
                             name: "hoge".to_owned(),

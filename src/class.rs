@@ -1,9 +1,9 @@
 use crate::{
     instance::Qj,
     tags::{QjAnyTag, QjObjectTag},
-    QjContext, QjResult, QjRuntime, QjValue, QjVec,
+    QjContext, QjResult, QjVec,
 };
-use std::{cell::RefCell, marker::Sync};
+use std::marker::Sync;
 
 pub trait QjClassMethods<'q, T: QjClass> {
     fn add_method<F>(&mut self, name: &str, method: F)

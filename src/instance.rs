@@ -8,7 +8,7 @@ use crate::{
     QjContext, QjRuntime,
 };
 use quilt::{ffi, Context, Value};
-use std::{ffi::c_void, fmt, marker::PhantomData, mem, ptr, ptr::null_mut, sync::atomic};
+use std::{ffi::c_void, fmt, marker::PhantomData, ptr, ptr::null_mut, sync::atomic};
 
 static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
 
