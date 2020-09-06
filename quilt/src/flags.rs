@@ -1,0 +1,31 @@
+use crate::ffi;
+use bitflags::bitflags;
+
+bitflags! {
+    pub struct EvalFlags: u32 {
+        /// global code (default)
+        const TYPE_GLOBAL = ffi::JS_EVAL_TYPE_GLOBAL;
+        /// module code
+        const TYPE_MODULE = ffi::JS_EVAL_TYPE_MODULE;
+        // direct call (internal use)
+        // const TypeDirect = ffi::JS_EVAL_TYPE_DIRECT;
+        // indirect call (internal use)
+        // const TypeInDirect = ffi::JS_EVAL_TYPE_INDIRECT;
+        const TYPE_MASK = ffi::JS_EVAL_TYPE_MASK;
+
+        /// force 'strict' mode
+        const FLAG_STRICT = ffi::JS_EVAL_FLAG_STRICT;
+        /// force 'strip' mode
+        const FLAG_STRIP = ffi::JS_EVAL_FLAG_STRIP;
+        /// compile but do not run. The result is an object with a
+        /// JS_TAG_FUNCTION_BYTECODE or JS_TAG_MODULE tag. It can be executed
+        /// with JS_EvalFunction().
+        const FLAG_COMPILE_ONLY = ffi::JS_EVAL_FLAG_COMPILE_ONLY;
+    }
+}
+
+bitflags! {
+    pub struct ParseJSONFlags: u32 {
+        const EXT = 0b0001;
+    }
+}

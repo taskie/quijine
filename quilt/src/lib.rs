@@ -8,13 +8,16 @@ pub mod util;
 
 mod class;
 mod context;
+mod enums;
+mod flags;
 mod function;
 mod runtime;
 mod string;
 mod value;
 
 pub use class::{ClassDef, ClassId};
-pub use context::{AsJSContextPointer, Context, EvalFlags, ParseJSONFlags};
+pub use context::{AsJSContextPointer, Context};
+pub use flags::EvalFlags;
 pub use runtime::Runtime;
 pub use string::CString;
 pub use value::Value;
