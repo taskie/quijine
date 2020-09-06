@@ -242,6 +242,20 @@ dependencies = [
  "lazy_static",
  "libquickjs-sys",
  "log",
+ "quilt",
+ "rand",
+ "rand_xorshift",
+]
+
+[[package]]
+name = "quilt"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "env_logger",
+ "lazy_static",
+ "libquickjs-sys",
+ "log",
  "rand",
  "rand_xorshift",
 ]

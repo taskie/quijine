@@ -1,4 +1,4 @@
-use crate::core::ffi;
+use crate::ffi;
 use std::{ffi::CString, ptr::null_mut};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -54,7 +54,7 @@ impl Default for ClassDef {
 #[cfg(test)]
 mod tests {
     use crate::{
-        core::{ClassDef, ClassId, Context, EvalFlags, Runtime, Value},
+        quilt::{ClassDef, ClassId, Context, EvalFlags, Runtime, Value},
         js_c_function, js_class_finalizer,
     };
     use std::{cell::RefCell, ffi::c_void, ptr::null_mut};

@@ -1,12 +1,12 @@
 use crate::{
     class::QjClass,
-    core::{conversion::AsJSValue, ffi, Context, Value},
     error::{QjError, QjErrorValue, QjResult},
     instance::QjVec,
     runtime::QjRuntime,
     tags::{QjAnyTag, QjIntTag, QjNullTag, QjObjectTag, QjStringTag, QjUndefinedTag},
     Qj, QjEvalFlags, QjRuntimeGuard,
 };
+use quilt::{conversion::AsJSValue, ffi, Context, Value};
 use std::{fmt, os::raw::c_int};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]

@@ -1,4 +1,4 @@
-use crate::core::{
+use crate::{
     class::{ClassDef, ClassId},
     conversion::AsJSValue,
     ffi,

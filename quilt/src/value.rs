@@ -1,4 +1,4 @@
-use crate::core::{
+use crate::{
     class::ClassId,
     context::{AsJSContextPointer, Context},
     conversion::AsJSValue,
@@ -18,17 +18,17 @@ pub struct Value<'q>(ffi::JSValue, Covariant<'q>);
 
 impl<'q> Value<'q> {
     #[inline]
-    pub(crate) fn from_raw(value: ffi::JSValue, _ctx: Context<'q>) -> Value<'q> {
+    pub fn from_raw(value: ffi::JSValue, _ctx: Context<'q>) -> Value<'q> {
         Value(value, PhantomData)
     }
 
     #[inline]
-    pub(crate) fn from_raw_with_runtime(value: ffi::JSValue, _ctx: Runtime<'q>) -> Value<'q> {
+    pub fn from_raw_with_runtime(value: ffi::JSValue, _ctx: Runtime<'q>) -> Value<'q> {
         Value(value, PhantomData)
     }
 
     #[inline]
-    pub(crate) fn from_static_raw(value: ffi::JSValue) -> Value<'static> {
+    pub fn from_static_raw(value: ffi::JSValue) -> Value<'static> {
         Value(value, PhantomData)
     }
 
@@ -39,7 +39,7 @@ impl<'q> Value<'q> {
 
     // memory
 
-    pub(crate) fn ref_count(self) -> Option<usize> {
+    pub fn ref_count(self) -> Option<usize> {
         unsafe {
             if !ffi::JS_VALUE_HAS_REF_COUNT(self.0) {
                 return None;
@@ -53,7 +53,7 @@ impl<'q> Value<'q> {
     // type
 
     #[inline]
-    pub(crate) fn tag(self) -> i32 {
+    pub fn tag(self) -> i32 {
         unsafe { ffi::JS_VALUE_GET_TAG(self.0) }
     }
 

@@ -1,4 +1,4 @@
-use crate::core::marker::Invariant;
+use crate::marker::Invariant;
 use std::{ffi::CStr, marker::PhantomData, os::raw::c_char};
 
 #[derive(Clone, Copy, Debug)]

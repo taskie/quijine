@@ -1,4 +1,4 @@
-use crate::core::{CString, Context};
+use quilt::{CString, Context};
 
 #[derive(Debug)]
 pub struct QjCString<'q> {

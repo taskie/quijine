@@ -1,6 +1,5 @@
 use crate::instance::Qj;
-use bitflags::_core::fmt::Formatter;
-use std::fmt;
+use std::{fmt, fmt::Formatter};
 
 // any
 pub struct QjAnyTag;

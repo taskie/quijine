@@ -1,14 +1,14 @@
 [package]
-name = "quijine"
+name = "quilt"
 version = "0.1.0"
 authors = ["taskie <t@skie.jp>"]
 edition = "2018"
+publish = false
 
 [dependencies]
 log = "0.4.0"
 bitflags = { version = "1.2.1" }
 lazy_static = "1.4.0"
-quilt = { path = "./quilt" }
 
 [dependencies.libquickjs-sys]
 version = "0.7.0"
@@ -20,9 +20,3 @@ version = "0.7.0"
 env_logger = "0.7.1"
 rand = "0.7.3"
 rand_xorshift = "0.2.0"
-
-[workspace]
-members = [
-    "quilt",
-    "jj",
-]

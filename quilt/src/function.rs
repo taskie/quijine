@@ -1,4 +1,4 @@
-use crate::core::{conversion::AsJSValue, ffi, Context, Value};
+use crate::{conversion::AsJSValue, ffi, Context, Value};
 use std::{ffi::c_void, os::raw::c_int};
 
 macro_rules! def_unpack_closure {

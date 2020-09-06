@@ -1,10 +1,10 @@
 use crate::{
     class::{QjClass, QjClassMethods},
-    core::{self, ffi, ClassDef, ClassId, Context, Runtime, Value},
     tags::{QjAnyTag, QjObjectTag},
     Qj, QjContext, QjResult, QjRuntime, QjValue, QjVec,
 };
 use log::trace;
+use quilt::{self, ffi, ClassDef, ClassId, Context, Runtime, Value};
 use std::{marker::Sync, ptr};
 
 unsafe fn finalize<T: QjClass + 'static>(rrt: Runtime, val: Value) {
@@ -54,7 +54,7 @@ pub(crate) fn register_class<T: QjClass + 'static>(rt: Runtime, clz: ClassId) {
     trace!("registering class: {} ({:?})", T::name(), clz);
     let rctx = Context::new(rt);
     let ctx = QjContext::from(rctx);
-    unsafe extern "C" fn finalizer<T: QjClass + 'static>(rt: *mut core::ffi::JSRuntime, val: core::ffi::JSValue) {
+    unsafe extern "C" fn finalizer<T: QjClass + 'static>(rt: *mut quilt::ffi::JSRuntime, val: quilt::ffi::JSValue) {
         let rt = Runtime::from_ptr(rt);
         let val = Value::from_raw_with_runtime(val, rt);
         finalize::<T>(rt, val)

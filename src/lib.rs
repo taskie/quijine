@@ -1,9 +1,6 @@
 #[macro_use]
 extern crate bitflags;
 
-#[macro_use]
-mod core;
-
 mod aliases;
 mod class;
 mod class_util;
@@ -16,7 +13,7 @@ mod string;
 
 pub mod tags;
 
-pub use crate::core::EvalFlags as QjEvalFlags;
+pub use quilt::EvalFlags as QjEvalFlags;
 
 pub use aliases::*;
 pub use context::{QjContext, QjContextGuard};

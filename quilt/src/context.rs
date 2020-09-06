@@ -1,4 +1,4 @@
-use crate::core::{
+use crate::{
     class::ClassId,
     conversion::AsJSValue,
     ffi,
@@ -9,6 +9,7 @@ use crate::core::{
     util,
     value::Value,
 };
+use bitflags::bitflags;
 use std::{
     ffi::CString,
     fmt,
@@ -136,7 +137,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub(crate) fn set_property_function_list(self, obj: Value<'q>, tab: &[ffi::JSCFunctionListEntry]) {
+    pub fn set_property_function_list(self, obj: Value<'q>, tab: &[ffi::JSCFunctionListEntry]) {
         unsafe { ffi::JS_SetPropertyFunctionList(self.as_ptr(), obj.as_js_value(), tab.as_ptr(), tab.len() as c_int) }
     }
 
@@ -226,13 +227,13 @@ impl<'q> Context<'q> {
         }
     }
 
-    pub(crate) unsafe fn new_c_function(self, func: ffi::JSCFunction, name: &str, length: i32) -> Value<'q> {
+    pub unsafe fn new_c_function(self, func: ffi::JSCFunction, name: &str, length: i32) -> Value<'q> {
         let c_name = CString::new(name).unwrap();
         let value = ffi::JS_NewCFunction(self.as_ptr(), func, c_name.as_ptr(), length);
         Value::from_raw(value, self)
     }
 
-    pub(crate) unsafe fn new_c_function_data(
+    pub unsafe fn new_c_function_data(
         self,
         func: ffi::JSCFunctionData,
         length: i32,
@@ -254,17 +255,17 @@ impl<'q> Context<'q> {
         Value::from_raw(value, self)
     }
 
-    pub(crate) unsafe fn new_array_buffer_copy(self, t: &[u8]) -> Value<'q> {
+    pub unsafe fn new_array_buffer_copy(self, t: &[u8]) -> Value<'q> {
         let value = ffi::JS_NewArrayBufferCopy(self.as_ptr(), t.as_ptr(), t.len() as u64);
         Value::from_raw(value, self)
     }
 
-    pub(crate) unsafe fn new_array_buffer_copy_from_sized<T>(self, t: T) -> Value<'q> {
+    pub unsafe fn new_array_buffer_copy_from_sized<T>(self, t: T) -> Value<'q> {
         let buf = util::to_vec(t);
         self.new_array_buffer_copy(buf.as_slice())
     }
 
-    pub(crate) unsafe fn array_buffer<'v>(self, v: &'v Value<'q>) -> Option<&'v [u8]> {
+    pub unsafe fn array_buffer<'v>(self, v: &'v Value<'q>) -> Option<&'v [u8]> {
         let mut len = 0;
         let bs: *const u8 = ffi::JS_GetArrayBuffer(self.as_ptr(), &mut len, v.as_js_value());
         if bs.is_null() {
@@ -273,7 +274,7 @@ impl<'q> Context<'q> {
         Some(slice::from_raw_parts(bs, len as usize))
     }
 
-    pub(crate) unsafe fn array_buffer_to_sized<'v, T>(self, v: &'v Value<'q>) -> Option<&'v T> {
+    pub unsafe fn array_buffer_to_sized<'v, T>(self, v: &'v Value<'q>) -> Option<&'v T> {
         let mut len = 0;
         let bs: *const u8 = ffi::JS_GetArrayBuffer(self.as_ptr(), &mut len, v.as_js_value());
         if bs.is_null() {

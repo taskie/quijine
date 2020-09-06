@@ -1,4 +1,4 @@
-use crate::core::{ffi, Value};
+use crate::{ffi, Value};
 
 pub trait AsValue<'q> {
     fn as_value(&self) -> Value<'q>;

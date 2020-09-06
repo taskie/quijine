@@ -120,8 +120,8 @@ pub unsafe fn JS_IsUninitialized(v: JSValue) -> bool {
 #[macro_export]
 macro_rules! JS_MKVAL {
     ($tag: expr, $val: expr) => {
-        crate::core::ffi::JSValue {
-            u: crate::core::ffi::JSValueUnion { int32: $val as i32 },
+        crate::ffi::JSValue {
+            u: crate::ffi::JSValueUnion { int32: $val as i32 },
             tag: $tag as i64,
         }
     };
@@ -130,8 +130,8 @@ macro_rules! JS_MKVAL {
 #[macro_export]
 macro_rules! JS_MKPTR {
     ($tag: expr, $p: expr) => {
-        crate::core::ffi::JSValue {
-            u: crate::core::ffi::JSValueUnion {
+        crate::ffi::JSValue {
+            u: crate::ffi::JSValueUnion {
                 ptr: $p as *mut std::ffi::c_void,
             },
             tag: $tag as i64,
