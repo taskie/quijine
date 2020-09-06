@@ -94,7 +94,7 @@ impl<'q> Context<'q> {
                 eval_flags.bits() as i32,
             )
         };
-        Value::from_raw(value, self)
+        unsafe { Value::from_raw(value, self) }
     }
 
     #[inline]
@@ -112,23 +112,25 @@ impl<'q> Context<'q> {
                 c_args.as_mut_ptr(),
             )
         };
-        Value::from_raw(value, self)
+        unsafe { Value::from_raw(value, self) }
     }
 
     #[inline]
     pub fn global_object(self) -> Value<'q> {
-        Value::from_raw(unsafe { ffi::JS_GetGlobalObject(self.as_ptr()) }, self)
+        unsafe { Value::from_raw(ffi::JS_GetGlobalObject(self.as_ptr()), self) }
     }
 
     #[inline]
     pub fn new_object(self) -> Value<'q> {
-        Value::from_raw(unsafe { ffi::JS_NewObject(self.as_ptr()) }, self)
+        unsafe { Value::from_raw(ffi::JS_NewObject(self.as_ptr()), self) }
     }
 
     #[inline]
     pub fn new_object_class(self, clz: ClassId) -> Value<'q> {
-        let value = unsafe { ffi::JS_NewObjectClass(self.as_ptr(), ClassId::raw(clz) as i32) };
-        Value::from_raw(value, self)
+        unsafe {
+            let value = ffi::JS_NewObjectClass(self.as_ptr(), ClassId::raw(clz) as i32);
+            Value::from_raw(value, self)
+        }
     }
 
     #[inline]
@@ -143,26 +145,34 @@ impl<'q> Context<'q> {
 
     #[inline]
     pub fn new_int32(self, v: i32) -> Value<'q> {
-        let value = unsafe { ffi::JS_NewInt32(self.as_ptr(), v) };
-        Value::from_raw(value, self)
+        unsafe {
+            let value = ffi::JS_NewInt32(self.as_ptr(), v);
+            Value::from_raw(value, self)
+        }
     }
 
     #[inline]
     pub fn new_int64(self, v: i64) -> Value<'q> {
-        let value = unsafe { ffi::JS_NewInt64(self.as_ptr(), v) };
-        Value::from_raw(value, self)
+        unsafe {
+            let value = ffi::JS_NewInt64(self.as_ptr(), v);
+            Value::from_raw(value, self)
+        }
     }
 
     #[inline]
     pub fn new_float64(self, v: f64) -> Value<'q> {
-        let value = unsafe { ffi::JS_NewFloat64(self.as_ptr(), v) };
-        Value::from_raw(value, self)
+        unsafe {
+            let value = ffi::JS_NewFloat64(self.as_ptr(), v);
+            Value::from_raw(value, self)
+        }
     }
 
     #[inline]
     pub fn new_string_from_bytes(self, v: &[u8]) -> Value<'q> {
-        let value = unsafe { ffi::JS_NewStringLen(self.as_ptr(), v.as_ptr() as *const c_char, v.len() as u64) };
-        Value::from_raw(value, self)
+        unsafe {
+            let value = ffi::JS_NewStringLen(self.as_ptr(), v.as_ptr() as *const c_char, v.len() as u64);
+            Value::from_raw(value, self)
+        }
     }
 
     #[inline]
@@ -177,14 +187,18 @@ impl<'q> Context<'q> {
 
     #[inline]
     pub fn exception(self) -> Value<'q> {
-        let value = unsafe { ffi::JS_GetException(self.as_ptr()) };
-        Value::from_raw(value, self)
+        unsafe {
+            let value = ffi::JS_GetException(self.as_ptr());
+            Value::from_raw(value, self)
+        }
     }
 
     #[inline]
     pub fn throw(self, obj: Value<'q>) -> Value<'q> {
-        let value = unsafe { ffi::JS_Throw(self.as_ptr(), obj.as_js_value()) };
-        Value::from_raw(value, self)
+        unsafe {
+            let value = unsafe { ffi::JS_Throw(self.as_ptr(), obj.as_js_value()) };
+            Value::from_raw(value, self)
+        }
     }
 
     // callback
@@ -290,44 +304,44 @@ impl<'q> Context<'q> {
     pub fn parse_json(self, buf: &str, filename: &str) -> Value<'q> {
         let c_buf = CString::new(buf).expect("buf");
         let c_filename = CString::new(filename).expect("filename");
-        let value = unsafe {
-            ffi::JS_ParseJSON(
+        unsafe {
+            let value = ffi::JS_ParseJSON(
                 self.as_ptr(),
                 c_buf.as_ptr(),
                 c_buf.as_bytes().len() as u64,
                 c_filename.as_ptr(),
-            )
-        };
-        Value::from_raw(value, self)
+            );
+            Value::from_raw(value, self)
+        }
     }
 
     #[inline]
     pub fn parse_json2(self, buf: &str, filename: &str, flags: ParseJSONFlags) -> Value<'q> {
         let c_buf = CString::new(buf).expect("buf");
         let c_filename = CString::new(filename).expect("filename");
-        let value = unsafe {
-            ffi::JS_ParseJSON2(
+        unsafe {
+            let value = ffi::JS_ParseJSON2(
                 self.as_ptr(),
                 c_buf.as_ptr(),
                 c_buf.as_bytes().len() as u64,
                 c_filename.as_ptr(),
                 flags.bits() as i32,
-            )
-        };
-        Value::from_raw(value, self)
+            );
+            Value::from_raw(value, self)
+        }
     }
 
     #[inline]
     pub fn json_stringify(self, obj: Value<'q>, replacer: Value<'q>, space0: Value<'q>) -> Value<'q> {
-        let value = unsafe {
-            ffi::JS_JSONStringify(
+        unsafe {
+            let value = ffi::JS_JSONStringify(
                 self.as_ptr(),
                 obj.as_js_value(),
                 replacer.as_js_value(),
                 space0.as_js_value(),
-            )
-        };
-        Value::from_raw(value, self)
+            );
+            Value::from_raw(value, self)
+        }
     }
 }
 

@@ -18,17 +18,17 @@ pub struct Value<'q>(ffi::JSValue, Covariant<'q>);
 
 impl<'q> Value<'q> {
     #[inline]
-    pub fn from_raw(value: ffi::JSValue, _ctx: Context<'q>) -> Value<'q> {
+    pub unsafe fn from_raw(value: ffi::JSValue, _ctx: Context<'q>) -> Value<'q> {
         Value(value, PhantomData)
     }
 
     #[inline]
-    pub fn from_raw_with_runtime(value: ffi::JSValue, _ctx: Runtime<'q>) -> Value<'q> {
+    pub unsafe fn from_raw_with_runtime(value: ffi::JSValue, _rt: Runtime<'q>) -> Value<'q> {
         Value(value, PhantomData)
     }
 
     #[inline]
-    pub fn from_static_raw(value: ffi::JSValue) -> Value<'static> {
+    pub(crate) unsafe fn from_static_raw(value: ffi::JSValue) -> Value<'static> {
         Value(value, PhantomData)
     }
 
@@ -85,17 +85,17 @@ impl<'q> Value<'q> {
 
     #[inline]
     pub fn undefined() -> Value<'static> {
-        Value::from_static_raw(ffi::JS_UNDEFINED)
+        unsafe { Value::from_static_raw(ffi::JS_UNDEFINED) }
     }
 
     #[inline]
     pub fn null() -> Value<'static> {
-        Value::from_static_raw(ffi::JS_NULL)
+        unsafe { Value::from_static_raw(ffi::JS_NULL) }
     }
 
     #[inline]
     pub fn exception() -> Value<'static> {
-        Value::from_static_raw(ffi::JS_EXCEPTION)
+        unsafe { Value::from_static_raw(ffi::JS_EXCEPTION) }
     }
 
     // conversion
@@ -162,8 +162,10 @@ impl<'q> Value<'q> {
         K: AsRef<str>,
     {
         let c_key = CString::new(key.as_ref()).unwrap();
-        let value = unsafe { ffi::JS_GetPropertyStr(ctx.as_ptr(), self.as_js_value(), c_key.as_ptr()) };
-        Value::from_raw(value, ctx)
+        unsafe {
+            let value = ffi::JS_GetPropertyStr(ctx.as_ptr(), self.as_js_value(), c_key.as_ptr());
+            Value::from_raw(value, ctx)
+        }
     }
 
     #[inline]
