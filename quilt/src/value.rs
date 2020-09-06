@@ -20,7 +20,7 @@ macro_rules! def_is_some {
     ($name: ident, $f: expr) => {
         #[inline]
         pub fn $name(self) -> bool {
-            unsafe { $f(self.0) }
+            unsafe { $f(self.0) != 0 }
         }
     };
 }

@@ -66,6 +66,6 @@ where
         let closure: &mut F = unsafe { &mut *((*data).u.ptr as *mut F) };
         (*closure)(ctx, this_val, argc, argv)
     }
-    let value = JS_MKPTR!(ffi::JS_TAG_NULL, closure as *mut F as *mut std::ffi::c_void);
+    let value = unsafe { ffi::JS_MKPTR(ffi::JS_TAG_NULL, closure as *mut F as *mut std::ffi::c_void) };
     (Some(trampoline::<F>), value)
 }
