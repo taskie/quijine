@@ -39,11 +39,15 @@ impl<'q> Value<'q> {
 
     // memory
 
+    pub fn has_ref_count(self) -> bool {
+        unsafe { ffi::JS_VALUE_HAS_REF_COUNT(self.0) }
+    }
+
     pub fn ref_count(self) -> Option<usize> {
+        if !self.has_ref_count() {
+            return None;
+        }
         unsafe {
-            if !ffi::JS_VALUE_HAS_REF_COUNT(self.0) {
-                return None;
-            }
             let p = ffi::JS_VALUE_GET_PTR(self.0) as *mut ffi::JSRefCountHeader;
             let pref: &mut ffi::JSRefCountHeader = &mut *p;
             Some(pref.ref_count as usize)
