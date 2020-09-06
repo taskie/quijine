@@ -55,7 +55,7 @@ impl<'r> QjRuntime<'r> {
         if let Some(class_id) = class_id {
             return class_id;
         }
-        let class_id = self.0.new_class_id();
+        let class_id = ClassId::generate();
         register_class::<T>(self.0, class_id);
         self.opaque_mut().registered_classes.insert(TypeId::of::<T>(), class_id);
         class_id

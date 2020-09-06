@@ -1,19 +1,43 @@
 use crate::ffi;
-use std::{ffi::CString, ptr::null_mut};
+use lazy_static::lazy_static;
+use std::{ffi::CString, ptr::null_mut, sync::Mutex};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[repr(transparent)]
 pub struct ClassId(u32);
 
 impl ClassId {
     #[inline]
-    pub fn new(id: u32) -> ClassId {
+    pub fn from_raw(id: ffi::JSClassID) -> ClassId {
         ClassId(id)
+    }
+
+    pub fn none() -> ClassId {
+        ClassId::from_raw(0)
+    }
+
+    pub fn generate() -> ClassId {
+        ClassId::none().new_class_id()
     }
 
     #[inline]
     pub fn raw(this: Self) -> u32 {
         this.0
     }
+
+    pub(crate) fn new_class_id(self) -> ClassId {
+        let mut before = ClassId::raw(self);
+        let res = {
+            // JS_NewClassID is not thread-safe...
+            let _ = NEW_CLASS_ID_LOCK.lock().unwrap();
+            unsafe { ffi::JS_NewClassID(&mut before) }
+        };
+        ClassId::from_raw(res)
+    }
+}
+
+lazy_static! {
+    static ref NEW_CLASS_ID_LOCK: Mutex<()> = Mutex::new(());
 }
 
 pub struct ClassDef {
@@ -62,7 +86,7 @@ mod tests {
     }
 
     thread_local! {
-        static S1_CLASS_ID: RefCell<ClassId> = RefCell::new(ClassId::new(0));
+        static S1_CLASS_ID: RefCell<ClassId> = RefCell::new(ClassId::none());
     }
 
     unsafe fn new_s1<'q, 'a>(ctx: Context<'q>, _this_val: Value<'q>, _values: &'a [Value<'q>]) -> Value<'q> {
@@ -86,7 +110,7 @@ mod tests {
         let rt = Runtime::new();
         let ctx = Context::new(rt);
         S1_CLASS_ID.with(|id| {
-            *id.borrow_mut() = rt.new_class_id();
+            *id.borrow_mut() = ClassId::generate();
             rt.new_class(
                 *id.borrow(),
                 &ClassDef {
