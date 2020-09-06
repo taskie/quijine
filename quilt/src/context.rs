@@ -3,7 +3,7 @@ use crate::{
     conversion::{AsJSContextPointer, AsJSRuntimePointer, AsJSValue, AsValue},
     ffi,
     flags::{EvalFlags, ParseJSONFlags},
-    function::convert_arguments,
+    function::{convert_function_arguments, convert_function_result},
     marker::Covariant,
     runtime::Runtime,
     string::CString as CoreCString,
@@ -305,7 +305,7 @@ impl<'q> Context<'q> {
         self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), name, length)
     }
 
-    pub fn new_callback(self, mut func: Box<Callback<'q, 'static>>, _name: &str, length: i32) -> Value<'q> {
+    fn new_callback(self, mut func: Box<Callback<'q, 'static>>, _name: &str, length: i32) -> Value<'q> {
         unsafe extern "C" fn call(
             ctx: *mut ffi::JSContext,
             js_this: ffi::JSValue,
@@ -314,12 +314,12 @@ impl<'q> Context<'q> {
             _magic: c_int,
             func_data: *mut ffi::JSValue,
         ) -> ffi::JSValue {
-            let (ctx, this, args) = convert_arguments(ctx, js_this, argc, argv);
+            let (ctx, this, args) = convert_function_arguments(ctx, js_this, argc, argv);
             let cb = Value::from_raw(*func_data, ctx);
             log::trace!("load pointer from ArrayBuffer");
             let func = cb.array_buffer_to_sized::<*mut Callback>(ctx).unwrap();
             let any = (**func)(ctx, this, args.as_slice());
-            (&any).as_js_value()
+            convert_function_result(&any)
         };
         unsafe {
             log::trace!("save pointer to ArrayBuffer");

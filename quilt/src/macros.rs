@@ -7,12 +7,9 @@ macro_rules! js_c_function {
             argc: ::std::os::raw::c_int,
             argv: *mut crate::ffi::JSValue,
         ) -> crate::ffi::JSValue {
-            let ctx = crate::Context::from_ptr(ctx);
-            let this_val = crate::Value::from_raw(this_val, ctx);
-            let values = ::std::slice::from_raw_parts(argv, argc as usize);
-            let values: Vec<Value> = values.iter().map(|v| Value::from_raw(*v, ctx)).collect();
-            let ret = $f(ctx, this_val, values.as_slice());
-            crate::conversion::AsJSValue::as_js_value(&ret)
+            let (ctx, this, args) = crate::convert_function_arguments(ctx, this_val, argc, argv);
+            let ret = $f(ctx, this, args.as_slice());
+            crate::convert_function_result(&ret)
         }
         Some(wrap)
     }};
@@ -58,13 +55,10 @@ macro_rules! js_class_call {
             argv: *mut crate::ffi::JSValue,
             flags: ::std::os::raw::c_int,
         ) -> crate::ffi::JSValue {
-            let ctx = crate::Context::from_ptr(ctx);
+            let (ctx, this, args) = crate::convert_function_arguments(ctx, this_val, argc, argv);
             let func_obj = crate::Value::from_raw(func_obj, ctx);
-            let this_val = crate::Value::from_raw(this_val, ctx);
-            let values = ::std::slice::from_raw_parts(argv, argc as usize);
-            let values: Vec<Value> = values.iter().map(|v| Value::from_raw(*v, ctx)).collect();
-            let ret = $f(ctx, func_obj, this_val, values.as_slice(), flags);
-            crate::conversion::AsJSValue::as_js_value(&ret)
+            let ret = $f(ctx, func_obj, this, args.as_slice(), flags);
+            crate::convert_function_result(&ret)
         }
         Some(wrap)
     }};
