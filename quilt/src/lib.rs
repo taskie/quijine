@@ -6,6 +6,7 @@ pub mod macros;
 pub mod marker;
 pub mod util;
 
+mod atom;
 mod class;
 mod context;
 mod enums;
@@ -15,6 +16,7 @@ mod runtime;
 mod string;
 mod value;
 
+pub use atom::Atom;
 pub use class::{ClassDef, ClassId};
 pub use context::Context;
 pub use flags::EvalFlags;

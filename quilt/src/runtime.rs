@@ -1,6 +1,6 @@
 use crate::{
     class::{ClassDef, ClassId},
-    conversion::{AsJSRuntimePointer, AsJSValue},
+    conversion::{AsJsClassId, AsJsRuntimePointer, AsJsValue},
     ffi,
     marker::Covariant,
     value::Value,
@@ -56,14 +56,14 @@ impl<'q> Runtime<'q> {
     #[inline]
     pub fn new_class(self, id: ClassId, class_def: &ClassDef) {
         unsafe {
-            let result = ffi::JS_NewClass(self.0.as_ptr(), ClassId::raw(id), &class_def.c_def());
+            let result = ffi::JS_NewClass(self.0.as_ptr(), id.as_js_class_id(), &class_def.c_def());
             assert_eq!(0, result)
         }
     }
 
     #[inline]
     pub fn id_registered_class(self, id: ClassId) -> bool {
-        unsafe { ffi::JS_IsRegisteredClass(self.0.as_ptr(), ClassId::raw(id)) != 0 }
+        unsafe { ffi::JS_IsRegisteredClass(self.0.as_ptr(), id.as_js_class_id()) != 0 }
     }
 
     // value
@@ -88,7 +88,8 @@ impl fmt::Debug for Runtime<'_> {
     }
 }
 
-impl AsJSRuntimePointer for Runtime<'_> {
+impl AsJsRuntimePointer for Runtime<'_> {
+    #[inline]
     fn as_ptr(&self) -> *mut ffi::JSRuntime {
         self.0.as_ptr()
     }

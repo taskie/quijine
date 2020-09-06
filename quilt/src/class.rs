@@ -1,4 +1,4 @@
-use crate::ffi;
+use crate::{conversion::AsJsClassId, ffi};
 use lazy_static::lazy_static;
 use std::{ffi::CString, ptr::null_mut, sync::Mutex};
 
@@ -20,19 +20,21 @@ impl ClassId {
         ClassId::none().new_class_id()
     }
 
-    #[inline]
-    pub fn raw(this: Self) -> u32 {
-        this.0
-    }
-
     pub(crate) fn new_class_id(self) -> ClassId {
-        let mut before = ClassId::raw(self);
+        let mut before = self.0;
         let res = {
             // JS_NewClassID is not thread-safe...
             let _ = NEW_CLASS_ID_LOCK.lock().unwrap();
             unsafe { ffi::JS_NewClassID(&mut before) }
         };
         ClassId::from_raw(res)
+    }
+}
+
+impl<'q> AsJsClassId<'q> for ClassId {
+    #[inline]
+    fn as_js_class_id(&self) -> ffi::JSClassID {
+        self.0
     }
 }
 
@@ -123,7 +125,7 @@ mod tests {
             ctx.set_class_proto(*id.borrow(), s1_proto);
         });
         let global = ctx.global_object();
-        global.set_property(ctx, "S1", unsafe {
+        global.set_property_str(ctx, "S1", unsafe {
             ctx.new_c_function(js_c_function!(new_s1), "S1", 0)
         });
         let ret = ctx.eval(

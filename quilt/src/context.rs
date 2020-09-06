@@ -1,12 +1,12 @@
 use crate::{
     class::ClassId,
-    conversion::{AsJSContextPointer, AsJSRuntimePointer, AsJSValue, AsValue},
+    conversion::{AsJsClassId, AsJsContextPointer, AsJsRuntimePointer, AsJsValue, AsValue},
     ffi,
     flags::{EvalFlags, ParseJSONFlags},
     function::{convert_function_arguments, convert_function_result},
     marker::Covariant,
     runtime::Runtime,
-    string::CString as CoreCString,
+    string::CString as LtCString,
     util,
     value::Value,
 };
@@ -65,13 +65,16 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn set_class_proto(self, clz: ClassId, proto: Value<'q>) {
-        unsafe { ffi::JS_SetClassProto(self.as_ptr(), ClassId::raw(clz), proto.as_js_value()) }
+    pub fn set_class_proto<P>(self, clz: ClassId, proto: P)
+    where
+        P: AsJsValue<'q>,
+    {
+        unsafe { ffi::JS_SetClassProto(self.as_ptr(), clz.as_js_class_id(), proto.as_js_value()) }
     }
 
     #[inline]
     pub fn class_proto(self, clz: ClassId) -> Value<'q> {
-        unsafe { Value::from_raw(ffi::JS_GetClassProto(self.as_ptr(), ClassId::raw(clz)), self) }
+        unsafe { Value::from_raw(ffi::JS_GetClassProto(self.as_ptr(), clz.as_js_class_id()), self) }
     }
 
     // value
@@ -159,16 +162,19 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub unsafe fn free_c_string(self, str: CoreCString<'q>) {
-        ffi::JS_FreeCString(self.as_ptr(), CoreCString::raw(str));
+    pub unsafe fn free_c_string(self, str: LtCString<'q>) {
+        ffi::JS_FreeCString(self.as_ptr(), LtCString::raw(str));
     }
 
     // object
 
     #[inline]
-    pub fn new_object_proto_class(self, proto: Value, clz: ClassId) -> Value<'q> {
+    pub fn new_object_proto_class<P>(self, proto: P, clz: ClassId) -> Value<'q>
+    where
+        P: AsJsValue<'q>,
+    {
         unsafe {
-            let value = ffi::JS_NewObjectProtoClass(self.as_ptr(), proto.as_js_value(), ClassId::raw(clz) as u32);
+            let value = ffi::JS_NewObjectProtoClass(self.as_ptr(), proto.as_js_value(), clz.as_js_class_id());
             Value::from_raw(value, self)
         }
     }
@@ -176,13 +182,16 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_object_class(self, clz: ClassId) -> Value<'q> {
         unsafe {
-            let value = ffi::JS_NewObjectClass(self.as_ptr(), ClassId::raw(clz) as i32);
+            let value = ffi::JS_NewObjectClass(self.as_ptr(), clz.as_js_class_id() as i32);
             Value::from_raw(value, self)
         }
     }
 
     #[inline]
-    pub fn new_object_proto(self, proto: Value) -> Value<'q> {
+    pub fn new_object_proto<P>(self, proto: P) -> Value<'q>
+    where
+        P: AsJsValue<'q>,
+    {
         unsafe {
             let value = ffi::JS_NewObjectProto(self.as_ptr(), proto.as_js_value());
             Value::from_raw(value, self)
@@ -197,8 +206,13 @@ impl<'q> Context<'q> {
     // call
 
     #[inline]
-    pub fn call(self, func_obj: Value, this_obj: Value, args: &[Value]) -> Value<'q> {
-        let mut c_args: Vec<_> = args.iter().map(|v| v.as_js_value()).collect();
+    pub fn call<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> Value<'q>
+    where
+        F: AsJsValue<'q>,
+        T: AsJsValue<'q>,
+        A: Into<Vec<Value<'q>>>,
+    {
+        let mut c_args: Vec<_> = args.into().iter().map(|v| v.as_js_value()).collect();
         let value = unsafe {
             ffi::JS_Call(
                 self.as_ptr(),
@@ -212,9 +226,13 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn eval(self, code: &str, filename: &str, eval_flags: EvalFlags) -> Value<'q> {
-        let c_code = CString::new(code).expect("code");
-        let c_filename = CString::new(filename).expect("filename");
+    pub fn eval<C, F>(self, code: C, filename: F, eval_flags: EvalFlags) -> Value<'q>
+    where
+        C: AsRef<str>,
+        F: AsRef<str>,
+    {
+        let c_code = CString::new(code.as_ref()).expect("code");
+        let c_filename = CString::new(filename.as_ref()).expect("filename");
         let value = unsafe {
             ffi::JS_Eval(
                 self.as_ptr(),
@@ -235,9 +253,13 @@ impl<'q> Context<'q> {
     // json
 
     #[inline]
-    pub fn parse_json(self, buf: &str, filename: &str) -> Value<'q> {
-        let c_buf = CString::new(buf).expect("buf");
-        let c_filename = CString::new(filename).expect("filename");
+    pub fn parse_json<B, F>(self, buf: B, filename: F) -> Value<'q>
+    where
+        B: AsRef<str>,
+        F: AsRef<str>,
+    {
+        let c_buf = CString::new(buf.as_ref()).expect("buf");
+        let c_filename = CString::new(filename.as_ref()).expect("filename");
         unsafe {
             let value = ffi::JS_ParseJSON(
                 self.as_ptr(),
@@ -250,9 +272,13 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn parse_json2(self, buf: &str, filename: &str, flags: ParseJSONFlags) -> Value<'q> {
-        let c_buf = CString::new(buf).expect("buf");
-        let c_filename = CString::new(filename).expect("filename");
+    pub fn parse_json2<B, F>(self, buf: B, filename: F, flags: ParseJSONFlags) -> Value<'q>
+    where
+        B: AsRef<str>,
+        F: AsRef<str>,
+    {
+        let c_buf = CString::new(buf.as_ref()).expect("buf");
+        let c_filename = CString::new(filename.as_ref()).expect("filename");
         unsafe {
             let value = ffi::JS_ParseJSON2(
                 self.as_ptr(),
@@ -281,9 +307,13 @@ impl<'q> Context<'q> {
     // array buffer
 
     #[inline]
-    pub fn new_array_buffer_copy(self, t: &[u8]) -> Value<'q> {
+    pub fn new_array_buffer_copy<B>(self, buf: B) -> Value<'q>
+    where
+        B: AsRef<[u8]>,
+    {
+        let buf = buf.as_ref();
         unsafe {
-            let value = ffi::JS_NewArrayBufferCopy(self.as_ptr(), t.as_ptr(), t.len() as u64);
+            let value = ffi::JS_NewArrayBufferCopy(self.as_ptr(), buf.as_ptr(), buf.len() as u64);
             Value::from_raw(value, self)
         }
     }
@@ -298,14 +328,14 @@ impl<'q> Context<'q> {
 
     // callback
 
-    pub fn new_function<F>(self, func: F, name: &str, length: i32) -> Value<'q>
+    pub fn new_function<F>(self, func: F, length: i32) -> Value<'q>
     where
         F: 'static + Send + Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q>,
     {
-        self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), name, length)
+        self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), length)
     }
 
-    fn new_callback(self, mut func: Box<Callback<'q, 'static>>, _name: &str, length: i32) -> Value<'q> {
+    fn new_callback(self, mut func: Box<Callback<'q, 'static>>, length: i32) -> Value<'q> {
         unsafe extern "C" fn call(
             ctx: *mut ffi::JSContext,
             js_this: ffi::JSValue,
@@ -362,7 +392,8 @@ impl fmt::Debug for Context<'_> {
     }
 }
 
-impl<'q> AsJSContextPointer<'q> for Context<'q> {
+impl<'q> AsJsContextPointer<'q> for Context<'q> {
+    #[inline]
     fn as_ptr(&self) -> *mut ffi::JSContext {
         self.0.as_ptr()
     }

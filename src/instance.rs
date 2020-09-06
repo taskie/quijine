@@ -167,7 +167,7 @@ impl<'q, T> Qj<'q, T> {
     where
         K: AsRef<str>,
     {
-        Qj::<QjAnyTag>::from(self.value.property(self.context, key), self.context)
+        Qj::<QjAnyTag>::from(self.value.property_str(self.context, key), self.context)
     }
 
     #[inline]
@@ -178,7 +178,7 @@ impl<'q, T> Qj<'q, T> {
     {
         let val = val.as_ref();
         Qj::dup(val);
-        self.value.set_property(self.context, key, val.as_value())
+        self.value.set_property_str(self.context, key, val.as_value())
     }
 
     // class
