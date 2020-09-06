@@ -1,11 +1,14 @@
 pub mod conversion;
+#[macro_use]
 pub mod ffi;
+#[macro_use]
+pub mod macros;
 pub mod marker;
 pub mod util;
 
 mod class;
 mod context;
-mod macros;
+mod function;
 mod runtime;
 mod string;
 mod value;

@@ -117,10 +117,23 @@ pub unsafe fn JS_IsUninitialized(v: JSValue) -> bool {
     JS_VALUE_GET_TAG(v) == JS_TAG_UNINITIALIZED
 }
 
+#[macro_export]
 macro_rules! JS_MKVAL {
     ($tag: expr, $val: expr) => {
-        JSValue {
-            u: JSValueUnion { int32: $val as i32 },
+        crate::core::ffi::JSValue {
+            u: crate::core::ffi::JSValueUnion { int32: $val as i32 },
+            tag: $tag as i64,
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! JS_MKPTR {
+    ($tag: expr, $p: expr) => {
+        crate::core::ffi::JSValue {
+            u: crate::core::ffi::JSValueUnion {
+                ptr: $p as *mut std::ffi::c_void,
+            },
             tag: $tag as i64,
         }
     };
@@ -223,6 +236,17 @@ macro_rules! JS_CFUNC_INTERNAL_DEF {
 #[allow(non_snake_case)]
 pub unsafe fn JS_CFUNC_DEF(name: *const c_char, length: u8, func1: JSCFunction) -> JSCFunctionListEntry {
     JS_CFUNC_INTERNAL_DEF!(name, length, CFunctionEnum::Generic, generic, func1, 0)
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_CFUNC_MAGIC_DEF(
+    name: *const c_char,
+    length: u8,
+    func1: JSCFunctionMagic,
+    magic: i16,
+) -> JSCFunctionListEntry {
+    JS_CFUNC_INTERNAL_DEF!(name, length, CFunctionEnum::GenericMagic, generic_magic, func1, magic)
 }
 
 #[inline]

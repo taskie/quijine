@@ -2,6 +2,7 @@ use crate::core::{
     class::ClassId,
     conversion::AsJSValue,
     ffi,
+    function::unpack_closure_to_c_function_data,
     marker::Covariant,
     runtime::{AsJSRuntimePointer, Runtime},
     string::CString as CoreCString,
@@ -14,7 +15,7 @@ use std::{
     marker::PhantomData,
     mem::size_of,
     os::raw::{c_char, c_int},
-    ptr::NonNull,
+    ptr::{null_mut, NonNull},
     slice,
 };
 
@@ -132,6 +133,11 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn set_class_proto(self, clz: ClassId, proto: Value<'q>) {
         unsafe { ffi::JS_SetClassProto(self.as_ptr(), ClassId::raw(clz), proto.as_js_value()) }
+    }
+
+    #[inline]
+    pub(crate) fn set_property_function_list(self, obj: Value<'q>, tab: &[ffi::JSCFunctionListEntry]) {
+        unsafe { ffi::JS_SetPropertyFunctionList(self.as_ptr(), obj.as_js_value(), tab.as_ptr(), tab.len() as c_int) }
     }
 
     #[inline]

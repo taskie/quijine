@@ -1,13 +1,16 @@
-use std::{ffi::c_void, fmt, marker::PhantomData, ptr::NonNull};
-
-use crate::core::ffi;
-
 use crate::core::{
     class::{ClassDef, ClassId},
     conversion::AsJSValue,
+    ffi,
     marker::Covariant,
     value::Value,
 };
+use lazy_static::lazy_static;
+use std::{ffi::c_void, fmt, marker::PhantomData, ptr::NonNull, sync::Mutex};
+
+lazy_static! {
+    static ref NEW_CLASS_ID_LOCK: Mutex<()> = Mutex::new(());
+}
 
 pub trait AsJSRuntimePointer {
     fn as_ptr(&self) -> *mut ffi::JSRuntime;
@@ -73,16 +76,21 @@ impl<'q> Runtime<'q> {
     #[inline]
     pub fn new_class_id(self) -> ClassId {
         let mut id = 0;
-        unsafe {
-            ffi::JS_NewClassID(&mut id);
-        };
+        {
+            // JS_NewClassID is not thread-safe...
+            let _ = NEW_CLASS_ID_LOCK.lock().unwrap();
+            unsafe {
+                ffi::JS_NewClassID(&mut id);
+            };
+        }
         ClassId::new(id)
     }
 
     #[inline]
     pub fn new_class(self, id: ClassId, class_def: &ClassDef) {
         unsafe {
-            ffi::JS_NewClass(self.as_ptr(), ClassId::raw(id), &class_def.c_def());
+            let result = ffi::JS_NewClass(self.as_ptr(), ClassId::raw(id), &class_def.c_def());
+            assert_eq!(0, result)
         }
     }
 

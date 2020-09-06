@@ -1,9 +1,12 @@
 #[macro_use]
 extern crate bitflags;
 
+#[macro_use]
 mod core;
 
 mod aliases;
+mod class;
+mod class_util;
 mod context;
 mod conversion;
 mod error;

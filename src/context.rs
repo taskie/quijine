@@ -1,4 +1,5 @@
 use crate::{
+    class::QjClass,
     core::{conversion::AsJSValue, ffi, Context, Value},
     error::{QjError, QjErrorValue, QjResult},
     instance::QjVec,
@@ -27,7 +28,7 @@ impl<'q> QjContext<'q> {
         if val.is_exception() {
             Err(QjError::from_value(Qj::<QjAnyTag>::from(self.0.exception(), self.0)))
         } else {
-            Ok(Qj::<QjAnyTag>::from(val, self.0))
+            Ok(Qj::from(val, self.0))
         }
     }
 
@@ -58,6 +59,13 @@ impl<'q> QjContext<'q> {
     #[inline]
     pub fn new_object(self) -> Qj<'q, QjObjectTag> {
         self.wrap_result(self.0.new_object()).unwrap()
+    }
+
+    #[inline]
+    pub fn new_object_class<C: QjClass + 'static>(self) -> Qj<'q, QjObjectTag> {
+        let mut rt = QjRuntime::from(self.0.runtime());
+        let clz = rt.get_or_register_class_id::<C>();
+        self.wrap_result(self.0.new_object_class(clz)).unwrap()
     }
 
     #[inline]
@@ -154,7 +162,7 @@ impl<'q> QjContext<'q> {
             log::debug!("new c function data");
             let cfd = self.0.new_c_function_data(Some(call), length, 0, vec![cb]);
             self.0.free_value(cb);
-            Qj::<QjAnyTag>::from(cfd, self.0)
+            Qj::from(cfd, self.0)
         }
     }
 

@@ -1,13 +1,14 @@
 use crate::{
+    class::QjClass,
     core::{ffi, Context, Value},
     string::QjCString,
     tags::{
         QjAnyTag, QjBigDecimalTag, QjBigFloatTag, QjBigIntTag, QjBoolTag, QjFloat64Tag, QjIntTag, QjNullTag,
         QjObjectTag, QjReferenceTag, QjStringTag, QjSymbolTag, QjUndefinedTag, QjValueTag, QjVariant,
     },
-    QjContext,
+    QjContext, QjRuntime,
 };
-use std::{fmt, marker::PhantomData, sync::atomic};
+use std::{ffi::c_void, fmt, marker::PhantomData, mem, ptr, ptr::null_mut, sync::atomic};
 
 static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
 
@@ -26,7 +27,7 @@ pub struct Qj<'q, T> {
 }
 
 impl<'q, T> Qj<'q, T> {
-    pub(crate) fn from<X>(value: Value<'q>, context: Context<'q>) -> Qj<'q, X> {
+    pub(crate) fn from(value: Value<'q>, context: Context<'q>) -> Qj<'q, T> {
         let count = DEBUG_GLOBAL_COUNT.fetch_add(1, atomic::Ordering::SeqCst);
         let qj = Qj {
             value,
@@ -59,9 +60,8 @@ impl<'q, T> Qj<'q, T> {
 
     #[inline]
     pub(crate) unsafe fn free(this: &Self) {
-        this.debug_trace("freeing");
         this.context.free_value(this.value);
-        this.debug_trace("free");
+        this.debug_trace("freed");
     }
 
     #[inline]
@@ -77,9 +77,9 @@ impl<'q, T> Qj<'q, T> {
 
     fn debug_trace(&self, name: &str) {
         if let Some(rc) = self.value.ref_count() {
-            log::debug!("{}: {:?} (rc: {})", name, self, rc);
+            log::trace!("{}: {:?} (rc: {})", name, self, rc);
         } else {
-            log::debug!("{}: {:?} (value)", name, self);
+            log::trace!("{}: {:?} (value)", name, self);
         }
     }
 
@@ -180,6 +180,38 @@ impl<'q, T> Qj<'q, T> {
         Qj::dup(val);
         self.value.set_property(self.context, key, val.as_value())
     }
+
+    // class
+
+    #[inline]
+    pub(crate) fn get_opaque<C: QjClass + 'static>(&self) -> Option<&C> {
+        let rt = QjRuntime::from(self.context.runtime());
+        let clz = rt.get_class_id::<C>()?;
+        let p = self.value.opaque(clz) as *const C;
+        if p.is_null() {
+            return None;
+        }
+        Some(unsafe { &*p })
+    }
+
+    #[inline]
+    pub(crate) fn take_opaque<C: QjClass + 'static>(&mut self) -> Option<C> {
+        let rt = QjRuntime::from(self.context.runtime());
+        let clz = rt.get_class_id::<C>()?;
+        let p = unsafe { self.value.opaque(clz) as *const C };
+        if p.is_null() {
+            return None;
+        }
+        self.value.set_opaque(null_mut());
+        Some(unsafe { ptr::read(p) })
+    }
+
+    #[inline]
+    pub fn set_opaque<C: QjClass + 'static>(&mut self, mut v: C) {
+        let mut rt = QjRuntime::from(self.context.runtime());
+        let _clz = rt.get_or_register_class_id::<C>();
+        self.value.set_opaque(&mut v as *mut C as *mut c_void);
+    }
 }
 
 impl<T> Drop for Qj<'_, T> {
@@ -216,7 +248,7 @@ pub struct QjVec<'q, T> {
 }
 
 impl<'q, T> QjVec<'q, T> {
-    pub(crate) fn from<X>(values: &[Value<'q>], context: Context<'q>) -> QjVec<'q, X> {
+    pub(crate) fn from(values: &[Value<'q>], context: Context<'q>) -> QjVec<'q, T> {
         let count = DEBUG_GLOBAL_COUNT.fetch_add(1, atomic::Ordering::SeqCst);
         let qjs = QjVec {
             values: values.to_vec(),

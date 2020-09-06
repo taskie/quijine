@@ -1,4 +1,6 @@
-use crate::{instance::Qj};
+use crate::instance::Qj;
+use bitflags::_core::fmt::Formatter;
+use std::fmt;
 
 // any
 pub struct QjAnyTag;
@@ -42,4 +44,26 @@ pub enum QjVariant<'q> {
     CatchOffset,
     Exception,
     Float64(f64),
+}
+
+impl<'q> fmt::Debug for QjVariant<'q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            QjVariant::BigDecimal(_) => f.write_str("BigDecimal(_)"),
+            QjVariant::BigInt(_) => f.write_str("BigInt(_)"),
+            QjVariant::BigFloat(_) => f.write_str("BigFloat(_)"),
+            QjVariant::Symbol(_) => f.write_str("Symbol(_)"),
+            QjVariant::String(_) => f.write_str("String(_)"),
+            QjVariant::Object(_) => f.write_str("Object(_)"),
+            QjVariant::Int(v) => f.write_str(format!("Int({})", v).as_str()),
+            QjVariant::Bool(v) => f.write_str(format!("Bool({})", v).as_str()),
+            QjVariant::Null => f.write_str("Null"),
+            QjVariant::Undefined => f.write_str("Undefined"),
+            QjVariant::Uninitialized => f.write_str("Uninitialized"),
+            QjVariant::CatchOffset => f.write_str("CatchOffset"),
+            QjVariant::Exception => f.write_str("Exception"),
+            QjVariant::Float64(v) => f.write_str(format!("Float64({})", v).as_str()),
+            _ => f.write_str("Unknown"),
+        }
+    }
 }

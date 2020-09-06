@@ -1,10 +1,14 @@
 use crate::{
+    class::QjClass,
+    class_util::register_class,
     context::{QjContext, QjContextGuard},
-    core::Runtime,
+    core::{ClassId, Runtime},
+    QjResult,
 };
-use std::{ffi::c_void, fmt, ptr::null_mut};
+use std::{any::TypeId, collections::HashMap, ffi::c_void, fmt, ptr::null_mut};
 
 pub struct QjRuntimeOpaque {
+    registered_classes: HashMap<TypeId, ClassId>,
     extra: *mut c_void,
 }
 
@@ -41,6 +45,21 @@ impl<'r> QjRuntime<'r> {
     pub(crate) fn opaque_mut(&mut self) -> &mut QjRuntimeOpaque {
         unsafe { &mut *(self.0.opaque() as *mut QjRuntimeOpaque) }
     }
+
+    pub(crate) fn get_class_id<T: 'static + QjClass>(&self) -> Option<ClassId> {
+        self.opaque().registered_classes.get(&TypeId::of::<T>()).cloned()
+    }
+
+    pub(crate) fn get_or_register_class_id<T: 'static + QjClass>(&mut self) -> ClassId {
+        let class_id = self.get_class_id::<T>();
+        if let Some(class_id) = class_id {
+            return class_id;
+        }
+        let class_id = self.0.new_class_id();
+        register_class::<T>(self.0, class_id);
+        self.opaque_mut().registered_classes.insert(TypeId::of::<T>(), class_id);
+        class_id
+    }
 }
 
 pub struct QjRuntimeGuard(QjRuntime<'static>);
@@ -49,7 +68,10 @@ impl QjRuntimeGuard {
     #[inline]
     pub fn new() -> Self {
         let rt = Runtime::new();
-        let opaque = Box::new(QjRuntimeOpaque { extra: null_mut() });
+        let opaque = Box::new(QjRuntimeOpaque {
+            registered_classes: HashMap::new(),
+            extra: null_mut(),
+        });
         rt.set_opaque(Box::into_raw(opaque) as *mut c_void);
         QjRuntimeGuard(QjRuntime::from(rt))
     }

@@ -1,7 +1,7 @@
 use crate::core::ffi;
 use std::{ffi::CString, ptr::null_mut};
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct ClassId(u32);
 
 impl ClassId {
