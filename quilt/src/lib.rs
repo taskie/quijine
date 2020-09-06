@@ -16,7 +16,7 @@ mod string;
 mod value;
 
 pub use class::{ClassDef, ClassId};
-pub use context::{AsJSContextPointer, Context};
+pub use context::Context;
 pub use flags::EvalFlags;
 pub use runtime::Runtime;
 pub use string::CString;

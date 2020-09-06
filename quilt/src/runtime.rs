@@ -1,6 +1,6 @@
 use crate::{
     class::{ClassDef, ClassId},
-    conversion::AsJSValue,
+    conversion::{AsJSRuntimePointer, AsJSValue},
     ffi,
     marker::Covariant,
     value::Value,
@@ -85,16 +85,6 @@ impl<'q> Runtime<'q> {
 impl fmt::Debug for Runtime<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         f.write_str(format!("Runtime({:p})", self.0).as_str())
-    }
-}
-
-pub trait AsJSRuntimePointer {
-    fn as_ptr(&self) -> *mut ffi::JSRuntime;
-}
-
-impl AsJSRuntimePointer for *mut ffi::JSRuntime {
-    fn as_ptr(&self) -> *mut ffi::JSRuntime {
-        *self
     }
 }
 

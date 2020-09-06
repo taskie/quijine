@@ -1,7 +1,7 @@
 use crate::{
     class::ClassId,
-    context::{AsJSContextPointer, Context},
-    conversion::AsJSValue,
+    context::Context,
+    conversion::{AsJSContextPointer, AsJSValue},
     ffi,
     marker::Covariant,
     string::CString as CoreCString,
@@ -215,5 +215,11 @@ impl fmt::Debug for Value<'_> {
             repr.push_str(format!("{:02x}", x).as_str())
         }
         f.write_str(format!("QjValueTag(tag={}, {})", tag, repr).as_str())
+    }
+}
+
+impl<'q> AsJSValue<'q> for Value<'q> {
+    fn as_js_value(&self) -> ffi::JSValue {
+        Value::raw(*self)
     }
 }

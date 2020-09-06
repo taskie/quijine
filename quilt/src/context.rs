@@ -1,11 +1,11 @@
 use crate::{
     class::ClassId,
-    conversion::AsJSValue,
+    conversion::{AsJSContextPointer, AsJSRuntimePointer, AsJSValue},
     ffi,
     flags::{EvalFlags, ParseJSONFlags},
     function::unpack_closure_to_c_function_data,
     marker::Covariant,
-    runtime::{AsJSRuntimePointer, Runtime},
+    runtime::Runtime,
     string::CString as CoreCString,
     util,
     value::Value,
@@ -19,16 +19,6 @@ use std::{
     ptr::{null_mut, NonNull},
     slice,
 };
-
-pub trait AsJSContextPointer<'q> {
-    fn as_ptr(&self) -> *mut ffi::JSContext;
-}
-
-impl AsJSContextPointer<'_> for *mut ffi::JSContext {
-    fn as_ptr(&self) -> *mut ffi::JSContext {
-        *self
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Context<'q>(NonNull<ffi::JSContext>, Covariant<'q>);

@@ -1,11 +1,21 @@
 use crate::{ffi, Value};
 
-pub trait AsValue<'q> {
-    fn as_value(&self) -> Value<'q>;
+pub trait AsJSRuntimePointer {
+    fn as_ptr(&self) -> *mut ffi::JSRuntime;
 }
 
-impl<'q> AsValue<'q> for Value<'q> {
-    fn as_value(&self) -> Value<'q> {
+impl AsJSRuntimePointer for *mut ffi::JSRuntime {
+    fn as_ptr(&self) -> *mut ffi::JSRuntime {
+        *self
+    }
+}
+
+pub trait AsJSContextPointer<'q> {
+    fn as_ptr(&self) -> *mut ffi::JSContext;
+}
+
+impl AsJSContextPointer<'_> for *mut ffi::JSContext {
+    fn as_ptr(&self) -> *mut ffi::JSContext {
         *self
     }
 }
@@ -20,8 +30,12 @@ impl AsJSValue<'_> for ffi::JSValue {
     }
 }
 
-impl<'q> AsJSValue<'q> for Value<'q> {
-    fn as_js_value(&self) -> ffi::JSValue {
-        Value::raw(*self)
+pub trait AsValue<'q> {
+    fn as_value(&self) -> Value<'q>;
+}
+
+impl<'q> AsValue<'q> for Value<'q> {
+    fn as_value(&self) -> Value<'q> {
+        *self
     }
 }
