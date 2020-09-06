@@ -16,7 +16,43 @@ use std::{
 #[derive(Clone, Copy)]
 pub struct Value<'q>(ffi::JSValue, Covariant<'q>);
 
+macro_rules! def_is_some {
+    ($name: ident, $f: expr) => {
+        #[inline]
+        pub fn $name(self) -> bool {
+            unsafe { $f(self.0) }
+        }
+    };
+}
+
 impl<'q> Value<'q> {
+    // is *
+    def_is_some!(is_number, ffi::JS_IsNumber);
+
+    def_is_some!(is_big_int, ffi::JS_IsBigInt);
+
+    def_is_some!(is_big_float, ffi::JS_IsBigFloat);
+
+    def_is_some!(is_big_decimal, ffi::JS_IsBigDecimal);
+
+    def_is_some!(is_bool, ffi::JS_IsBool);
+
+    def_is_some!(is_null, ffi::JS_IsNull);
+
+    def_is_some!(is_undefined, ffi::JS_IsUndefined);
+
+    def_is_some!(is_exception, ffi::JS_IsException);
+
+    def_is_some!(is_uninitialized, ffi::JS_IsUninitialized);
+
+    def_is_some!(is_string, ffi::JS_IsString);
+
+    def_is_some!(is_symbol, ffi::JS_IsSymbol);
+
+    def_is_some!(is_object, ffi::JS_IsObject);
+
+    // raw
+
     #[inline]
     pub unsafe fn from_raw(value: ffi::JSValue, _ctx: Context<'q>) -> Value<'q> {
         Value(value, PhantomData)
@@ -28,7 +64,7 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub(crate) unsafe fn from_static_raw(value: ffi::JSValue) -> Value<'static> {
+    pub unsafe fn from_static_raw(value: ffi::JSValue) -> Value<'static> {
         Value(value, PhantomData)
     }
 
@@ -59,26 +95,6 @@ impl<'q> Value<'q> {
     #[inline]
     pub fn tag(self) -> i32 {
         unsafe { ffi::JS_VALUE_GET_TAG(self.0) }
-    }
-
-    #[inline]
-    pub fn is_null(self) -> bool {
-        unsafe { ffi::JS_IsNull(self.0) }
-    }
-
-    #[inline]
-    pub fn is_exception(self) -> bool {
-        unsafe { ffi::JS_IsException(self.0) }
-    }
-
-    #[inline]
-    pub fn is_undefined(self) -> bool {
-        unsafe { ffi::JS_IsUndefined(self.0) }
-    }
-
-    #[inline]
-    pub fn is_uninitialized(self) -> bool {
-        unsafe { ffi::JS_IsUninitialized(self.0) }
     }
 
     // special values

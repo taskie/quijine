@@ -95,9 +95,33 @@ pub(crate) fn js_unlikely(x: bool) -> bool {
 
 #[inline]
 #[allow(non_snake_case)]
-pub unsafe fn JS_IsNull(v: JSValue) -> bool {
-    JS_VALUE_GET_TAG(v) == JS_TAG_NULL
+pub unsafe fn JS_TAG_IS_FLOAT64(tag: i32) -> bool {
+    tag == JS_TAG_FLOAT64
 }
+
+macro_rules! def_js_is_some {
+    ($name: ident, $tag: expr) => {
+        #[inline]
+        #[allow(non_snake_case)]
+        pub unsafe fn $name(v: JSValue) -> bool {
+            JS_VALUE_GET_TAG(v) == $tag
+        }
+    };
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_IsNumber(v: JSValue) -> bool {
+    let tag = JS_VALUE_GET_TAG(v);
+    tag == JS_TAG_INT || JS_TAG_IS_FLOAT64(tag)
+}
+
+def_js_is_some!(JS_IsBigInt, JS_TAG_BIG_INT);
+def_js_is_some!(JS_IsBigFloat, JS_TAG_BIG_FLOAT);
+def_js_is_some!(JS_IsBigDecimal, JS_TAG_BIG_DECIMAL);
+def_js_is_some!(JS_IsBool, JS_TAG_BOOL);
+def_js_is_some!(JS_IsNull, JS_TAG_NULL);
+def_js_is_some!(JS_IsUndefined, JS_TAG_UNDEFINED);
 
 #[inline]
 #[allow(non_snake_case)]
@@ -105,17 +129,10 @@ pub unsafe fn JS_IsException(v: JSValue) -> bool {
     js_unlikely(JS_VALUE_GET_TAG(v) == JS_TAG_EXCEPTION)
 }
 
-#[inline]
-#[allow(non_snake_case)]
-pub unsafe fn JS_IsUndefined(v: JSValue) -> bool {
-    JS_VALUE_GET_TAG(v) == JS_TAG_UNDEFINED
-}
-
-#[inline]
-#[allow(non_snake_case)]
-pub unsafe fn JS_IsUninitialized(v: JSValue) -> bool {
-    JS_VALUE_GET_TAG(v) == JS_TAG_UNINITIALIZED
-}
+def_js_is_some!(JS_IsUninitialized, JS_TAG_UNINITIALIZED);
+def_js_is_some!(JS_IsString, JS_TAG_STRING);
+def_js_is_some!(JS_IsSymbol, JS_TAG_SYMBOL);
+def_js_is_some!(JS_IsObject, JS_TAG_OBJECT);
 
 #[macro_export]
 macro_rules! JS_MKVAL {
