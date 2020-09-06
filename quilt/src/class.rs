@@ -53,10 +53,7 @@ impl Default for ClassDef {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        quilt::{ClassDef, ClassId, Context, EvalFlags, Runtime, Value},
-        js_c_function, js_class_finalizer,
-    };
+    use crate::{js_c_function, js_class_finalizer, ClassDef, ClassId, Context, EvalFlags, Runtime, Value};
     use std::{cell::RefCell, ffi::c_void, ptr::null_mut};
 
     struct S1 {
