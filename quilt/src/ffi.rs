@@ -280,6 +280,7 @@ pub unsafe fn JS_NewCFunctionMagic(
     JS_NewCFunction2(ctx, func, name, length, cproto, magic)
 }
 
+#[allow(non_snake_case)]
 macro_rules! JS_CFUNC_INTERNAL_DEF {
     ($name: expr, $length: expr, $cproto: expr, $field: ident, $func1: expr, $magic: expr) => {
         JSCFunctionListEntry {
