@@ -4,7 +4,7 @@ use crate::{
     Qj, QjContext, QjResult, QjRuntime, QjVec,
 };
 use log::trace;
-use quilt::{self, ffi, ClassDef, ClassId, Context, Runtime, Value};
+use quilt::{self, ffi, js_c_function, CFunctionListEntry, ClassDef, ClassId, Context, Runtime, Value};
 use std::{marker::Sync, ptr};
 
 unsafe fn finalize<T: QjClass + 'static>(rrt: Runtime, val: Value) {
@@ -69,7 +69,16 @@ pub(crate) fn register_class<T: QjClass + 'static>(rt: Runtime, clz: ClassId) {
     );
     let proto = ctx.new_object();
     rctx.set_class_proto(clz, proto.as_value());
-    proto.as_value().set_property_function_list(rctx, &[]);
+    proto.as_value().set_property_function_list(
+        rctx,
+        &[CFunctionListEntry::new(
+            "foo",
+            0,
+            js_c_function!(|_ctx: quilt::Context, _this: quilt::Value, _args: &[quilt::Value]| {
+                quilt::Value::undefined()
+            }),
+        )],
+    );
     let mut methods = Methods {
         context: ctx,
         proto: &proto,
@@ -139,6 +148,10 @@ mod tests {
             let result = ctx
                 .eval("Object.getPrototypeOf(s1)", "<input>", QjEvalFlags::TYPE_GLOBAL)
                 .unwrap();
+            println!("{:?}", result.to_var());
+            let result = ctx.eval("s1.name", "<input>", QjEvalFlags::TYPE_GLOBAL).unwrap();
+            println!("{:?}", result.to_var());
+            let result = ctx.eval("s1.foo", "<input>", QjEvalFlags::TYPE_GLOBAL).unwrap();
             println!("{:?}", result.to_var());
         })
     }

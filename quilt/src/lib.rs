@@ -20,7 +20,7 @@ pub use atom::Atom;
 pub use class::{ClassDef, ClassId};
 pub use context::Context;
 pub use flags::EvalFlags;
-pub use function::{convert_function_arguments, convert_function_result};
+pub use function::{convert_function_arguments, convert_function_result, CFunctionListEntry};
 pub use runtime::Runtime;
 pub use string::CString;
 pub use value::Value;

@@ -2,12 +2,14 @@ use crate::{
     atom::Atom,
     class::ClassId,
     context::Context,
-    conversion::{AsJsClassId, AsJsContextPointer, AsJsValue},
+    conversion::{AsJsCFunctionListEntry, AsJsClassId, AsJsContextPointer, AsJsValue},
     ffi,
+    function::CFunctionListEntry,
     marker::Covariant,
     string::CString as LtCString,
     util, Runtime,
 };
+use log::trace;
 use std::{
     ffi::{c_void, CString},
     fmt,
@@ -231,6 +233,22 @@ impl<'q> Value<'q> {
         unsafe { ffi::JS_SetPropertyStr(ctx.as_ptr(), self.0, c_key.as_ptr(), val.as_js_value()) };
     }
 
+    pub fn set_prototype<V>(self, ctx: Context<'q>, proto_val: V)
+    where
+        V: AsJsValue<'q>,
+    {
+        unsafe {
+            ffi::JS_SetPrototype(ctx.as_ptr(), self.0, proto_val.as_js_value());
+        }
+    }
+
+    pub fn prototype(self, ctx: Context<'q>) -> Value<'q> {
+        unsafe {
+            let val = ffi::JS_GetPrototype(ctx.as_ptr(), self.0);
+            Value::from_raw(val, ctx)
+        }
+    }
+
     // class
 
     #[inline]
@@ -267,7 +285,9 @@ impl<'q> Value<'q> {
     // C property
 
     #[inline]
-    pub fn set_property_function_list(self, ctx: Context, tab: &[ffi::JSCFunctionListEntry]) {
+    pub fn set_property_function_list(self, ctx: Context, tab: &[CFunctionListEntry<'q>]) {
+        let tab: Vec<ffi::JSCFunctionListEntry> = tab.iter().map(|v| v.as_js_c_function_list_entry()).collect();
+        trace!("length: {}", tab.len());
         unsafe { ffi::JS_SetPropertyFunctionList(ctx.as_ptr(), self.0, tab.as_ptr(), tab.len() as c_int) }
     }
 }
@@ -279,7 +299,7 @@ impl fmt::Debug for Value<'_> {
         for x in util::to_vec(self.0) {
             repr.push_str(format!("{:02x}", x).as_str())
         }
-        f.write_str(format!("QjValueTag(tag={}, {})", tag, repr).as_str())
+        f.write_str(format!("Value(tag={}, {})", tag, repr).as_str())
     }
 }
 
