@@ -3,7 +3,7 @@ use crate::{
     class_util::register_class,
     context::{QjContext, QjContextGuard},
 };
-use quilt::{ClassId, Runtime};
+use qjncore::{ClassId, Runtime};
 use std::{any::TypeId, collections::HashMap, ffi::c_void, fmt, ptr::null_mut};
 
 pub struct QjRuntimeOpaque {

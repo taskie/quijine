@@ -1,4 +1,4 @@
-use quilt::{
+use qjncore::{
     js_c_function, js_class_finalizer, CFunctionListEntry, ClassDef, ClassId, Context, EvalFlags, Runtime, Value,
 };
 use rand::{Rng, SeedableRng};

@@ -13,7 +13,7 @@ mod string;
 
 pub mod tags;
 
-pub use quilt::EvalFlags as QjEvalFlags;
+pub use qjncore::EvalFlags as QjEvalFlags;
 
 pub use aliases::*;
 pub use context::{QjContext, QjContextGuard};

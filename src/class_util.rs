@@ -4,7 +4,7 @@ use crate::{
     Qj, QjContext, QjResult, QjRuntime, QjVec,
 };
 use log::trace;
-use quilt::{self, ffi, js_c_function, CFunctionListEntry, ClassDef, ClassId, Context, Runtime, Value};
+use qjncore::{self, ffi, js_c_function, CFunctionListEntry, ClassDef, ClassId, Context, Runtime, Value};
 use std::{marker::Sync, ptr};
 
 unsafe fn finalize<T: QjClass + 'static>(rrt: Runtime, val: Value) {
@@ -54,7 +54,7 @@ pub(crate) fn register_class<T: QjClass + 'static>(rt: Runtime, clz: ClassId) {
     trace!("registering class: {} ({:?})", T::name(), clz);
     let rctx = Context::new(rt);
     let ctx = QjContext::from(rctx);
-    unsafe extern "C" fn finalizer<T: QjClass + 'static>(rt: *mut quilt::ffi::JSRuntime, val: quilt::ffi::JSValue) {
+    unsafe extern "C" fn finalizer<T: QjClass + 'static>(rt: *mut qjncore::ffi::JSRuntime, val: qjncore::ffi::JSValue) {
         let rt = Runtime::from_ptr(rt);
         let val = Value::from_raw_with_runtime(val, rt);
         finalize::<T>(rt, val)
@@ -74,9 +74,11 @@ pub(crate) fn register_class<T: QjClass + 'static>(rt: Runtime, clz: ClassId) {
         &[CFunctionListEntry::new(
             "foo",
             0,
-            js_c_function!(|_ctx: quilt::Context, _this: quilt::Value, _args: &[quilt::Value]| {
-                quilt::Value::undefined()
-            }),
+            js_c_function!(
+                |_ctx: qjncore::Context, _this: qjncore::Value, _args: &[qjncore::Value]| {
+                    qjncore::Value::undefined()
+                }
+            ),
         )],
     );
     let mut methods = Methods {
