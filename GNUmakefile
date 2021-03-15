@@ -20,6 +20,11 @@ fmt:
 fix:
 	cargo fix --allow-staged
 
+.PHONY: vet
+
+vet:
+	cargo clippy --all-features
+
 .PHONY: doc
 
 doc:

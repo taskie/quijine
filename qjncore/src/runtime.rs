@@ -37,8 +37,8 @@ impl<'q> Runtime<'q> {
     }
 
     #[inline]
-    pub fn set_opaque(self, opaque: *mut c_void) {
-        unsafe { ffi::JS_SetRuntimeOpaque(self.0.as_ptr(), opaque) }
+    pub unsafe fn set_opaque(self, opaque: *mut c_void) {
+        ffi::JS_SetRuntimeOpaque(self.0.as_ptr(), opaque)
     }
 
     #[inline]

@@ -257,8 +257,8 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn set_opaque(self, opaque: *mut c_void) {
-        unsafe { ffi::JS_SetOpaque(self.0, opaque) }
+    pub unsafe fn set_opaque(self, opaque: *mut c_void) {
+        ffi::JS_SetOpaque(self.0, opaque)
     }
 
     // array buffer

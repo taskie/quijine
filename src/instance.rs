@@ -202,7 +202,9 @@ impl<'q, T> Qj<'q, T> {
         if p.is_null() {
             return None;
         }
-        self.value.set_opaque(null_mut());
+        unsafe {
+            self.value.set_opaque(null_mut());
+        }
         Some(unsafe { ptr::read(p) })
     }
 
@@ -210,7 +212,7 @@ impl<'q, T> Qj<'q, T> {
     pub fn set_opaque<C: QjClass + 'static>(&mut self, mut v: C) {
         let mut rt = QjRuntime::from(self.context.runtime());
         let _clz = rt.get_or_register_class_id::<C>();
-        self.value.set_opaque(&mut v as *mut C as *mut c_void);
+        unsafe { self.value.set_opaque(&mut v as *mut C as *mut c_void) };
     }
 }
 

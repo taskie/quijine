@@ -24,7 +24,7 @@ impl ClassId {
         let mut before = self.0;
         let res = {
             // JS_NewClassID is not thread-safe...
-            let _ = NEW_CLASS_ID_LOCK.lock().unwrap();
+            let _lock = NEW_CLASS_ID_LOCK.lock().unwrap();
             unsafe { ffi::JS_NewClassID(&mut before) }
         };
         ClassId::from_raw(res)

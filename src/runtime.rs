@@ -71,7 +71,9 @@ impl QjRuntimeGuard {
             registered_classes: HashMap::new(),
             extra: null_mut(),
         });
-        rt.set_opaque(Box::into_raw(opaque) as *mut c_void);
+        unsafe {
+            rt.set_opaque(Box::into_raw(opaque) as *mut c_void);
+        }
         QjRuntimeGuard(QjRuntime::from(rt))
     }
 
