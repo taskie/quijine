@@ -1,5 +1,6 @@
 use qjncore::{
-    js_c_function, js_class_finalizer, CFunctionListEntry, ClassDef, ClassId, Context, EvalFlags, Runtime, Value,
+    conversion::AsJsCFunctionListEntry, ffi::JSCFunctionListEntry, js_c_function, js_class_finalizer,
+    CFunctionListEntry, ClassDef, ClassId, Context, EvalFlags, Runtime, Value,
 };
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
@@ -47,11 +48,15 @@ fn test() {
         ..Default::default()
     };
     let prng_proto_funcs = &[CFunctionListEntry::new("generate", 0, js_c_function!(prng_generate))];
+    let prng_proto_js_funcs: Vec<JSCFunctionListEntry> = prng_proto_funcs
+        .iter()
+        .map(|v| v.as_js_c_function_list_entry())
+        .collect();
     PRNG_CLASS_ID.with(|id| {
         *id.borrow_mut() = ClassId::generate();
         rt.new_class(*id.borrow(), &prng_class);
         let prng_proto = ctx.new_object();
-        prng_proto.set_property_function_list(ctx, prng_proto_funcs);
+        prng_proto.set_property_function_list(ctx, prng_proto_js_funcs.as_ref());
         prng_proto.set_property_str(ctx, "answer", ctx.new_int32(42));
         ctx.set_class_proto(*id.borrow(), prng_proto);
         eprintln!("{:?}", prng_proto);
@@ -62,6 +67,9 @@ fn test() {
     });
     let ret = ctx.eval("var prng = PRNG(); prng", "<input>", EvalFlags::TYPE_GLOBAL);
     assert_eq!(false, ctx.exception().is_exception(), "no exception");
+    unsafe {
+        ctx.free_value(ret);
+    }
     PRNG_CLASS_ID.with(|id| {
         let pt = ret.prototype(ctx);
         assert!(pt.is_object(), "prototype is object");
@@ -78,7 +86,7 @@ fn test() {
     };
     let ret = ctx.eval("prng.generate()", "<input>", EvalFlags::TYPE_GLOBAL);
     eprintln!("{:?}", ret);
-    // assert!(!ret.is_exception());
+    assert!(!ret.is_exception());
     unsafe {
         ctx.free_value(ret);
         ctx.free_value(global);

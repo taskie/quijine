@@ -4,7 +4,10 @@ use crate::{
     Qj, QjContext, QjResult, QjRuntime, QjVec,
 };
 use log::trace;
-use qjncore::{self, ffi, js_c_function, CFunctionListEntry, ClassDef, ClassId, Context, Runtime, Value};
+use qjncore::{
+    self, conversion::AsJsCFunctionListEntry, ffi, ffi::JSCFunctionListEntry, js_c_function, CFunctionListEntry,
+    ClassDef, ClassId, Context, Runtime, Value,
+};
 use std::{marker::Sync, ptr};
 
 unsafe fn finalize<T: QjClass + 'static>(rrt: Runtime, val: Value) {
@@ -69,18 +72,15 @@ pub(crate) fn register_class<T: QjClass + 'static>(rt: Runtime, clz: ClassId) {
     );
     let proto = ctx.new_object();
     rctx.set_class_proto(clz, proto.as_value());
-    proto.as_value().set_property_function_list(
-        rctx,
-        &[CFunctionListEntry::new(
-            "foo",
-            0,
-            js_c_function!(
-                |_ctx: qjncore::Context, _this: qjncore::Value, _args: &[qjncore::Value]| {
-                    qjncore::Value::undefined()
-                }
-            ),
-        )],
-    );
+    let functions = &[CFunctionListEntry::new(
+        "foo",
+        0,
+        js_c_function!(
+            |_ctx: qjncore::Context, _this: qjncore::Value, _args: &[qjncore::Value]| { qjncore::Value::undefined() }
+        ),
+    )];
+    let js_functions: Vec<JSCFunctionListEntry> = functions.iter().map(|v| v.as_js_c_function_list_entry()).collect();
+    proto.as_value().set_property_function_list(rctx, js_functions.as_ref());
     let mut methods = Methods {
         context: ctx,
         proto: &proto,

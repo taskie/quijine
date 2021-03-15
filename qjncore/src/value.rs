@@ -285,8 +285,7 @@ impl<'q> Value<'q> {
     // C property
 
     #[inline]
-    pub fn set_property_function_list(self, ctx: Context, tab: &[CFunctionListEntry<'q>]) {
-        let tab: Vec<ffi::JSCFunctionListEntry> = tab.iter().map(|v| v.as_js_c_function_list_entry()).collect();
+    pub fn set_property_function_list(self, ctx: Context, tab: &[ffi::JSCFunctionListEntry]) {
         trace!("length: {}", tab.len());
         unsafe { ffi::JS_SetPropertyFunctionList(ctx.as_ptr(), self.0, tab.as_ptr(), tab.len() as c_int) }
     }
