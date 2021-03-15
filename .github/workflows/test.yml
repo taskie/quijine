@@ -23,7 +23,8 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+          args: --all --all-features
 
-      - run: cargo fmt -- --check
-      - run: cargo test --verbose
+      - run: cargo fmt --all -- --check
+
+      - run: cargo test --all --verbose

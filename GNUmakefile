@@ -1,7 +1,7 @@
 .PHONY: build
 
 build:
-	cargo build --release
+	cargo build --all --release
 
 PREFIX := $(HOME)/.local
 
@@ -9,6 +9,11 @@ PREFIX := $(HOME)/.local
 
 install:
 	$(MAKE) -C jj install
+
+.PHONY: test
+
+test:
+	cargo test --all
 
 .PHONY: fmt
 
@@ -18,12 +23,12 @@ fmt:
 .PHONY: fix
 
 fix:
-	cargo fix --allow-staged
+	cargo fix --all --allow-staged
 
 .PHONY: vet
 
 vet:
-	cargo clippy --all-features
+	cargo clippy --all --all-features
 
 .PHONY: doc
 
