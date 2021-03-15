@@ -12,12 +12,11 @@ pub struct JjError {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum JjErrorKind {
     Io(io::Error),
     Qj(String),
     Other(String),
-    #[doc(hidden)]
-    __Nonexhaustive,
 }
 
 impl std::error::Error for JjError {}
@@ -28,6 +27,7 @@ impl std::fmt::Display for JjError {
             JjErrorKind::Io(ref e) => e.fmt(f),
             JjErrorKind::Qj(ref s) => f.write_str(s.as_str()),
             JjErrorKind::Other(ref s) => f.write_str(s.as_str()),
+            #[allow(unreachable_patterns)]
             _ => f.write_str("internal error"),
         }
     }
@@ -44,12 +44,12 @@ impl From<std::io::Error> for std::boxed::Box<JjError> {
 impl<'q> From<QjError<'q>> for std::boxed::Box<JjError> {
     fn from(e: QjError) -> Self {
         let s: Option<String> = match e.value {
-            QjErrorValue::String(s) => Some(s.clone()),
+            QjErrorValue::String(s) => Some(s),
             QjErrorValue::Value(v) => v.to_string(),
             _ => None,
         };
         Box::new(JjError {
-            kind: JjErrorKind::Qj(s.unwrap_or("internal error".to_owned())),
+            kind: JjErrorKind::Qj(s.unwrap_or_else(|| "internal error".to_owned())),
         })
     }
 }

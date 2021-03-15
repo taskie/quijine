@@ -2,9 +2,9 @@ use crate::{
     conversion::{AsJsCFunctionListEntry, AsJsValue},
     ffi,
     marker::Invariant,
-    Context, Runtime, Value,
+    Context, Value,
 };
-use std::{borrow::Cow, ffi::CString, marker::PhantomData, os::raw::c_int, slice};
+use std::{ffi::CString, marker::PhantomData, os::raw::c_int, slice};
 
 #[inline]
 pub unsafe fn convert_function_arguments<'q>(
@@ -43,9 +43,8 @@ impl<'q> CFunctionListEntry<'q> {
         S: AsRef<str>,
     {
         let c_name = CString::new(name.as_ref()).unwrap();
-        unsafe {
-            CFunctionListEntry::from_raw_with_name(unsafe { ffi::JS_CFUNC_DEF(c_name.as_ptr(), length, func1) }, c_name)
-        }
+        let c_def = unsafe { ffi::JS_CFUNC_DEF(c_name.as_ptr(), length, func1) };
+        unsafe { CFunctionListEntry::from_raw_with_name(c_def, c_name) }
     }
 
     #[inline]
@@ -54,12 +53,8 @@ impl<'q> CFunctionListEntry<'q> {
         S: AsRef<str>,
     {
         let c_name = CString::new(name.as_ref()).unwrap();
-        unsafe {
-            CFunctionListEntry::from_raw_with_name(
-                unsafe { ffi::JS_CFUNC_MAGIC_DEF(c_name.as_ptr(), length, func1, magic) },
-                c_name,
-            )
-        }
+        let c_def = unsafe { ffi::JS_CFUNC_MAGIC_DEF(c_name.as_ptr(), length, func1, magic) };
+        unsafe { CFunctionListEntry::from_raw_with_name(c_def, c_name) }
     }
 
     #[inline]
@@ -68,12 +63,8 @@ impl<'q> CFunctionListEntry<'q> {
         S: AsRef<str>,
     {
         let c_name = CString::new(name.as_ref()).unwrap();
-        unsafe {
-            CFunctionListEntry::from_raw_with_name(
-                unsafe { ffi::JS_CFUNC_SPECIAL_DEF_constructor(c_name.as_ptr(), length, func1) },
-                c_name,
-            )
-        }
+        let c_def = unsafe { ffi::JS_CFUNC_SPECIAL_DEF_constructor(c_name.as_ptr(), length, func1) };
+        unsafe { CFunctionListEntry::from_raw_with_name(c_def, c_name) }
     }
 }
 

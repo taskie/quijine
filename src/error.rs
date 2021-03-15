@@ -14,7 +14,7 @@ impl fmt::Display for QjErrorValue<'_> {
             QjErrorValue::None => f.write_str(default),
             QjErrorValue::String(s) => f.write_str(s),
             QjErrorValue::Value(v) => {
-                let s = v.to_string().unwrap_or(default.into());
+                let s = v.to_string().unwrap_or_else(|| default.into());
                 f.write_str(s.as_str())
             }
         }

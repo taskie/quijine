@@ -1,6 +1,6 @@
 use crate::{
     class::ClassId,
-    conversion::{AsJsClassId, AsJsContextPointer, AsJsRuntimePointer, AsJsValue, AsValue},
+    conversion::{AsJsClassId, AsJsContextPointer, AsJsRuntimePointer, AsJsValue},
     ffi,
     flags::{EvalFlags, ParseJSONFlags},
     function::{convert_function_arguments, convert_function_result},
@@ -14,10 +14,8 @@ use std::{
     ffi::{c_void, CString},
     fmt,
     marker::PhantomData,
-    mem::size_of,
     os::raw::{c_char, c_int},
-    ptr::{null_mut, NonNull},
-    slice,
+    ptr::NonNull,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -115,10 +113,8 @@ impl<'q> Context<'q> {
 
     #[inline]
     pub fn throw(self, obj: Value<'q>) -> Value<'q> {
-        unsafe {
-            let value = unsafe { ffi::JS_Throw(self.as_ptr(), obj.as_js_value()) };
-            Value::from_raw(value, self)
-        }
+        let value = unsafe { ffi::JS_Throw(self.as_ptr(), obj.as_js_value()) };
+        unsafe { Value::from_raw(value, self) }
     }
 
     #[inline]
@@ -320,10 +316,8 @@ impl<'q> Context<'q> {
 
     #[inline]
     pub fn new_array_buffer_copy_from_sized<T: 'q>(self, t: T) -> Value<'q> {
-        unsafe {
-            let buf = util::to_vec(t);
-            self.new_array_buffer_copy(buf.as_slice())
-        }
+        let buf = util::to_vec(t);
+        self.new_array_buffer_copy(buf.as_slice())
     }
 
     // callback
@@ -350,13 +344,11 @@ impl<'q> Context<'q> {
             let func = cb.array_buffer_to_sized::<*mut Callback>(ctx).unwrap();
             let any = (**func)(ctx, this, args.as_slice());
             convert_function_result(&any)
-        };
-        unsafe {
-            log::trace!("save pointer to ArrayBuffer");
-            let cb = self.new_array_buffer_copy_from_sized::<*mut Callback>(func.as_mut());
-            log::trace!("new c function data");
-            self.new_c_function_data(Some(call), length, 0, vec![cb])
         }
+        log::trace!("save pointer to ArrayBuffer");
+        let cb = self.new_array_buffer_copy_from_sized::<*mut Callback>(func.as_mut());
+        log::trace!("new c function data");
+        self.new_c_function_data(Some(call), length, 0, vec![cb])
     }
 
     pub fn new_c_function(self, func: ffi::JSCFunction, name: &str, length: i32) -> Value<'q> {

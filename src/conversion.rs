@@ -1,4 +1,4 @@
-use crate::{context::QjContext, error::QjResult, string::QjCString, tags::QjVariant, QjError};
+use crate::{context::QjContext, error::QjResult, tags::QjVariant};
 
 pub trait ToQj<'q> {
     fn to_qj(self, ctx: QjContext<'q>) -> QjResult<QjVariant<'q>>;

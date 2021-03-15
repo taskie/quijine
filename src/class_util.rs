@@ -96,9 +96,7 @@ pub(crate) fn register_class<T: QjClass + 'static>(rt: Runtime, clz: ClassId) {
 mod tests {
     use crate::{
         class::{QjClass, QjClassMethods},
-        run_with_context,
-        tags::QjObjectTag,
-        Qj, QjContext, QjEvalFlags, QjResult,
+        run_with_context, QjEvalFlags,
     };
 
     struct S1 {

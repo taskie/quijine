@@ -155,7 +155,7 @@ impl<'q> QjContext<'q> {
             };
             log::debug!("invoke end");
             res
-        };
+        }
         unsafe {
             log::debug!("save pointer to ArrayBuffer");
             let cb = self.0.new_array_buffer_copy_from_sized::<QjCallback>(func);

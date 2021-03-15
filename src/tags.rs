@@ -28,6 +28,7 @@ pub struct QjCatchOffsetTag;
 pub struct QjExceptionTag;
 pub struct QjFloat64Tag;
 
+#[non_exhaustive]
 pub enum QjVariant<'q> {
     BigDecimal(Qj<'q, QjBigDecimalTag>),
     BigInt(Qj<'q, QjBigIntTag>),
@@ -62,6 +63,7 @@ impl<'q> fmt::Debug for QjVariant<'q> {
             QjVariant::CatchOffset => f.write_str("CatchOffset"),
             QjVariant::Exception => f.write_str("Exception"),
             QjVariant::Float64(v) => f.write_str(format!("Float64({})", v).as_str()),
+            #[allow(unreachable_patterns)]
             _ => f.write_str("Unknown"),
         }
     }

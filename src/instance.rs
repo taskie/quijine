@@ -41,7 +41,7 @@ impl<'q, T> Qj<'q, T> {
 
     #[inline]
     pub(crate) fn transmute<X>(&self) -> &Qj<'q, X> {
-        unsafe { std::mem::transmute(self) }
+        unsafe { &*(self as *const Qj<T> as *const Qj<X>) }
     }
 
     // property
@@ -198,7 +198,7 @@ impl<'q, T> Qj<'q, T> {
     pub(crate) fn take_opaque<C: QjClass + 'static>(&mut self) -> Option<C> {
         let rt = QjRuntime::from(self.context.runtime());
         let clz = rt.get_class_id::<C>()?;
-        let p = unsafe { self.value.opaque(clz) as *const C };
+        let p = self.value.opaque(clz) as *const C;
         if p.is_null() {
             return None;
         }
@@ -280,7 +280,7 @@ impl<'q, T> QjVec<'q, T> {
     }
 
     pub fn from_slice(qjs: &[Qj<'q, T>], ctx: QjContext<'q>) -> Option<QjVec<'q, T>> {
-        let vec: Vec<&Qj<'q, T>> = qjs.iter().map(|v| v).collect();
+        let vec: Vec<&Qj<'q, T>> = qjs.iter().collect();
         Self::from_ref_slice(vec.as_slice(), ctx)
     }
 

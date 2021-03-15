@@ -24,7 +24,7 @@ unsafe fn prng_generate<'q, 'a>(ctx: Context<'q>, this: Value<'q>, _values: &'a 
     ctx.new_int32(res)
 }
 
-unsafe fn prng_new<'q, 'a>(ctx: Context<'q>, this: Value<'q>, _values: &'a [Value<'q>]) -> Value<'q> {
+unsafe fn prng_new<'q, 'a>(ctx: Context<'q>, _this: Value<'q>, _values: &'a [Value<'q>]) -> Value<'q> {
     let obj = PRNG_CLASS_ID.with(|id| ctx.new_object_class(*id.borrow()));
     let prng = Box::new(PRNG {
         rng: XorShiftRng::from_seed([0; 16]),
@@ -33,7 +33,7 @@ unsafe fn prng_new<'q, 'a>(ctx: Context<'q>, this: Value<'q>, _values: &'a [Valu
     obj
 }
 
-unsafe fn prng_finalizer<'q, 'a>(rt: Runtime<'q>, val: Value<'q>) {
+unsafe fn prng_finalizer<'q, 'a>(_rt: Runtime<'q>, val: Value<'q>) {
     let obj = PRNG_CLASS_ID.with(|id| val.opaque(*id.borrow())) as *mut PRNG;
     Box::from_raw(obj);
 }
@@ -62,9 +62,7 @@ fn test() {
         eprintln!("{:?}", prng_proto);
     });
     let global = ctx.global_object();
-    global.set_property_str(ctx, "PRNG", unsafe {
-        ctx.new_c_function(js_c_function!(prng_new), "PRNG", 0)
-    });
+    global.set_property_str(ctx, "PRNG", ctx.new_c_function(js_c_function!(prng_new), "PRNG", 0));
     let ret = ctx.eval("var prng = PRNG(); prng", "<input>", EvalFlags::TYPE_GLOBAL);
     assert_eq!(false, ctx.exception().is_exception(), "no exception");
     unsafe {
