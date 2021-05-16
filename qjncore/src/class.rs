@@ -1,6 +1,6 @@
 use crate::{conversion::AsJsClassId, ffi, Runtime, Value};
 use lazy_static::lazy_static;
-use std::{ffi::CString, ptr::null_mut, sync::Mutex};
+use std::{ffi::{CStr, CString}, ptr::null_mut, sync::Mutex};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(transparent)]
@@ -46,7 +46,7 @@ type ClassFinalizer<'q> = fn(Runtime<'q>, Value<'q>) -> ();
 
 #[derive(Debug)]
 pub struct ClassDef {
-    pub class_name: String,
+    pub class_name: CString,
     pub finalizer: ffi::JSClassFinalizer,
     pub gc_mark: ffi::JSClassGCMark,
     #[doc(hidden)]
@@ -57,9 +57,8 @@ pub struct ClassDef {
 
 impl ClassDef {
     pub(crate) fn c_def(&self) -> ffi::JSClassDef {
-        let c_str = CString::new(self.class_name.as_str()).unwrap();
         ffi::JSClassDef {
-            class_name: c_str.as_ptr(),
+            class_name: self.class_name.as_ptr(),
             finalizer: self.finalizer,
             gc_mark: self.gc_mark,
             call: self.call,
@@ -71,7 +70,7 @@ impl ClassDef {
 impl Default for ClassDef {
     fn default() -> Self {
         ClassDef {
-            class_name: String::default(),
+            class_name: CString::default(),
             finalizer: None,
             gc_mark: None,
             call: None,

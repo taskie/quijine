@@ -209,10 +209,10 @@ impl<'q, T> Qj<'q, T> {
     }
 
     #[inline]
-    pub fn set_opaque<C: QjClass + 'static>(&mut self, mut v: C) {
+    pub fn set_opaque<C: QjClass + 'static>(&mut self, v: *mut C) {
         let mut rt = QjRuntime::from(self.context.runtime());
         let _clz = rt.get_or_register_class_id::<C>();
-        unsafe { self.value.set_opaque(&mut v as *mut C as *mut c_void) };
+        unsafe { self.value.set_opaque(v as *mut c_void) };
     }
 }
 

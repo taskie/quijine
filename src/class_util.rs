@@ -5,10 +5,10 @@ use crate::{
 };
 use log::trace;
 use qjncore::{
-    self, conversion::AsJsCFunctionListEntry, ffi, ffi::JSCFunctionListEntry, js_c_function, CFunctionListEntry,
+    self,
     ClassDef, ClassId, Context, Runtime, Value,
 };
-use std::{marker::Sync, ptr};
+use std::{ffi::CString, marker::Sync, ptr};
 
 unsafe fn finalize<T: QjClass + 'static>(rrt: Runtime, val: Value) {
     let rt = QjRuntime::from(rrt);
@@ -27,7 +27,6 @@ unsafe fn finalize<T: QjClass + 'static>(rrt: Runtime, val: Value) {
 struct Methods<'q> {
     proto: &'q Qj<'q, QjObjectTag>,
     context: QjContext<'q>,
-    function_list: Vec<ffi::JSCFunctionListEntry>,
 }
 
 impl<'q, T: QjClass + 'static> QjClassMethods<'q, T> for Methods<'q> {
@@ -53,42 +52,36 @@ impl<'q, T: QjClass + 'static> QjClassMethods<'q, T> for Methods<'q> {
     }
 }
 
-pub(crate) fn register_class<T: QjClass + 'static>(rt: Runtime, clz: ClassId) {
+pub(crate) fn register_class<T: QjClass + 'static>(rrt: Runtime, clz: ClassId) {
     trace!("registering class: {} ({:?})", T::name(), clz);
-    let rctx = Context::new(rt);
+    let mut rt = QjRuntime::from(rrt);
+    let rctx = Context::new(rrt);
     let ctx = QjContext::from(rctx);
     unsafe extern "C" fn finalizer<T: QjClass + 'static>(rt: *mut qjncore::ffi::JSRuntime, val: qjncore::ffi::JSValue) {
         let rt = Runtime::from_ptr(rt);
         let val = Value::from_raw_with_runtime(val, rt);
         finalize::<T>(rt, val)
     }
-    rt.new_class(
+    let class_def = ClassDef {
+        class_name: CString::new(T::name()).unwrap(),
+        finalizer: Some(finalizer::<T>),
+        ..Default::default()
+    };
+    rt.register_class_def(clz, class_def);
+    let class_def = rt.get_class_def(clz).unwrap();
+    rrt.new_class(
         clz,
-        &ClassDef {
-            class_name: T::name().to_owned(),
-            finalizer: Some(finalizer::<T>),
-            ..Default::default()
-        },
+        class_def,
     );
     let proto = ctx.new_object();
+    Qj::dup(&proto);
     rctx.set_class_proto(clz, proto.as_value());
-    let functions = &[CFunctionListEntry::new(
-        "foo",
-        0,
-        js_c_function!(
-            |_ctx: qjncore::Context, _this: qjncore::Value, _args: &[qjncore::Value]| { qjncore::Value::undefined() }
-        ),
-    )];
-    let js_functions: Vec<JSCFunctionListEntry> = functions.iter().map(|v| v.as_js_c_function_list_entry()).collect();
-    proto.as_value().set_property_function_list(rctx, js_functions.as_ref());
     let mut methods = Methods {
         context: ctx,
         proto: &proto,
-        function_list: vec![],
     };
     T::add_methods(&mut methods);
     T::setup_proto(ctx, &proto);
-    proto.detach();
     unsafe { Context::free(rctx) };
 }
 
@@ -126,11 +119,12 @@ mod tests {
                 ctx.new_function(
                     |ctx, _this, _args| {
                         let mut obj = ctx.new_object_class::<S1>();
-                        let s1 = S1 {
+                        let mut s1 = Box::new(S1 {
                             name: "hoge".to_owned(),
                             pos: (3, 4),
-                        };
-                        obj.set_opaque(s1);
+                        });
+                        obj.set_opaque(s1.as_mut() as *mut S1);
+                        std::mem::forget(s1);
                         Ok(obj.into())
                     },
                     "S1",

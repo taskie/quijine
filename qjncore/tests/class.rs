@@ -1,12 +1,14 @@
+use std::ffi::CString;
+
 use qjncore::{ClassDef, ClassId, Context, Runtime, conversion::AsJsValue};
 
 #[test]
 fn test() {
     let rt = Runtime::new();
-    let ctx = Context::new(rt);
     // Define Class
+    let ctx = Context::new(rt);
     let test_class_def = ClassDef {
-        class_name: "Test".to_string(),
+        class_name: CString::new("Test").unwrap(),
         ..Default::default()
     };
     let test_class_id = ClassId::generate();
@@ -17,6 +19,7 @@ fn test() {
     let obj = ctx.new_object_class(test_class_id);
     let obj_proto = obj.prototype(ctx);
     assert!(obj_proto.is_object());
+    assert!(! obj_proto.is_null());
     unsafe {
         assert_eq!(obj_proto.as_js_value().u.ptr, test_proto.as_js_value().u.ptr);
     }

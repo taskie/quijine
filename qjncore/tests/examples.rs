@@ -4,11 +4,7 @@ use qjncore::{
 };
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
-use std::{
-    cell::RefCell,
-    ffi::c_void,
-    ptr::{null_mut, NonNull},
-};
+use std::{cell::RefCell, ffi::{CString, c_void}, ptr::{null_mut, NonNull}};
 
 thread_local! {
     static PRNG_CLASS_ID: RefCell<ClassId> = RefCell::new(ClassId::none());
@@ -43,7 +39,7 @@ fn test() {
     let rt = Runtime::new();
     let ctx = Context::new(rt);
     let prng_class = ClassDef {
-        class_name: "PRNG".to_string(),
+        class_name: CString::new("PRNG").unwrap(),
         finalizer: js_class_finalizer!(prng_finalizer),
         ..Default::default()
     };
