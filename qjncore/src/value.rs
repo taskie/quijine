@@ -95,6 +95,14 @@ impl<'q> Value<'q> {
         unsafe { ffi::JS_VALUE_GET_TAG(self.0) }
     }
 
+    #[inline]
+    pub fn ptr(self) -> Option<*mut c_void> {
+        if !self.has_ref_count() {
+            return None;
+        }
+        Some(unsafe { ffi::JS_VALUE_GET_PTR(self.0) })
+    }
+
     // special values
 
     #[inline]

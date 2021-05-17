@@ -1,13 +1,19 @@
 use crate::{
     class::QjClass,
+    class_util::register_class,
     error::{QjError, QjErrorValue, QjResult},
     instance::QjVec,
     runtime::QjRuntime,
     tags::{QjAnyTag, QjIntTag, QjNullTag, QjObjectTag, QjStringTag, QjUndefinedTag},
     Qj, QjEvalFlags, QjRuntimeGuard,
 };
-use qjncore::{conversion::AsJsValue, ffi, Context, Value};
-use std::{fmt, os::raw::c_int};
+use qjncore::{conversion::AsJsValue, ffi, ClassId, Context, Value};
+use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int, ptr::null_mut};
+
+pub struct QjContextOpaque {
+    registered_classes: HashSet<TypeId>,
+    extra: *mut c_void,
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct QjContext<'q>(Context<'q>);
@@ -21,6 +27,21 @@ impl<'q> QjContext<'q> {
     #[inline]
     pub(crate) fn into(self) -> Context<'q> {
         self.0
+    }
+
+    #[inline]
+    pub fn runtime(self) -> QjRuntime<'q> {
+        QjRuntime::from(self.0.runtime())
+    }
+
+    #[inline]
+    pub(crate) fn opaque(&self) -> &QjContextOpaque {
+        unsafe { &*(self.0.opaque() as *mut QjContextOpaque) }
+    }
+
+    #[inline]
+    pub(crate) fn opaque_mut(&mut self) -> &mut QjContextOpaque {
+        unsafe { &mut *(self.0.opaque() as *mut QjContextOpaque) }
     }
 
     #[inline]
@@ -62,9 +83,8 @@ impl<'q> QjContext<'q> {
     }
 
     #[inline]
-    pub fn new_object_class<C: QjClass + 'static>(self) -> Qj<'q, QjObjectTag> {
-        let mut rt = QjRuntime::from(self.0.runtime());
-        let clz = rt.get_or_register_class_id::<C>();
+    pub fn new_object_class<C: QjClass + 'static>(mut self) -> Qj<'q, QjObjectTag> {
+        let clz = self.register_class::<C>();
         self.wrap_result(self.0.new_object_class(clz)).unwrap()
     }
 
@@ -193,17 +213,36 @@ impl<'q> QjContext<'q> {
                 .json_stringify(obj.as_value(), replacer.as_value(), space0.as_value()),
         )
     }
+
+    // class
+
+    pub(crate) fn register_class<T: 'static + QjClass>(&mut self) -> ClassId {
+        let class_id = self.runtime().get_or_register_class_id::<T>();
+        if self.opaque().registered_classes.contains(&TypeId::of::<T>()) {
+            return class_id;
+        }
+        register_class::<T>(self.0, class_id);
+        class_id
+    }
 }
 
 pub struct QjContextGuard<'r>(QjContext<'r>);
 
 impl<'r> QjContextGuard<'r> {
     pub fn new(rt: QjRuntime) -> QjContextGuard {
-        QjContextGuard(QjContext(Context::new(rt.into())))
+        let ctx = Context::new(rt.into());
+        let opaque = Box::new(QjContextOpaque {
+            registered_classes: HashSet::new(),
+            extra: null_mut(),
+        });
+        unsafe {
+            ctx.set_opaque(Box::into_raw(opaque) as *mut c_void);
+        }
+        QjContextGuard(QjContext(ctx))
     }
 
     pub fn new_with_guard(rtg: &QjRuntimeGuard) -> QjContextGuard {
-        QjContextGuard(QjContext(Context::new(rtg.get().into())))
+        QjContextGuard::new(rtg.get())
     }
 
     #[inline]
@@ -222,7 +261,10 @@ impl<'r> QjContextGuard<'r> {
 
 impl Drop for QjContextGuard<'_> {
     fn drop(&mut self) {
-        unsafe { Context::free(self.0.into()) }
+        unsafe {
+            Box::from_raw((self.0).0.opaque() as *mut QjContextOpaque);
+            Context::free(self.0.into())
+        }
     }
 }
 

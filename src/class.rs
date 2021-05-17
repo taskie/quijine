@@ -10,7 +10,7 @@ pub trait QjClassMethods<'q, T: QjClass> {
     where
         F: 'static
             + Send
-            + Fn(QjContext<'q>, &T, Qj<'q, QjAnyTag>, QjVec<'q, QjAnyTag>) -> QjResult<'q, Qj<'q, QjAnyTag>>
+            + Fn(QjContext<'q>, &mut T, Qj<'q, QjAnyTag>, QjVec<'q, QjAnyTag>) -> QjResult<'q, Qj<'q, QjAnyTag>>
             + Sync;
 }
 

@@ -49,12 +49,12 @@ pub enum QjVariant<'q> {
 impl<'q> fmt::Debug for QjVariant<'q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            QjVariant::BigDecimal(_) => f.write_str("BigDecimal(_)"),
-            QjVariant::BigInt(_) => f.write_str("BigInt(_)"),
-            QjVariant::BigFloat(_) => f.write_str("BigFloat(_)"),
-            QjVariant::Symbol(_) => f.write_str("Symbol(_)"),
-            QjVariant::String(_) => f.write_str("String(_)"),
-            QjVariant::Object(_) => f.write_str("Object(_)"),
+            QjVariant::BigDecimal(v) => f.write_str(format!("BigDecimal({:p})", v.to_ptr().unwrap()).as_str()),
+            QjVariant::BigInt(v) => f.write_str(format!("BigInt({:p})", v.to_ptr().unwrap()).as_str()),
+            QjVariant::BigFloat(v) => f.write_str(format!("BigFloat({:p})", v.to_ptr().unwrap()).as_str()),
+            QjVariant::Symbol(v) => f.write_str(format!("Symbol({:p})", v.to_ptr().unwrap()).as_str()),
+            QjVariant::String(v) => f.write_str(format!("String({:p})", v.to_ptr().unwrap()).as_str()),
+            QjVariant::Object(v) => f.write_str(format!("Object({:p})", v.to_ptr().unwrap()).as_str()),
             QjVariant::Int(v) => f.write_str(format!("Int({})", v).as_str()),
             QjVariant::Bool(v) => f.write_str(format!("Bool({})", v).as_str()),
             QjVariant::Null => f.write_str("Null"),

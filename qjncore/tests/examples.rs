@@ -4,7 +4,11 @@ use qjncore::{
 };
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
-use std::{cell::RefCell, ffi::{CString, c_void}, ptr::{null_mut, NonNull}};
+use std::{
+    cell::RefCell,
+    ffi::{c_void, CString},
+    ptr::{null_mut, NonNull},
+};
 
 thread_local! {
     static PRNG_CLASS_ID: RefCell<ClassId> = RefCell::new(ClassId::none());

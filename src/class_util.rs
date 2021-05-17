@@ -4,11 +4,8 @@ use crate::{
     Qj, QjContext, QjResult, QjRuntime, QjVec,
 };
 use log::trace;
-use qjncore::{
-    self,
-    ClassDef, ClassId, Context, Runtime, Value,
-};
-use std::{ffi::CString, marker::Sync, ptr};
+use qjncore::{self, ClassDef, ClassId, Context, Runtime, Value};
+use std::{ffi::CString, marker::Sync};
 
 unsafe fn finalize<T: QjClass + 'static>(rrt: Runtime, val: Value) {
     let rt = QjRuntime::from(rrt);
@@ -21,7 +18,7 @@ unsafe fn finalize<T: QjClass + 'static>(rrt: Runtime, val: Value) {
     if p.is_null() {
         return;
     }
-    let _ = ptr::read(p);
+    let _b = Box::from_raw(p);
 }
 
 struct Methods<'q> {
@@ -34,14 +31,15 @@ impl<'q, T: QjClass + 'static> QjClassMethods<'q, T> for Methods<'q> {
     where
         F: 'static
             + Send
-            + Fn(QjContext<'q>, &T, Qj<'q, QjAnyTag>, QjVec<'q, QjAnyTag>) -> QjResult<'q, Qj<'q, QjAnyTag>>
+            + Fn(QjContext<'q>, &mut T, Qj<'q, QjAnyTag>, QjVec<'q, QjAnyTag>) -> QjResult<'q, Qj<'q, QjAnyTag>>
             + Sync,
     {
         let ctx = self.context;
         let f = ctx.new_function(
             move |ctx, this, args| {
                 let cloned = this.clone();
-                let t = cloned.get_opaque::<T>().unwrap();
+                let mut t = cloned.get_opaque::<T>().unwrap();
+                let t = unsafe { t.as_mut() };
                 (method)(ctx, t, this, args)
             },
             name,
@@ -52,27 +50,30 @@ impl<'q, T: QjClass + 'static> QjClassMethods<'q, T> for Methods<'q> {
     }
 }
 
-pub(crate) fn register_class<T: QjClass + 'static>(rrt: Runtime, clz: ClassId) {
+pub(crate) fn register_class<T: QjClass + 'static>(rctx: Context, clz: ClassId) {
     trace!("registering class: {} ({:?})", T::name(), clz);
-    let mut rt = QjRuntime::from(rrt);
-    let rctx = Context::new(rrt);
     let ctx = QjContext::from(rctx);
+    let mut rt = ctx.runtime();
     unsafe extern "C" fn finalizer<T: QjClass + 'static>(rt: *mut qjncore::ffi::JSRuntime, val: qjncore::ffi::JSValue) {
         let rt = Runtime::from_ptr(rt);
         let val = Value::from_raw_with_runtime(val, rt);
         finalize::<T>(rt, val)
     }
-    let class_def = ClassDef {
-        class_name: CString::new(T::name()).unwrap(),
-        finalizer: Some(finalizer::<T>),
-        ..Default::default()
+    if let Some(_class_def) = rt.get_class_def(clz) {
+        // nop
+    } else {
+        // per Runtime
+        let class_def = ClassDef {
+            class_name: CString::new(T::name()).unwrap(),
+            finalizer: Some(finalizer::<T>),
+            ..Default::default()
+        };
+        rt.register_class_def(clz, class_def);
+        let rt2 = rt.clone();
+        let class_def = &rt.get_class_def(clz).unwrap();
+        rt2.new_class(clz, class_def)
     };
-    rt.register_class_def(clz, class_def);
-    let class_def = rt.get_class_def(clz).unwrap();
-    rrt.new_class(
-        clz,
-        class_def,
-    );
+    // per Context
     let proto = ctx.new_object();
     Qj::dup(&proto);
     rctx.set_class_proto(clz, proto.as_value());
@@ -82,71 +83,7 @@ pub(crate) fn register_class<T: QjClass + 'static>(rrt: Runtime, clz: ClassId) {
     };
     T::add_methods(&mut methods);
     T::setup_proto(ctx, &proto);
-    unsafe { Context::free(rctx) };
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::{
-        class::{QjClass, QjClassMethods},
-        run_with_context, QjEvalFlags,
-    };
-
-    struct S1 {
-        name: String,
-        pos: (i32, i32),
-    }
-
-    impl QjClass for S1 {
-        fn name() -> &'static str {
-            "S1"
-        }
-
-        fn add_methods<'q, T: QjClassMethods<'q, Self>>(methods: &mut T) {
-            methods.add_method("name", |ctx, t, _this, _args| {
-                Ok(ctx.new_string(t.name.as_str()).into())
-            });
-        }
-    }
-
-    #[test]
-    fn test_opaque() {
-        env_logger::init();
-        run_with_context(|ctx| {
-            let global = ctx.global_object();
-            global.set(
-                "S1",
-                ctx.new_function(
-                    |ctx, _this, _args| {
-                        let mut obj = ctx.new_object_class::<S1>();
-                        let mut s1 = Box::new(S1 {
-                            name: "hoge".to_owned(),
-                            pos: (3, 4),
-                        });
-                        obj.set_opaque(s1.as_mut() as *mut S1);
-                        std::mem::forget(s1);
-                        Ok(obj.into())
-                    },
-                    "S1",
-                    0,
-                ),
-            );
-            let result = ctx
-                .eval("var s1 = S1(); s1", "<input>", QjEvalFlags::TYPE_GLOBAL)
-                .unwrap();
-            println!("{:?}", result.to_var());
-            let result = ctx
-                .eval("Object.getPrototypeOf({})", "<input>", QjEvalFlags::TYPE_GLOBAL)
-                .unwrap();
-            println!("{:?}", result.to_var());
-            let result = ctx
-                .eval("Object.getPrototypeOf(s1)", "<input>", QjEvalFlags::TYPE_GLOBAL)
-                .unwrap();
-            println!("{:?}", result.to_var());
-            let result = ctx.eval("s1.name", "<input>", QjEvalFlags::TYPE_GLOBAL).unwrap();
-            println!("{:?}", result.to_var());
-            let result = ctx.eval("s1.foo", "<input>", QjEvalFlags::TYPE_GLOBAL).unwrap();
-            println!("{:?}", result.to_var());
-        })
-    }
-}
+mod tests {}

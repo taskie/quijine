@@ -8,7 +8,15 @@ use crate::{
     QjContext, QjRuntime,
 };
 use qjncore::{ffi, Context, Value};
-use std::{ffi::c_void, fmt, marker::PhantomData, ptr, ptr::null_mut, sync::atomic};
+use std::{
+    cell::Cell,
+    ffi::c_void,
+    fmt,
+    marker::PhantomData,
+    mem, ptr,
+    ptr::{null_mut, NonNull},
+    sync::atomic,
+};
 
 static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
 
@@ -160,6 +168,11 @@ impl<'q, T> Qj<'q, T> {
         self.to_c_string().and_then(|v| v.to_string())
     }
 
+    #[inline]
+    pub(crate) fn to_ptr(&self) -> Option<*mut c_void> {
+        self.value.ptr()
+    }
+
     // object
 
     #[inline]
@@ -184,35 +197,27 @@ impl<'q, T> Qj<'q, T> {
     // class
 
     #[inline]
-    pub(crate) fn get_opaque<C: QjClass + 'static>(&self) -> Option<&C> {
-        let rt = QjRuntime::from(self.context.runtime());
-        let clz = rt.get_class_id::<C>()?;
-        let p = self.value.opaque(clz) as *const C;
-        if p.is_null() {
-            return None;
-        }
-        Some(unsafe { &*p })
+    pub fn prototype(&self) -> Qj<'q, QjAnyTag> {
+        Qj::from(self.value.prototype(self.context), self.context)
     }
 
     #[inline]
-    pub(crate) fn take_opaque<C: QjClass + 'static>(&mut self) -> Option<C> {
+    pub(crate) fn get_opaque<C: QjClass + 'static>(&self) -> Option<NonNull<C>> {
         let rt = QjRuntime::from(self.context.runtime());
         let clz = rt.get_class_id::<C>()?;
-        let p = self.value.opaque(clz) as *const C;
+        let p = self.value.opaque(clz) as *mut C;
         if p.is_null() {
             return None;
         }
-        unsafe {
-            self.value.set_opaque(null_mut());
-        }
-        Some(unsafe { ptr::read(p) })
+        NonNull::new(p)
     }
 
     #[inline]
-    pub fn set_opaque<C: QjClass + 'static>(&mut self, v: *mut C) {
+    pub fn set_opaque<C: QjClass + 'static>(&mut self, mut v: Box<C>) {
         let mut rt = QjRuntime::from(self.context.runtime());
         let _clz = rt.get_or_register_class_id::<C>();
-        unsafe { self.value.set_opaque(v as *mut c_void) };
+        unsafe { self.value.set_opaque(v.as_mut() as *mut C as *mut c_void) };
+        mem::forget(v);
     }
 }
 

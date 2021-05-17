@@ -15,6 +15,7 @@ pub mod tags;
 pub use qjncore::EvalFlags as QjEvalFlags;
 
 pub use aliases::*;
+pub use class::{QjClass, QjClassMethods};
 pub use context::{QjContext, QjContextGuard};
 pub use error::{QjError, QjErrorValue, QjResult};
 pub use instance::{Qj, QjVec};

@@ -1,6 +1,6 @@
 use crate::{conversion::AsJsClassId, ffi, Runtime, Value};
 use lazy_static::lazy_static;
-use std::{ffi::{CStr, CString}, ptr::null_mut, sync::Mutex};
+use std::{ffi::CString, ptr::null_mut, sync::Mutex};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(transparent)]
