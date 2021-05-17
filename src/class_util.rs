@@ -37,9 +37,8 @@ impl<'q, T: QjClass + 'static> QjClassMethods<'q, T> for Methods<'q> {
         let ctx = self.context;
         let f = ctx.new_function(
             move |ctx, this, args| {
-                let cloned = this.clone();
-                let mut t = cloned.get_opaque::<T>().unwrap();
-                let t = unsafe { t.as_mut() };
+                let mut cloned = this.clone();
+                let t = cloned.get_opaque_mut::<T>().unwrap();
                 (method)(ctx, t, this, args)
             },
             name,
@@ -69,9 +68,8 @@ pub(crate) fn register_class<T: QjClass + 'static>(rctx: Context, clz: ClassId) 
             ..Default::default()
         };
         rt.register_class_def(clz, class_def);
-        let rt2 = rt.clone();
-        let class_def = &rt.get_class_def(clz).unwrap();
-        rt2.new_class(clz, class_def)
+        let class_def = rt.get_class_def(clz).unwrap();
+        rt.new_class(clz, class_def)
     };
     // per Context
     let proto = ctx.new_object();

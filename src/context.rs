@@ -4,15 +4,14 @@ use crate::{
     error::{QjError, QjErrorValue, QjResult},
     instance::QjVec,
     runtime::QjRuntime,
-    tags::{QjAnyTag, QjIntTag, QjNullTag, QjObjectTag, QjStringTag, QjUndefinedTag},
+    tags::{QjAnyTag, QjBoolTag, QjFloat64Tag, QjIntTag, QjNullTag, QjObjectTag, QjStringTag, QjUndefinedTag},
     Qj, QjEvalFlags, QjRuntimeGuard,
 };
 use qjncore::{conversion::AsJsValue, ffi, ClassId, Context, Value};
-use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int, ptr::null_mut};
+use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int};
 
 pub struct QjContextOpaque {
     registered_classes: HashSet<TypeId>,
-    extra: *mut c_void,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -47,7 +46,7 @@ impl<'q> QjContext<'q> {
     #[inline]
     fn wrap_result<T>(self, val: Value<'q>) -> QjResult<'q, Qj<'q, T>> {
         if val.is_exception() {
-            Err(QjError::from_value(Qj::<QjAnyTag>::from(self.0.exception(), self.0)))
+            Err(QjError::with_value(Qj::<QjAnyTag>::from(self.0.exception(), self.0)))
         } else {
             Ok(Qj::from(val, self.0))
         }
@@ -89,6 +88,11 @@ impl<'q> QjContext<'q> {
     }
 
     #[inline]
+    pub fn new_bool(self, v: bool) -> Qj<'q, QjBoolTag> {
+        self.wrap_result(self.0.new_bool(v)).unwrap()
+    }
+
+    #[inline]
     pub fn new_int32(self, v: i32) -> Qj<'q, QjIntTag> {
         self.wrap_result(self.0.new_int32(v)).unwrap()
     }
@@ -99,7 +103,7 @@ impl<'q> QjContext<'q> {
     }
 
     #[inline]
-    pub fn new_float64(self, v: f64) -> Qj<'q, QjIntTag> {
+    pub fn new_float64(self, v: f64) -> Qj<'q, QjFloat64Tag> {
         self.wrap_result(self.0.new_float64(v)).unwrap()
     }
 
@@ -217,11 +221,13 @@ impl<'q> QjContext<'q> {
     // class
 
     pub(crate) fn register_class<T: 'static + QjClass>(&mut self) -> ClassId {
+        let type_id = TypeId::of::<T>();
         let class_id = self.runtime().get_or_register_class_id::<T>();
-        if self.opaque().registered_classes.contains(&TypeId::of::<T>()) {
+        if self.opaque().registered_classes.contains(&type_id) {
             return class_id;
         }
         register_class::<T>(self.0, class_id);
+        self.opaque_mut().registered_classes.insert(type_id);
         class_id
     }
 }
@@ -233,7 +239,6 @@ impl<'r> QjContextGuard<'r> {
         let ctx = Context::new(rt.into());
         let opaque = Box::new(QjContextOpaque {
             registered_classes: HashSet::new(),
-            extra: null_mut(),
         });
         unsafe {
             ctx.set_opaque(Box::into_raw(opaque) as *mut c_void);

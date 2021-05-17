@@ -8,7 +8,7 @@ fn multiple_runtimes() {
         quijine::run_with_context(move |ctx| {
             let recv = ctx.new_function(
                 move |ctx, _this, _args| {
-                    let message = rx.recv().map_err(|e| QjError::from_str(e.to_string().as_str()))?;
+                    let message = rx.recv().map_err(|e| QjError::with_str(e.to_string().as_str()))?;
                     Ok(ctx.new_string(message.as_str()).into())
                 },
                 "recv",
@@ -26,7 +26,7 @@ fn multiple_runtimes() {
             move |ctx, _this, args| {
                 let message = args.get(0).to_string().unwrap();
                 tx.send(message)
-                    .map_err(|e| QjError::from_str(e.to_string().as_str()))?;
+                    .map_err(|e| QjError::with_str(e.to_string().as_str()))?;
                 Ok(ctx.undefined().into())
             },
             "send",

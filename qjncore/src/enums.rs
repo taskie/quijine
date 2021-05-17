@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::ffi;
 
 #[derive(Copy, Clone)]
@@ -10,6 +11,7 @@ pub enum CFunctionEnum {
     ConstructorOrFunc = ffi::JSCFunctionEnum_JS_CFUNC_constructor_or_func,
     ConstructorOrFuncMagic = ffi::JSCFunctionEnum_JS_CFUNC_constructor_or_func_magic,
     FF = ffi::JSCFunctionEnum_JS_CFUNC_f_f,
+    #[allow(clippy::upper_case_acronyms)]
     FFF = ffi::JSCFunctionEnum_JS_CFUNC_f_f_f,
     Getter = ffi::JSCFunctionEnum_JS_CFUNC_getter,
     Setter = ffi::JSCFunctionEnum_JS_CFUNC_setter,

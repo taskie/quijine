@@ -53,7 +53,7 @@ impl<'q> fmt::Debug for QjVariant<'q> {
             QjVariant::BigInt(v) => f.write_str(format!("BigInt({:p})", v.to_ptr().unwrap()).as_str()),
             QjVariant::BigFloat(v) => f.write_str(format!("BigFloat({:p})", v.to_ptr().unwrap()).as_str()),
             QjVariant::Symbol(v) => f.write_str(format!("Symbol({:p})", v.to_ptr().unwrap()).as_str()),
-            QjVariant::String(v) => f.write_str(format!("String({:p})", v.to_ptr().unwrap()).as_str()),
+            QjVariant::String(v) => f.write_str(format!("String({:?})", v.to_string().unwrap()).as_str()),
             QjVariant::Object(v) => f.write_str(format!("Object({:p})", v.to_ptr().unwrap()).as_str()),
             QjVariant::Int(v) => f.write_str(format!("Int({})", v).as_str()),
             QjVariant::Bool(v) => f.write_str(format!("Bool({})", v).as_str()),

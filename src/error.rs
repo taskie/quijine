@@ -32,13 +32,13 @@ pub struct QjError<'q> {
 }
 
 impl<'q> QjError<'q> {
-    pub fn from_str<T: AsRef<str>>(message: T) -> QjError<'static> {
+    pub fn with_str<T: AsRef<str>>(message: T) -> QjError<'static> {
         QjError {
             value: QjErrorValue::String(message.as_ref().to_string()),
         }
     }
 
-    pub fn from_value(val: Qj<'q, QjAnyTag>) -> QjError<'q> {
+    pub fn with_value(val: Qj<'q, QjAnyTag>) -> QjError<'q> {
         QjError {
             value: QjErrorValue::Value(val),
         }

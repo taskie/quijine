@@ -16,7 +16,7 @@ pub unsafe fn convert_function_arguments<'q>(
     let ctx = Context::from_ptr(ctx);
     let this = Value::from_raw(js_this, ctx);
     let args = slice::from_raw_parts(argv, argc as usize);
-    let args: Vec<Value> = args.into_iter().map(|v| Value::from_raw(*v, ctx)).collect();
+    let args: Vec<Value> = args.iter().map(|v| Value::from_raw(*v, ctx)).collect();
     (ctx, this, args)
 }
 

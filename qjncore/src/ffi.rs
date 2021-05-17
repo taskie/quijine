@@ -1,3 +1,5 @@
+#![allow(clippy::missing_safety_doc)]
+
 pub use libquickjs_sys::*;
 use std::{
     mem::transmute,

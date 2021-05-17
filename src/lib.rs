@@ -4,7 +4,6 @@ mod aliases;
 mod class;
 mod class_util;
 mod context;
-mod conversion;
 mod error;
 mod instance;
 mod runtime;

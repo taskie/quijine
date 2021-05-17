@@ -8,15 +8,7 @@ use crate::{
     QjContext, QjRuntime,
 };
 use qjncore::{ffi, Context, Value};
-use std::{
-    cell::Cell,
-    ffi::c_void,
-    fmt,
-    marker::PhantomData,
-    mem, ptr,
-    ptr::{null_mut, NonNull},
-    sync::atomic,
-};
+use std::{ffi::c_void, fmt, marker::PhantomData, mem, sync::atomic};
 
 static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
 
@@ -69,18 +61,13 @@ impl<'q, T> Qj<'q, T> {
     #[inline]
     pub(crate) unsafe fn free(this: &Self) {
         this.context.free_value(this.value);
-        this.debug_trace("freed");
+        this.debug_trace("free");
     }
 
     #[inline]
     pub(crate) fn dup(this: &Self) {
         this.context.dup_value(this.value);
         this.debug_trace("dup");
-    }
-
-    #[inline]
-    pub(crate) fn detach(self) {
-        Self::dup(&self)
     }
 
     fn debug_trace(&self, name: &str) {
@@ -116,7 +103,7 @@ impl<'q, T> Qj<'q, T> {
 
     // conversion
 
-    pub(crate) fn to_var(&self) -> QjVariant<'_> {
+    pub fn to_variant(&self) -> QjVariant<'_> {
         match self.value.tag() {
             ffi::JS_TAG_BIG_DECIMAL => QjVariant::BigDecimal(self.transmute::<QjBigDecimalTag>().clone()),
             ffi::JS_TAG_BIG_INT => QjVariant::BigInt(self.transmute::<QjBigIntTag>().clone()),
@@ -202,14 +189,14 @@ impl<'q, T> Qj<'q, T> {
     }
 
     #[inline]
-    pub(crate) fn get_opaque<C: QjClass + 'static>(&self) -> Option<NonNull<C>> {
+    pub(crate) fn get_opaque_mut<C: QjClass + 'static>(&mut self) -> Option<&mut C> {
         let rt = QjRuntime::from(self.context.runtime());
         let clz = rt.get_class_id::<C>()?;
         let p = self.value.opaque(clz) as *mut C;
         if p.is_null() {
             return None;
         }
-        NonNull::new(p)
+        Some(unsafe { &mut *p })
     }
 
     #[inline]
@@ -292,18 +279,8 @@ impl<'q, T> QjVec<'q, T> {
     // property
 
     #[inline]
-    pub(crate) fn as_vec(&self) -> &Vec<Value<'q>> {
-        &self.values
-    }
-
-    #[inline]
     pub(crate) fn as_slice(&self) -> &[Value<'q>] {
         self.values.as_slice()
-    }
-
-    #[inline]
-    pub(crate) fn context(&self) -> Context<'q> {
-        self.context
     }
 
     // memory
@@ -324,16 +301,19 @@ impl<'q, T> QjVec<'q, T> {
         this.debug_trace("dup");
     }
 
-    #[inline]
-    pub(crate) fn detach(self) {
-        Self::dup(&self)
-    }
-
     fn debug_trace(&self, name: &str) {
         log::debug!("{}: {:?} (Vec)", name, self);
     }
 
     // elements
+
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
 
     pub fn get(&self, idx: usize) -> Qj<'q, T> {
         let qj = Qj::<T>::from(self.values[idx], self.context);
@@ -361,10 +341,10 @@ impl<T> Clone for QjVec<'_, T> {
     }
 }
 
-impl<'q, T> Into<Vec<Qj<'q, T>>> for QjVec<'q, T> {
-    fn into(self) -> Vec<Qj<'q, T>> {
-        QjVec::dup(&self);
-        self.values.iter().map(|v| Qj::<T>::from(*v, self.context)).collect()
+impl<'q, T> From<QjVec<'q, T>> for Vec<Qj<'q, T>> {
+    fn from(vs: QjVec<'q, T>) -> Self {
+        QjVec::dup(&vs);
+        vs.values.iter().map(|v| Qj::<T>::from(*v, vs.context)).collect()
     }
 }
 

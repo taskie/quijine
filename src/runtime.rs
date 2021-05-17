@@ -3,12 +3,11 @@ use crate::{
     context::{QjContext, QjContextGuard},
 };
 use qjncore::{ClassDef, ClassId, Runtime};
-use std::{any::TypeId, collections::HashMap, ffi::c_void, fmt, ptr::null_mut};
+use std::{any::TypeId, collections::HashMap, ffi::c_void, fmt};
 
 pub struct QjRuntimeOpaque {
     registered_classes: HashMap<TypeId, ClassId>,
     class_defs: HashMap<ClassId, ClassDef>,
-    extra: *mut c_void,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -68,8 +67,8 @@ impl<'r> QjRuntime<'r> {
         self.opaque_mut().class_defs.insert(class_id, class_def);
     }
 
-    pub(crate) fn get_class_def(&mut self, class_id: ClassId) -> Option<&ClassDef> {
-        self.opaque_mut().class_defs.get(&class_id)
+    pub(crate) fn get_class_def(&self, class_id: ClassId) -> Option<&ClassDef> {
+        self.opaque().class_defs.get(&class_id)
     }
 }
 
@@ -82,7 +81,6 @@ impl QjRuntimeGuard {
         let opaque = Box::new(QjRuntimeOpaque {
             registered_classes: HashMap::new(),
             class_defs: HashMap::new(),
-            extra: null_mut(),
         });
         unsafe {
             rt.set_opaque(Box::into_raw(opaque) as *mut c_void);

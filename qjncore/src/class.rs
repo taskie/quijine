@@ -1,4 +1,4 @@
-use crate::{conversion::AsJsClassId, ffi, Runtime, Value};
+use crate::{conversion::AsJsClassId, ffi};
 use lazy_static::lazy_static;
 use std::{ffi::CString, ptr::null_mut, sync::Mutex};
 
@@ -41,8 +41,6 @@ impl<'q> AsJsClassId<'q> for ClassId {
 lazy_static! {
     static ref NEW_CLASS_ID_LOCK: Mutex<()> = Mutex::new(());
 }
-
-type ClassFinalizer<'q> = fn(Runtime<'q>, Value<'q>) -> ();
 
 #[derive(Debug)]
 pub struct ClassDef {
