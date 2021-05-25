@@ -7,14 +7,10 @@ use std::{
     ptr::null_mut,
 };
 
-// private type definitions
+// basic type definitions
 
-#[cfg(any(target_pointer_width = "32"))]
 #[allow(non_camel_case_types)]
-type c_size_t = u32;
-#[cfg(any(target_pointer_width = "64"))]
-#[allow(non_camel_case_types)]
-type c_size_t = u64;
+pub type c_size_t = size_t;
 
 // from C preprocessor macro
 

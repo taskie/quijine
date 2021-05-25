@@ -1,7 +1,7 @@
 use crate::{
     class::ClassId,
     conversion::{AsJsClassId, AsJsContextPointer, AsJsRuntimePointer, AsJsValue},
-    ffi,
+    ffi::{self, c_size_t},
     flags::{EvalFlags, ParseJSONFlags},
     function::{convert_function_arguments, convert_function_result},
     marker::Covariant,
@@ -144,7 +144,7 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_string_from_bytes(self, v: &[u8]) -> Value<'q> {
         unsafe {
-            let value = ffi::JS_NewStringLen(self.as_ptr(), v.as_ptr() as *const c_char, v.len() as u64);
+            let value = ffi::JS_NewStringLen(self.as_ptr(), v.as_ptr() as *const c_char, v.len() as c_size_t);
             Value::from_raw(value, self)
         }
     }
@@ -233,7 +233,7 @@ impl<'q> Context<'q> {
             ffi::JS_Eval(
                 self.as_ptr(),
                 c_code.as_ptr(),
-                c_code.as_bytes().len() as u64,
+                c_code.as_bytes().len() as c_size_t,
                 c_filename.as_ptr(),
                 eval_flags.bits() as i32,
             )
@@ -260,7 +260,7 @@ impl<'q> Context<'q> {
             let value = ffi::JS_ParseJSON(
                 self.as_ptr(),
                 c_buf.as_ptr(),
-                c_buf.as_bytes().len() as u64,
+                c_buf.as_bytes().len() as c_size_t,
                 c_filename.as_ptr(),
             );
             Value::from_raw(value, self)
@@ -279,7 +279,7 @@ impl<'q> Context<'q> {
             let value = ffi::JS_ParseJSON2(
                 self.as_ptr(),
                 c_buf.as_ptr(),
-                c_buf.as_bytes().len() as u64,
+                c_buf.as_bytes().len() as c_size_t,
                 c_filename.as_ptr(),
                 flags.bits() as i32,
             );
@@ -309,7 +309,7 @@ impl<'q> Context<'q> {
     {
         let buf = buf.as_ref();
         unsafe {
-            let value = ffi::JS_NewArrayBufferCopy(self.as_ptr(), buf.as_ptr(), buf.len() as u64);
+            let value = ffi::JS_NewArrayBufferCopy(self.as_ptr(), buf.as_ptr(), buf.len() as c_size_t);
             Value::from_raw(value, self)
         }
     }
