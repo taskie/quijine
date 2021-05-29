@@ -7,7 +7,7 @@ use crate::{
     },
     QjContext, QjRuntime,
 };
-use qjncore::{ffi, Context, Value};
+use qjncore::{Context, Value, ValueTag};
 use std::{ffi::c_void, fmt, marker::PhantomData, mem, sync::atomic};
 
 static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
@@ -105,21 +105,20 @@ impl<'q, T> Qj<'q, T> {
 
     pub fn to_variant(&self) -> QjVariant<'_> {
         match self.value.tag() {
-            ffi::JS_TAG_BIG_DECIMAL => QjVariant::BigDecimal(self.transmute::<QjBigDecimalTag>().clone()),
-            ffi::JS_TAG_BIG_INT => QjVariant::BigInt(self.transmute::<QjBigIntTag>().clone()),
-            ffi::JS_TAG_BIG_FLOAT => QjVariant::BigFloat(self.transmute::<QjBigFloatTag>().clone()),
-            ffi::JS_TAG_SYMBOL => QjVariant::Symbol(self.transmute::<QjSymbolTag>().clone()),
-            ffi::JS_TAG_STRING => QjVariant::String(self.transmute::<QjStringTag>().clone()),
-            ffi::JS_TAG_OBJECT => QjVariant::Object(self.transmute::<QjObjectTag>().clone()),
-            ffi::JS_TAG_INT => QjVariant::Int(self.to_i32().unwrap()),
-            ffi::JS_TAG_BOOL => QjVariant::Bool(self.to_bool().unwrap()),
-            ffi::JS_TAG_NULL => QjVariant::Null,
-            ffi::JS_TAG_UNDEFINED => QjVariant::Undefined,
-            ffi::JS_TAG_UNINITIALIZED => QjVariant::Uninitialized,
-            ffi::JS_TAG_CATCH_OFFSET => QjVariant::CatchOffset,
-            ffi::JS_TAG_EXCEPTION => QjVariant::Exception,
-            ffi::JS_TAG_FLOAT64 => QjVariant::Float64(self.to_f64().unwrap()),
-            _ => panic!("invalid state"),
+            ValueTag::BigDecimal => QjVariant::BigDecimal(self.transmute::<QjBigDecimalTag>().clone()),
+            ValueTag::BigInt => QjVariant::BigInt(self.transmute::<QjBigIntTag>().clone()),
+            ValueTag::BigFloat => QjVariant::BigFloat(self.transmute::<QjBigFloatTag>().clone()),
+            ValueTag::Symbol => QjVariant::Symbol(self.transmute::<QjSymbolTag>().clone()),
+            ValueTag::String => QjVariant::String(self.transmute::<QjStringTag>().clone()),
+            ValueTag::Object => QjVariant::Object(self.transmute::<QjObjectTag>().clone()),
+            ValueTag::Int => QjVariant::Int(self.to_i32().unwrap()),
+            ValueTag::Bool => QjVariant::Bool(self.to_bool().unwrap()),
+            ValueTag::Null => QjVariant::Null,
+            ValueTag::Undefined => QjVariant::Undefined,
+            ValueTag::Uninitialized => QjVariant::Uninitialized,
+            ValueTag::CatchOffset => QjVariant::CatchOffset,
+            ValueTag::Exception => QjVariant::Exception,
+            ValueTag::Float64 => QjVariant::Float64(self.to_f64().unwrap()),
         }
     }
 

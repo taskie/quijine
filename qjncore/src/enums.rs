@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+
 use crate::ffi;
 
 #[derive(Copy, Clone)]
@@ -18,4 +19,23 @@ pub enum CFunctionEnum {
     GetterMagic = ffi::JSCFunctionEnum_JS_CFUNC_getter_magic,
     SetterMagic = ffi::JSCFunctionEnum_JS_CFUNC_setter_magic,
     IteratorNext = ffi::JSCFunctionEnum_JS_CFUNC_iterator_next,
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(i32)]
+pub enum ValueTag {
+    BigDecimal = ffi::JS_TAG_BIG_DECIMAL,
+    BigInt = ffi::JS_TAG_BIG_INT,
+    BigFloat = ffi::JS_TAG_BIG_FLOAT,
+    Symbol = ffi::JS_TAG_SYMBOL,
+    String = ffi::JS_TAG_STRING,
+    Object = ffi::JS_TAG_OBJECT,
+    Int = ffi::JS_TAG_INT,
+    Bool = ffi::JS_TAG_BOOL,
+    Null = ffi::JS_TAG_NULL,
+    Undefined = ffi::JS_TAG_UNDEFINED,
+    Uninitialized = ffi::JS_TAG_UNINITIALIZED,
+    CatchOffset = ffi::JS_TAG_CATCH_OFFSET,
+    Exception = ffi::JS_TAG_EXCEPTION,
+    Float64 = ffi::JS_TAG_FLOAT64,
 }

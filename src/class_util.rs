@@ -53,7 +53,7 @@ pub(crate) fn register_class<T: QjClass + 'static>(rctx: Context, clz: ClassId) 
     trace!("registering class: {} ({:?})", T::name(), clz);
     let ctx = QjContext::from(rctx);
     let mut rt = ctx.runtime();
-    unsafe extern "C" fn finalizer<T: QjClass + 'static>(rt: *mut qjncore::ffi::JSRuntime, val: qjncore::ffi::JSValue) {
+    unsafe extern "C" fn finalizer<T: QjClass + 'static>(rt: *mut qjncore::raw::JSRuntime, val: qjncore::raw::JSValue) {
         let rt = Runtime::from_ptr(rt);
         let val = Value::from_raw_with_runtime(val, rt);
         finalize::<T>(rt, val)

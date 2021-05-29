@@ -7,7 +7,7 @@ use crate::{
     tags::{QjAnyTag, QjBoolTag, QjFloat64Tag, QjIntTag, QjNullTag, QjObjectTag, QjStringTag, QjUndefinedTag},
     Qj, QjEvalFlags, QjRuntimeGuard,
 };
-use qjncore::{conversion::AsJsValue, ffi, ClassId, Context, Value};
+use qjncore::{conversion::AsJsValue, raw, ClassId, Context, Value};
 use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int};
 
 pub struct QjContextOpaque {
@@ -130,13 +130,13 @@ impl<'q> QjContext<'q> {
     #[inline]
     pub fn new_callback(self, func: QjCallback<'q, 'static>, _name: &str, length: i32) -> Qj<'q, QjObjectTag> {
         unsafe extern "C" fn call(
-            ctx: *mut ffi::JSContext,
-            js_this: ffi::JSValue,
+            ctx: *mut raw::JSContext,
+            js_this: raw::JSValue,
             argc: c_int,
-            argv: *mut ffi::JSValue,
+            argv: *mut raw::JSValue,
             _magic: c_int,
-            func_data: *mut ffi::JSValue,
-        ) -> ffi::JSValue {
+            func_data: *mut raw::JSValue,
+        ) -> raw::JSValue {
             let ctx = Context::from_ptr(ctx);
             let this = Value::from_raw(js_this, ctx);
             let mut args: Vec<Value> = Vec::with_capacity(argc as usize);

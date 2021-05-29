@@ -3,6 +3,7 @@ use crate::{
     class::ClassId,
     context::Context,
     conversion::{AsJsClassId, AsJsContextPointer, AsJsValue},
+    enums::ValueTag,
     ffi,
     marker::Covariant,
     string::CString as LtCString,
@@ -12,6 +13,7 @@ use log::trace;
 use std::{
     ffi::{c_void, CString},
     fmt,
+    intrinsics::transmute,
     marker::PhantomData,
     mem::size_of,
     os::raw::c_int,
@@ -91,8 +93,8 @@ impl<'q> Value<'q> {
     // type
 
     #[inline]
-    pub fn tag(self) -> i32 {
-        unsafe { ffi::JS_VALUE_GET_TAG(self.0) }
+    pub fn tag(self) -> ValueTag {
+        unsafe { transmute(ffi::JS_VALUE_GET_TAG(self.0)) }
     }
 
     #[inline]
@@ -305,7 +307,7 @@ impl fmt::Debug for Value<'_> {
         for x in util::to_vec(self.0) {
             repr.push_str(format!("{:02x}", x).as_str())
         }
-        f.write_str(format!("Value(tag={}, {})", tag, repr).as_str())
+        f.write_str(format!("Value(tag={:?}, {})", tag, repr).as_str())
     }
 }
 

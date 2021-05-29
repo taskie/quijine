@@ -1,6 +1,6 @@
 use qjncore::{
-    conversion::AsJsCFunctionListEntry, ffi::JSCFunctionListEntry, js_c_function, js_class_finalizer,
-    CFunctionListEntry, ClassDef, ClassId, Context, EvalFlags, Runtime, Value,
+    conversion::AsJsCFunctionListEntry, js_c_function, js_class_finalizer, CFunctionListEntry, ClassDef, ClassId,
+    Context, EvalFlags, Runtime, Value,
 };
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
@@ -48,7 +48,7 @@ fn test() {
         ..Default::default()
     };
     let prng_proto_funcs = &[CFunctionListEntry::new("generate", 0, js_c_function!(prng_generate))];
-    let prng_proto_js_funcs: Vec<JSCFunctionListEntry> = prng_proto_funcs
+    let prng_proto_js_funcs: Vec<_> = prng_proto_funcs
         .iter()
         .map(|v| v.as_js_c_function_list_entry())
         .collect();

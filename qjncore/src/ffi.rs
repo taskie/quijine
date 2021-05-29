@@ -1,4 +1,5 @@
 #![allow(clippy::missing_safety_doc)]
+#![allow(dead_code)]
 
 pub use libquickjs_sys::*;
 use std::{
