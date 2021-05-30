@@ -1,7 +1,7 @@
 use crate::{
     class::{QjClass, QjClassMethods},
     tags::{QjAnyTag, QjObjectTag},
-    Qj, QjContext, QjResult, QjRuntime, QjVec,
+    Qj, QjContext, QjResult, QjRuntime,
 };
 use log::trace;
 use qjncore::{self, ClassDef, ClassId, Context, Runtime, Value};
@@ -31,7 +31,7 @@ impl<'q, T: QjClass + 'static> QjClassMethods<'q, T> for Methods<'q> {
     where
         F: 'static
             + Send
-            + Fn(QjContext<'q>, &mut T, Qj<'q, QjAnyTag>, QjVec<'q, QjAnyTag>) -> QjResult<'q, Qj<'q, QjAnyTag>>
+            + Fn(QjContext<'q>, &mut T, Qj<'q, QjAnyTag>, &[Qj<'q, QjAnyTag>]) -> QjResult<'q, Qj<'q, QjAnyTag>>
             + Sync,
     {
         let ctx = self.context;

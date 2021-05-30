@@ -15,7 +15,7 @@ impl QjClass for S1 {
             Ok(ctx.new_string(t.name.as_str()).into())
         });
         methods.add_method("setName", |ctx, t, _this, args| {
-            let name = args.get(0).to_string().unwrap();
+            let name = args[0].to_string().unwrap();
             t.name = name;
             Ok(ctx.undefined().into())
         });
@@ -26,8 +26,8 @@ impl QjClass for S1 {
             Ok(obj.into())
         });
         methods.add_method("move", |ctx, t, _this, args| {
-            t.pos.0 += args.get(0).to_i32().unwrap();
-            t.pos.1 += args.get(1).to_i32().unwrap();
+            t.pos.0 += args[0].to_i32().unwrap();
+            t.pos.1 += args[1].to_i32().unwrap();
             Ok(ctx.undefined().into())
         });
     }

@@ -2,7 +2,6 @@ use crate::{
     class::QjClass,
     class_util::register_class,
     error::{QjError, QjErrorValue, QjResult},
-    instance::QjVec,
     runtime::QjRuntime,
     tags::{QjAnyTag, QjBoolTag, QjFloat64Tag, QjIntTag, QjNullTag, QjObjectTag, QjStringTag, QjUndefinedTag},
     Qj, QjEvalFlags, QjRuntimeGuard,
@@ -58,16 +57,16 @@ impl<'q> QjContext<'q> {
     }
 
     #[inline]
-    pub fn call<F, T>(self, func_obj: F, this_obj: T, args: &QjVec<'q, QjAnyTag>) -> QjResult<'q, Qj<'q, QjAnyTag>>
+    pub fn call<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> QjResult<'q, Qj<'q, QjAnyTag>>
     where
         F: AsRef<Qj<'q, QjAnyTag>>,
         T: AsRef<Qj<'q, QjAnyTag>>,
+        A: AsRef<[Qj<'q, QjAnyTag>]>,
     {
-        let val = self.0.call(
-            func_obj.as_ref().as_value(),
-            this_obj.as_ref().as_value(),
-            args.as_slice(),
-        );
+        let qc_args: Vec<_> = args.as_ref().iter().map(|v| v.as_value()).collect();
+        let val = self
+            .0
+            .call(func_obj.as_ref().as_value(), this_obj.as_ref().as_value(), qc_args);
         self.wrap_result(val)
     }
 
@@ -122,7 +121,7 @@ impl<'q> QjContext<'q> {
     #[inline]
     pub fn new_function<F>(self, func: F, name: &str, length: i32) -> Qj<'q, QjObjectTag>
     where
-        F: 'static + Send + Fn(QjContext<'q>, Qj<'q, QjAnyTag>, QjVec<'q, QjAnyTag>) -> QjResult<'q, Qj<'q, QjAnyTag>>,
+        F: 'static + Send + Fn(QjContext<'q>, Qj<'q, QjAnyTag>, &[Qj<'q, QjAnyTag>]) -> QjResult<'q, Qj<'q, QjAnyTag>>,
     {
         self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), name, length)
     }
@@ -153,12 +152,12 @@ impl<'q> QjContext<'q> {
             let this = Qj::<QjAnyTag>::from(this, ctx);
             Qj::dup(&this);
             log::debug!("args");
-            let args = QjVec::<QjAnyTag>::from(args.as_slice(), ctx);
-            QjVec::dup(&args);
+            let args: Vec<_> = args.iter().map(|v| Qj::<QjAnyTag>::from(*v, ctx)).collect();
+            args.iter().for_each(Qj::dup);
             let ctx = QjContext::from(ctx);
 
             log::debug!("invoke start");
-            let r = (*func)(ctx, this, args);
+            let r = (*func)(ctx, this, args.as_slice());
             let res = match r {
                 Ok(t) => {
                     Qj::dup(&t);
@@ -280,4 +279,4 @@ impl fmt::Debug for QjContextGuard<'_> {
 }
 
 pub(crate) type QjCallback<'q, 'a> =
-    Box<dyn Fn(QjContext<'q>, Qj<'q, QjAnyTag>, QjVec<'q, QjAnyTag>) -> QjResult<'q, Qj<'q, QjAnyTag>> + 'a>;
+    Box<dyn Fn(QjContext<'q>, Qj<'q, QjAnyTag>, &[Qj<'q, QjAnyTag>]) -> QjResult<'q, Qj<'q, QjAnyTag>> + 'a>;

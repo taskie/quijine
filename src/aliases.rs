@@ -1,5 +1,5 @@
 use crate::{
-    instance::{Qj, QjVec},
+    instance::Qj,
     tags::{
         QjAnyTag, QjBigDecimalTag, QjBigFloatTag, QjBigIntTag, QjBoolTag, QjCatchOffsetTag, QjExceptionTag,
         QjFloat64Tag, QjIntTag, QjNullTag, QjObjectTag, QjReferenceTag, QjStringTag, QjSymbolTag, QjUndefinedTag,
@@ -11,14 +11,10 @@ macro_rules! qj_define_aliases {
     ($tag: ident, $single: ident) => {
         pub type $single<'q> = Qj<'q, $tag>;
     };
-    ($tag: ident, $single: ident, $vec: ident) => {
-        pub type $single<'q> = Qj<'q, $tag>;
-        pub type $vec<'q> = QjVec<'q, $tag>;
-    };
 }
 
 // any
-qj_define_aliases!(QjAnyTag, QjAny, QjAnyVec);
+qj_define_aliases!(QjAnyTag, QjAny);
 
 // references
 qj_define_aliases!(QjReferenceTag, QjReference);

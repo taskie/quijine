@@ -24,7 +24,7 @@ fn multiple_runtimes() {
     quijine::run_with_context(move |ctx| {
         let send = ctx.new_function(
             move |ctx, _this, args| {
-                let message = args.get(0).to_string().unwrap();
+                let message = args[0].to_string().unwrap();
                 tx.send(message)
                     .map_err(|e| QjError::with_str(e.to_string().as_str()))?;
                 Ok(ctx.undefined().into())

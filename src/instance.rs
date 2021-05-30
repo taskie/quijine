@@ -5,7 +5,7 @@ use crate::{
         QjAnyTag, QjBigDecimalTag, QjBigFloatTag, QjBigIntTag, QjBoolTag, QjFloat64Tag, QjIntTag, QjNullTag,
         QjObjectTag, QjReferenceTag, QjStringTag, QjSymbolTag, QjUndefinedTag, QjValueTag, QjVariant,
     },
-    QjContext, QjRuntime,
+    QjRuntime,
 };
 use qjncore::{Context, Value, ValueTag};
 use std::{ffi::c_void, fmt, marker::PhantomData, mem, sync::atomic};
@@ -229,127 +229,6 @@ impl<T> Clone for Qj<'_, T> {
 impl<T> fmt::Debug for Qj<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         f.write_str(format!("Qj({}, {:?})", self._debug_count, self.value).as_str())
-    }
-}
-
-/// `QjVec` is a value vector with a context.
-pub struct QjVec<'q, T> {
-    values: Vec<Value<'q>>,
-    context: Context<'q>,
-    _debug_count: u16,
-    _type: PhantomData<T>,
-}
-
-impl<'q, T> QjVec<'q, T> {
-    pub(crate) fn from(values: &[Value<'q>], context: Context<'q>) -> QjVec<'q, T> {
-        let count = DEBUG_GLOBAL_COUNT.fetch_add(1, atomic::Ordering::SeqCst);
-        let qjs = QjVec {
-            values: values.to_vec(),
-            context,
-            _debug_count: count,
-            _type: PhantomData,
-        };
-        qjs.debug_trace("from");
-        qjs
-    }
-
-    pub fn empty(ctx: QjContext<'q>) -> QjVec<'q, T> {
-        Self::from(&[], ctx.into())
-    }
-
-    pub fn from_ref_slice(qjs: &[&Qj<'q, T>], ctx: QjContext<'q>) -> Option<QjVec<'q, T>> {
-        let ctx = ctx.into();
-        let mut vec = Vec::with_capacity(qjs.len());
-        for qj in qjs {
-            if qj.context != ctx {
-                return None;
-            }
-            vec.push(qj.value);
-            Qj::dup(qj)
-        }
-        Some(Self::from(vec.as_slice(), ctx))
-    }
-
-    pub fn from_slice(qjs: &[Qj<'q, T>], ctx: QjContext<'q>) -> Option<QjVec<'q, T>> {
-        let vec: Vec<&Qj<'q, T>> = qjs.iter().collect();
-        Self::from_ref_slice(vec.as_slice(), ctx)
-    }
-
-    // property
-
-    #[inline]
-    pub(crate) fn as_slice(&self) -> &[Value<'q>] {
-        self.values.as_slice()
-    }
-
-    // memory
-
-    #[inline]
-    pub(crate) unsafe fn free(this: &Self) {
-        for value in &this.values {
-            this.context.free_value(*value)
-        }
-        this.debug_trace("free");
-    }
-
-    #[inline]
-    pub(crate) fn dup(this: &Self) {
-        for value in &this.values {
-            this.context.dup_value(*value)
-        }
-        this.debug_trace("dup");
-    }
-
-    fn debug_trace(&self, name: &str) {
-        log::debug!("{}: {:?} (Vec)", name, self);
-    }
-
-    // elements
-
-    pub fn is_empty(&self) -> bool {
-        self.values.is_empty()
-    }
-
-    pub fn len(&self) -> usize {
-        self.values.len()
-    }
-
-    pub fn get(&self, idx: usize) -> Qj<'q, T> {
-        let qj = Qj::<T>::from(self.values[idx], self.context);
-        Qj::dup(&qj);
-        qj
-    }
-}
-
-impl<T> Drop for QjVec<'_, T> {
-    fn drop(&mut self) {
-        unsafe { Self::free(self) }
-    }
-}
-
-impl<T> Clone for QjVec<'_, T> {
-    fn clone(&self) -> Self {
-        let qjs = QjVec {
-            values: self.values.clone(),
-            context: self.context,
-            _debug_count: self._debug_count,
-            _type: PhantomData,
-        };
-        QjVec::dup(&qjs);
-        qjs
-    }
-}
-
-impl<'q, T> From<QjVec<'q, T>> for Vec<Qj<'q, T>> {
-    fn from(vs: QjVec<'q, T>) -> Self {
-        QjVec::dup(&vs);
-        vs.values.iter().map(|v| Qj::<T>::from(*v, vs.context)).collect()
-    }
-}
-
-impl<T> fmt::Debug for QjVec<'_, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        f.write_str(format!("QjVec({}, {:?})", self._debug_count, self.values).as_str())
     }
 }
 

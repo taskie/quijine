@@ -1,7 +1,7 @@
 use crate::{
     instance::Qj,
     tags::{QjAnyTag, QjObjectTag},
-    QjContext, QjResult, QjVec,
+    QjContext, QjResult,
 };
 use std::marker::Sync;
 
@@ -10,7 +10,7 @@ pub trait QjClassMethods<'q, T: QjClass> {
     where
         F: 'static
             + Send
-            + Fn(QjContext<'q>, &mut T, Qj<'q, QjAnyTag>, QjVec<'q, QjAnyTag>) -> QjResult<'q, Qj<'q, QjAnyTag>>
+            + Fn(QjContext<'q>, &mut T, Qj<'q, QjAnyTag>, &[Qj<'q, QjAnyTag>]) -> QjResult<'q, Qj<'q, QjAnyTag>>
             + Sync;
 }
 

@@ -17,7 +17,7 @@ pub use aliases::*;
 pub use class::{QjClass, QjClassMethods};
 pub use context::{QjContext, QjContextGuard};
 pub use error::{QjError, QjErrorValue, QjResult};
-pub use instance::{Qj, QjVec};
+pub use instance::Qj;
 pub use runtime::{QjRuntime, QjRuntimeGuard};
 
 #[inline]
