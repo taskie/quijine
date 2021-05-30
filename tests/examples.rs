@@ -1,4 +1,4 @@
-use quijine::{EvalFlags, Result};
+use quijine::{qj_slice, EvalFlags, Result};
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use std::cell::RefCell;
@@ -13,7 +13,7 @@ fn example_call_js_func_from_rust() -> Result<()> {
         )?;
         let global = ctx.global_object();
         let foo = global.get("foo");
-        let args = &[ctx.new_int32(5).into(), ctx.new_int32(3).into()];
+        let args = qj_slice![ctx.new_int32(5), ctx.new_int32(3)];
         let result = ctx.call(foo, global, args)?;
         assert_eq!(8, result.to_i32()?, "call foo (JS) from Rust");
         Ok(())

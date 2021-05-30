@@ -6,6 +6,9 @@ mod instance;
 mod runtime;
 mod string;
 
+#[macro_use]
+pub mod macros;
+
 pub mod tags;
 pub mod types;
 
