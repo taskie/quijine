@@ -1,13 +1,11 @@
-use qjncore::ValueTag;
+use crate::instance::{Data, ValueTag};
 use std::{
     any::type_name,
+    convert::TryFrom,
     error::Error,
     fmt::{self, Display, Formatter},
     ops::{Deref, DerefMut},
 };
-
-use crate::instance::Data;
-use std::convert::TryFrom;
 
 macro_rules! impl_deref {
     { $target:ident for $type:ident } => {

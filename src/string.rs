@@ -1,15 +1,15 @@
-use qjncore::{CString, Context};
+use qjncore as qc;
 
 #[derive(Debug)]
-pub struct QjCString<'q> {
-    value: CString<'q>,
-    context: Context<'q>,
+pub struct CString<'q> {
+    value: qc::CString<'q>,
+    context: qc::Context<'q>,
 }
 
-impl<'q> QjCString<'q> {
+impl<'q> CString<'q> {
     #[inline]
-    pub fn from(value: CString<'q>, context: Context<'q>) -> QjCString<'q> {
-        QjCString { value, context }
+    pub fn from(value: qc::CString<'q>, context: qc::Context<'q>) -> CString<'q> {
+        CString { value, context }
     }
 
     #[inline]
@@ -33,7 +33,7 @@ impl<'q> QjCString<'q> {
     }
 }
 
-impl Drop for QjCString<'_> {
+impl Drop for CString<'_> {
     fn drop(&mut self) {
         log::debug!("drop: {:?}", self.to_str());
         unsafe { self.context.free_c_string(self.value) }

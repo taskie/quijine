@@ -9,33 +9,33 @@ mod string;
 pub mod tags;
 pub mod types;
 
-pub use qjncore::EvalFlags as QjEvalFlags;
+pub use qjncore::EvalFlags;
 
-pub use class::{QjClass, QjClassMethods};
-pub use context::{QjContext, QjContextGuard};
-pub use error::{QjError, QjErrorValue, QjResult};
+pub use class::{Class, ClassMethods};
+pub use context::{Context, ContextScope};
+pub use error::{Error, ErrorValue, Result};
 pub use instance::Data;
-pub use runtime::{QjRuntime, QjRuntimeGuard};
+pub use runtime::{Runtime, RuntimeScope};
 
 #[inline]
-pub fn new_runtime_guard() -> QjRuntimeGuard {
-    QjRuntimeGuard::new()
+pub fn new_runtime_scope() -> RuntimeScope {
+    RuntimeScope::new()
 }
 
 #[inline]
 pub fn run<F, R>(f: F) -> R
 where
-    F: FnOnce(QjRuntime) -> R,
+    F: FnOnce(Runtime) -> R,
 {
-    let rtg = new_runtime_guard();
-    rtg.run(f)
+    let rts = new_runtime_scope();
+    rts.run(f)
 }
 
 #[inline]
 pub fn run_with_context<F, R>(f: F) -> R
 where
-    F: FnOnce(QjContext) -> R,
+    F: FnOnce(Context) -> R,
 {
-    let rtg = new_runtime_guard();
-    rtg.run_with_context(f)
+    let rts = new_runtime_scope();
+    rts.run_with_context(f)
 }

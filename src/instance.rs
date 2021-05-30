@@ -1,5 +1,5 @@
-use crate::{class::QjClass, string::QjCString, tags::QjVariant, types::String as QjString, QjRuntime};
-use qjncore::{Context, Value, ValueTag};
+use crate::{class::Class, string::CString as QjCString, tags::QjVariant, types::String as QjString, Runtime};
+use qjncore as qc;
 use std::{
     convert::TryInto,
     ffi::c_void,
@@ -7,6 +7,8 @@ use std::{
     mem::{self, forget, transmute, transmute_copy},
     sync::atomic,
 };
+
+pub use qc::ValueTag;
 
 static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
 
@@ -18,13 +20,13 @@ macro_rules! call_with_context {
 
 /// `Data` is a value holder with a context.
 pub struct Data<'q> {
-    value: Value<'q>,
-    context: Context<'q>,
+    value: qc::Value<'q>,
+    context: qc::Context<'q>,
     _debug_count: u16,
 }
 
 impl<'q> Data<'q> {
-    pub(crate) fn from(value: Value<'q>, context: Context<'q>) -> Data<'q> {
+    pub(crate) fn from(value: qc::Value<'q>, context: qc::Context<'q>) -> Data<'q> {
         let count = DEBUG_GLOBAL_COUNT.fetch_add(1, atomic::Ordering::SeqCst);
         let qj = Data {
             value,
@@ -38,7 +40,7 @@ impl<'q> Data<'q> {
     // property
 
     #[inline]
-    pub(crate) fn as_value(&self) -> Value<'q> {
+    pub(crate) fn as_value(&self) -> qc::Value<'q> {
         self.value
     }
 
@@ -200,8 +202,8 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub(crate) fn get_opaque_mut<C: QjClass + 'static>(&mut self) -> Option<&mut C> {
-        let rt = QjRuntime::from(self.context.runtime());
+    pub(crate) fn get_opaque_mut<C: Class + 'static>(&mut self) -> Option<&mut C> {
+        let rt = Runtime::from(self.context.runtime());
         let clz = rt.get_class_id::<C>()?;
         let p = self.value.opaque(clz) as *mut C;
         if p.is_null() {
@@ -211,8 +213,8 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub fn set_opaque<C: QjClass + 'static>(&mut self, mut v: Box<C>) {
-        let mut rt = QjRuntime::from(self.context.runtime());
+    pub fn set_opaque<C: Class + 'static>(&mut self, mut v: Box<C>) {
+        let mut rt = Runtime::from(self.context.runtime());
         let _clz = rt.get_or_register_class_id::<C>();
         unsafe { self.value.set_opaque(v.as_mut() as *mut C as *mut c_void) };
         mem::forget(v);

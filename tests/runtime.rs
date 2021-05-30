@@ -1,4 +1,4 @@
-use quijine::{QjError, QjEvalFlags};
+use quijine::{Error, EvalFlags};
 
 #[test]
 fn multiple_runtimes() {
@@ -8,16 +8,16 @@ fn multiple_runtimes() {
         quijine::run_with_context(move |ctx| {
             let recv = ctx.new_function(
                 move |ctx, _this, _args| {
-                    let message = rx.recv().map_err(|e| QjError::with_str(e.to_string().as_str()))?;
-                    Ok(ctx.new_string(message.as_str()).into())
+                    let message = rx.recv().map_err(|e| Error::with_str(e.to_string().as_str()))?;
+                    Ok(ctx.new_string(message.as_str()))
                 },
                 "recv",
                 0,
             );
             ctx.global_object().set("recv", recv);
-            let result = ctx.eval("recv();", "<input>", QjEvalFlags::TYPE_GLOBAL).unwrap();
+            let result = ctx.eval("recv();", "<input>", EvalFlags::TYPE_GLOBAL).unwrap();
             assert_eq!("Hello, world!".to_owned(), result.to_string().unwrap(), "received");
-            let result = ctx.eval("recv();", "<input>", QjEvalFlags::TYPE_GLOBAL).unwrap();
+            let result = ctx.eval("recv();", "<input>", EvalFlags::TYPE_GLOBAL).unwrap();
             assert_eq!("Goodbye, world!".to_owned(), result.to_string().unwrap(), "received");
         });
     });
@@ -25,17 +25,16 @@ fn multiple_runtimes() {
         let send = ctx.new_function(
             move |ctx, _this, args| {
                 let message = args[0].to_string().unwrap();
-                tx.send(message)
-                    .map_err(|e| QjError::with_str(e.to_string().as_str()))?;
-                Ok(ctx.undefined().into())
+                tx.send(message).map_err(|e| Error::with_str(e.to_string().as_str()))?;
+                Ok(ctx.undefined())
             },
             "send",
             1,
         );
         ctx.global_object().set("send", send);
-        ctx.eval("send('Hello, world!');", "<input>", QjEvalFlags::TYPE_GLOBAL)
+        ctx.eval("send('Hello, world!');", "<input>", EvalFlags::TYPE_GLOBAL)
             .unwrap();
-        ctx.eval("send('Goodbye, world!');", "<input>", QjEvalFlags::TYPE_GLOBAL)
+        ctx.eval("send('Goodbye, world!');", "<input>", EvalFlags::TYPE_GLOBAL)
             .unwrap();
     });
     th.join().expect("joined");

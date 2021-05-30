@@ -1,4 +1,4 @@
-use quijine::{self, QjError, QjErrorValue, QjEvalFlags};
+use quijine::{self, Error, ErrorValue, EvalFlags};
 use std::{
     convert::From,
     fmt::Formatter,
@@ -41,11 +41,11 @@ impl From<std::io::Error> for std::boxed::Box<JjError> {
     }
 }
 
-impl<'q> From<QjError<'q>> for std::boxed::Box<JjError> {
-    fn from(e: QjError) -> Self {
+impl<'q> From<Error<'q>> for std::boxed::Box<JjError> {
+    fn from(e: Error) -> Self {
         let s: Option<String> = match e.value {
-            QjErrorValue::String(s) => Some(s),
-            QjErrorValue::Value(v) => v.to_string(),
+            ErrorValue::String(s) => Some(s),
+            ErrorValue::Value(v) => v.to_string(),
             _ => None,
         };
         Box::new(JjError {
@@ -88,18 +88,14 @@ fn main() -> Result<(), Box<JjError>> {
     quijine::run_with_context(move |ctx| {
         let script = opt.script.as_str();
         // check a syntax error
-        ctx.eval(
-            script,
-            "<input>",
-            QjEvalFlags::TYPE_GLOBAL | QjEvalFlags::FLAG_COMPILE_ONLY,
-        )?;
+        ctx.eval(script, "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY)?;
         let stdin = io::stdin();
         for (i, line) in stdin.lock().lines().enumerate() {
             let line = line?;
             let result = ctx.parse_json(&line, "<input>")?;
             ctx.global_object().set("$_", &result);
             ctx.global_object().set("$L", ctx.new_int64(i as i64));
-            let result = ctx.eval(script, "<input>", QjEvalFlags::TYPE_GLOBAL)?;
+            let result = ctx.eval(script, "<input>", EvalFlags::TYPE_GLOBAL)?;
             if !opt.silent {
                 if result.is_null() || result.is_undefined() {
                     continue;

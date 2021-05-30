@@ -1,14 +1,15 @@
-use crate::{instance::Data, types::Object, QjContext, QjResult};
-use std::marker::Sync;
+use crate::{instance::Data, types::Object, Context, Result};
+use std::panic::UnwindSafe;
 
-pub trait QjClassMethods<'q, T: QjClass> {
-    fn add_method<F>(&mut self, name: &str, method: F)
+pub trait ClassMethods<'q, T: Class> {
+    fn add_method<F, R>(&mut self, name: &str, method: F)
     where
-        F: 'static + Send + Fn(QjContext<'q>, &mut T, Data<'q>, &[Data<'q>]) -> QjResult<'q, Data<'q>> + Sync;
+        F: Fn(Context<'q>, &mut T, Data<'q>, &[Data<'q>]) -> Result<'q, R> + UnwindSafe + Send + 'static,
+        R: Into<Data<'q>> + 'q;
 }
 
-pub trait QjClass: Sized {
+pub trait Class: Sized {
     fn name() -> &'static str;
-    fn add_methods<'q, T: QjClassMethods<'q, Self>>(_methods: &mut T) {}
-    fn setup_proto(_ctx: QjContext, _proto: &Object) {}
+    fn add_methods<'q, T: ClassMethods<'q, Self>>(_methods: &mut T) {}
+    fn setup_proto(_ctx: Context, _proto: &Object) {}
 }

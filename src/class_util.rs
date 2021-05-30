@@ -1,13 +1,13 @@
 use crate::{
-    class::{QjClass, QjClassMethods},
-    Data, QjContext, QjResult, QjRuntime,
+    class::{Class, ClassMethods},
+    Context, Data, Result, Runtime,
 };
 use log::trace;
-use qjncore::{self, ClassDef, ClassId, Context, Runtime, Value};
-use std::{ffi::CString, marker::Sync};
+use qjncore as qc;
+use std::{ffi::CString, panic::UnwindSafe};
 
-unsafe fn finalize<T: QjClass + 'static>(rrt: Runtime, val: Value) {
-    let rt = QjRuntime::from(rrt);
+unsafe fn finalize<T: Class + 'static>(rrt: qc::Runtime, val: qc::Value) {
+    let rt = Runtime::from(rrt);
     let clz = if let Some(clz) = rt.get_class_id::<T>() {
         clz
     } else {
@@ -22,13 +22,14 @@ unsafe fn finalize<T: QjClass + 'static>(rrt: Runtime, val: Value) {
 
 struct Methods<'q> {
     proto: &'q Data<'q>,
-    context: QjContext<'q>,
+    context: Context<'q>,
 }
 
-impl<'q, T: QjClass + 'static> QjClassMethods<'q, T> for Methods<'q> {
-    fn add_method<F>(&mut self, name: &str, method: F)
+impl<'q, T: Class + 'static> ClassMethods<'q, T> for Methods<'q> {
+    fn add_method<F, R>(&mut self, name: &str, method: F)
     where
-        F: 'static + Send + Fn(QjContext<'q>, &mut T, Data<'q>, &[Data<'q>]) -> QjResult<'q, Data<'q>> + Sync,
+        F: Fn(Context<'q>, &mut T, Data<'q>, &[Data<'q>]) -> Result<'q, R> + UnwindSafe + Send + 'static,
+        R: Into<Data<'q>> + 'q,
     {
         let ctx = self.context;
         let f = ctx.new_function(
@@ -45,20 +46,20 @@ impl<'q, T: QjClass + 'static> QjClassMethods<'q, T> for Methods<'q> {
     }
 }
 
-pub(crate) fn register_class<T: QjClass + 'static>(rctx: Context, clz: ClassId) {
+pub(crate) fn register_class<T: Class + 'static>(rctx: qc::Context, clz: qc::ClassId) {
     trace!("registering class: {} ({:?})", T::name(), clz);
-    let ctx = QjContext::from(rctx);
+    let ctx = Context::from(rctx);
     let mut rt = ctx.runtime();
-    unsafe extern "C" fn finalizer<T: QjClass + 'static>(rt: *mut qjncore::raw::JSRuntime, val: qjncore::raw::JSValue) {
-        let rt = Runtime::from_ptr(rt);
-        let val = Value::from_raw_with_runtime(val, rt);
+    unsafe extern "C" fn finalizer<T: Class + 'static>(rt: *mut qjncore::raw::JSRuntime, val: qjncore::raw::JSValue) {
+        let rt = qc::Runtime::from_ptr(rt);
+        let val = qc::Value::from_raw_with_runtime(val, rt);
         finalize::<T>(rt, val)
     }
     if let Some(_class_def) = rt.get_class_def(clz) {
         // nop
     } else {
         // per Runtime
-        let class_def = ClassDef {
+        let class_def = qc::ClassDef {
             class_name: CString::new(T::name()).unwrap(),
             finalizer: Some(finalizer::<T>),
             ..Default::default()
