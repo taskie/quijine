@@ -4,8 +4,7 @@ use crate::{
     error::{Error, ErrorKind, Result},
     runtime::Runtime,
     string::CString as QjCString,
-    tags::QjVariant,
-    types::String as QjString,
+    types::{String as QjString, Variant},
 };
 use qjncore as qc;
 use std::{
@@ -131,22 +130,22 @@ impl<'q> Data<'q> {
         self.value.tag()
     }
 
-    pub fn to_variant(&self) -> QjVariant<'_> {
+    pub fn to_variant(&self) -> Variant<'_> {
         match self.tag() {
-            ValueTag::BigDecimal => QjVariant::BigDecimal(self.clone().try_into().unwrap()),
-            ValueTag::BigInt => QjVariant::BigInt(self.clone().try_into().unwrap()),
-            ValueTag::BigFloat => QjVariant::BigFloat(self.clone().try_into().unwrap()),
-            ValueTag::Symbol => QjVariant::Symbol(self.clone().try_into().unwrap()),
-            ValueTag::String => QjVariant::String(TryInto::<QjString>::try_into(self.clone()).unwrap()),
-            ValueTag::Object => QjVariant::Object(self.clone().try_into().unwrap()),
-            ValueTag::Int => QjVariant::Int(self.to_i32().unwrap()),
-            ValueTag::Bool => QjVariant::Bool(self.to_bool().unwrap()),
-            ValueTag::Null => QjVariant::Null,
-            ValueTag::Undefined => QjVariant::Undefined,
-            ValueTag::Uninitialized => QjVariant::Uninitialized,
-            ValueTag::CatchOffset => QjVariant::CatchOffset,
-            ValueTag::Exception => QjVariant::Exception,
-            ValueTag::Float64 => QjVariant::Float64(self.to_f64().unwrap()),
+            ValueTag::BigDecimal => Variant::BigDecimal(self.clone().try_into().unwrap()),
+            ValueTag::BigInt => Variant::BigInt(self.clone().try_into().unwrap()),
+            ValueTag::BigFloat => Variant::BigFloat(self.clone().try_into().unwrap()),
+            ValueTag::Symbol => Variant::Symbol(self.clone().try_into().unwrap()),
+            ValueTag::String => Variant::String(TryInto::<QjString>::try_into(self.clone()).unwrap()),
+            ValueTag::Object => Variant::Object(self.clone().try_into().unwrap()),
+            ValueTag::Int => Variant::Int(self.to_i32().unwrap()),
+            ValueTag::Bool => Variant::Bool(self.to_bool().unwrap()),
+            ValueTag::Null => Variant::Null,
+            ValueTag::Undefined => Variant::Undefined,
+            ValueTag::Uninitialized => Variant::Uninitialized,
+            ValueTag::CatchOffset => Variant::CatchOffset,
+            ValueTag::Exception => Variant::Exception,
+            ValueTag::Float64 => Variant::Float64(self.to_f64().unwrap()),
         }
     }
 

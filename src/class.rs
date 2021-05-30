@@ -1,4 +1,4 @@
-use crate::{instance::Data, types::Object, Context, Result};
+use crate::{data::Data, types::Object, Context, Result};
 use std::panic::UnwindSafe;
 
 pub trait ClassMethods<'q, T: Class> {

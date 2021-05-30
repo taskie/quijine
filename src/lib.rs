@@ -1,24 +1,26 @@
 mod class;
 mod class_util;
 mod context;
+mod data;
 mod error;
-mod instance;
 mod runtime;
 mod string;
+mod types;
 
 #[macro_use]
 pub mod macros;
-
-pub mod tags;
-pub mod types;
 
 pub use qjncore::EvalFlags;
 
 pub use class::{Class, ClassMethods};
 pub use context::{Context, ContextScope};
+pub use data::Data;
 pub use error::{Error, ErrorKind, ErrorValue, Result};
-pub use instance::Data;
 pub use runtime::{Runtime, RuntimeScope};
+pub use types::{
+    BigDecimal, BigFloat, BigInt, Bool, CatchOffset, Exception, Float64, Int, Null, Object, String, Symbol, Undefined,
+    Uninitialized, Variant,
+};
 
 #[inline]
 pub fn new_runtime_scope() -> RuntimeScope {

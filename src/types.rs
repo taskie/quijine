@@ -1,4 +1,4 @@
-use crate::instance::{Data, ValueTag};
+use crate::data::{Data, ValueTag};
 use std::{
     any::type_name,
     convert::TryFrom,
@@ -155,6 +155,13 @@ impl_deref! { Value for Undefined }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
+pub struct Uninitialized<'q>(Value<'q>);
+impl_from! { Uninitialized for Data }
+impl_try_from! { Data for Uninitialized if v => v.tag() == ValueTag::Uninitialized }
+impl_deref! { Value for Uninitialized }
+
+#[derive(Clone, Debug)]
+#[repr(transparent)]
 pub struct CatchOffset<'q>(Value<'q>);
 impl_from! { CatchOffset for Data }
 impl_try_from! { Data for CatchOffset if v => v.tag() == ValueTag::CatchOffset }
@@ -204,3 +211,44 @@ impl Display for DataError {
 }
 
 impl Error for DataError {}
+
+#[non_exhaustive]
+pub enum Variant<'q> {
+    BigDecimal(BigDecimal<'q>),
+    BigInt(BigInt<'q>),
+    BigFloat(BigFloat<'q>),
+    Symbol(Symbol<'q>),
+    String(String<'q>),
+    Object(Object<'q>),
+    Int(i32),
+    Bool(bool),
+    Null,
+    Undefined,
+    Uninitialized,
+    CatchOffset,
+    Exception,
+    Float64(f64),
+}
+
+impl<'q> fmt::Debug for Variant<'q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Variant::BigDecimal(v) => f.write_str(format!("BigDecimal({:p})", v.to_ptr().unwrap()).as_str()),
+            Variant::BigInt(v) => f.write_str(format!("BigInt({:p})", v.to_ptr().unwrap()).as_str()),
+            Variant::BigFloat(v) => f.write_str(format!("BigFloat({:p})", v.to_ptr().unwrap()).as_str()),
+            Variant::Symbol(v) => f.write_str(format!("Symbol({:p})", v.to_ptr().unwrap()).as_str()),
+            Variant::String(v) => f.write_str(format!("String({:?})", v.to_string().unwrap()).as_str()),
+            Variant::Object(v) => f.write_str(format!("Object({:p})", v.to_ptr().unwrap()).as_str()),
+            Variant::Int(v) => f.write_str(format!("Int({})", v).as_str()),
+            Variant::Bool(v) => f.write_str(format!("Bool({})", v).as_str()),
+            Variant::Null => f.write_str("Null"),
+            Variant::Undefined => f.write_str("Undefined"),
+            Variant::Uninitialized => f.write_str("Uninitialized"),
+            Variant::CatchOffset => f.write_str("CatchOffset"),
+            Variant::Exception => f.write_str("Exception"),
+            Variant::Float64(v) => f.write_str(format!("Float64({})", v).as_str()),
+            #[allow(unreachable_patterns)]
+            _ => f.write_str("Unknown"),
+        }
+    }
+}
