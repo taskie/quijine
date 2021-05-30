@@ -77,41 +77,38 @@ impl<'q> QjContext<'q> {
 
     #[inline]
     pub fn new_object(self) -> Object<'q> {
-        self.wrap_result(self.0.new_object()).unwrap().try_into().unwrap()
+        unsafe { self.wrap_result(self.0.new_object()).unwrap().into_unchecked() }
     }
 
     #[inline]
     pub fn new_object_class<C: QjClass + 'static>(mut self) -> Object<'q> {
         let clz = self.register_class::<C>();
-        self.wrap_result(self.0.new_object_class(clz))
-            .unwrap()
-            .try_into()
-            .unwrap()
+        unsafe { self.wrap_result(self.0.new_object_class(clz)).unwrap().into_unchecked() }
     }
 
     #[inline]
     pub fn new_bool(self, v: bool) -> Bool<'q> {
-        self.wrap_result(self.0.new_bool(v)).unwrap().try_into().unwrap()
+        unsafe { self.wrap_result(self.0.new_bool(v)).unwrap().into_unchecked() }
     }
 
     #[inline]
     pub fn new_int32(self, v: i32) -> Int<'q> {
-        self.wrap_result(self.0.new_int32(v)).unwrap().try_into().unwrap()
+        unsafe { self.wrap_result(self.0.new_int32(v)).unwrap().into_unchecked() }
     }
 
     #[inline]
     pub fn new_int64(self, v: i64) -> Data<'q> {
-        self.wrap_result(self.0.new_int64(v)).unwrap()
+        unsafe { self.wrap_result(self.0.new_int64(v)).unwrap().into_unchecked() }
     }
 
     #[inline]
     pub fn new_float64(self, v: f64) -> Float64<'q> {
-        self.wrap_result(self.0.new_float64(v)).unwrap().try_into().unwrap()
+        unsafe { self.wrap_result(self.0.new_float64(v)).unwrap().into_unchecked() }
     }
 
     #[inline]
     pub fn new_string(self, v: &str) -> QjString<'q> {
-        self.wrap_result(self.0.new_string(v)).unwrap().try_into().unwrap()
+        unsafe { self.wrap_result(self.0.new_string(v)).unwrap().into_unchecked() }
     }
 
     // callback
@@ -183,18 +180,18 @@ impl<'q> QjContext<'q> {
             log::debug!("new c function data");
             let cfd = self.0.new_c_function_data(Some(call), length, 0, vec![cb]);
             self.0.free_value(cb);
-            Data::from(cfd, self.0).try_into().unwrap()
+            Data::from(cfd, self.0).into_unchecked()
         }
     }
 
     // special values
 
     pub fn undefined(self) -> Undefined<'q> {
-        Data::from(Value::undefined(), self.0).try_into().unwrap()
+        unsafe { Data::from(Value::undefined(), self.0).into_unchecked() }
     }
 
     pub fn null(self) -> Null<'q> {
-        Data::from(Value::null(), self.0).try_into().unwrap()
+        unsafe { Data::from(Value::null(), self.0).into_unchecked() }
     }
 
     // json
@@ -203,11 +200,12 @@ impl<'q> QjContext<'q> {
         self.wrap_result(self.0.parse_json(buf, filename))
     }
 
-    pub fn json_stringify(self, obj: Data<'q>, replacer: Data<'q>, space0: Data<'q>) -> QjResult<'q, Data<'q>> {
+    pub fn json_stringify(self, obj: Data<'q>, replacer: Data<'q>, space0: Data<'q>) -> QjResult<'q, QjString<'q>> {
         self.wrap_result(
             self.0
                 .json_stringify(obj.as_value(), replacer.as_value(), space0.as_value()),
         )
+        .map(|v| unsafe { v.into_unchecked() })
     }
 
     // class

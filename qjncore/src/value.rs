@@ -13,9 +13,8 @@ use log::trace;
 use std::{
     ffi::{c_void, CString},
     fmt,
-    intrinsics::transmute,
     marker::PhantomData,
-    mem::size_of,
+    mem::{size_of, transmute},
     os::raw::c_int,
     slice,
 };

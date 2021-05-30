@@ -1,6 +1,12 @@
 use crate::{class::QjClass, string::QjCString, tags::QjVariant, types::String as QjString, QjRuntime};
 use qjncore::{Context, Value, ValueTag};
-use std::{convert::TryInto, ffi::c_void, fmt, intrinsics::transmute, mem, sync::atomic};
+use std::{
+    convert::TryInto,
+    ffi::c_void,
+    fmt,
+    mem::{self, forget, transmute, transmute_copy},
+    sync::atomic,
+};
 
 static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
 
@@ -48,6 +54,13 @@ impl<'q> Data<'q> {
     #[inline]
     pub(crate) unsafe fn as_any<T: Into<Data<'q>>>(&self) -> &T {
         transmute(self)
+    }
+
+    #[inline]
+    pub(crate) unsafe fn into_unchecked<T: Into<Data<'q>>>(self) -> T {
+        let ret = transmute_copy(&self);
+        forget(self);
+        ret
     }
 
     // memory
