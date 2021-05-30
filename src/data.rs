@@ -4,7 +4,7 @@ use crate::{
     error::{Error, ErrorKind, Result},
     runtime::Runtime,
     string::CString as QjCString,
-    types::{String as QjString, Variant},
+    types::{Tag, Variant},
 };
 use qjncore as qc;
 use std::{
@@ -15,8 +15,6 @@ use std::{
     result::Result as StdResult,
     sync::atomic,
 };
-
-pub use qc::ValueTag;
 
 static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
 
@@ -126,26 +124,26 @@ impl<'q> Data<'q> {
     // conversion
 
     #[inline]
-    pub(crate) fn tag(&self) -> ValueTag {
+    pub(crate) fn tag(&self) -> Tag {
         self.value.tag()
     }
 
     pub fn to_variant(&self) -> Variant<'_> {
         match self.tag() {
-            ValueTag::BigDecimal => Variant::BigDecimal(self.clone().try_into().unwrap()),
-            ValueTag::BigInt => Variant::BigInt(self.clone().try_into().unwrap()),
-            ValueTag::BigFloat => Variant::BigFloat(self.clone().try_into().unwrap()),
-            ValueTag::Symbol => Variant::Symbol(self.clone().try_into().unwrap()),
-            ValueTag::String => Variant::String(TryInto::<QjString>::try_into(self.clone()).unwrap()),
-            ValueTag::Object => Variant::Object(self.clone().try_into().unwrap()),
-            ValueTag::Int => Variant::Int(self.to_i32().unwrap()),
-            ValueTag::Bool => Variant::Bool(self.to_bool().unwrap()),
-            ValueTag::Null => Variant::Null,
-            ValueTag::Undefined => Variant::Undefined,
-            ValueTag::Uninitialized => Variant::Uninitialized,
-            ValueTag::CatchOffset => Variant::CatchOffset,
-            ValueTag::Exception => Variant::Exception,
-            ValueTag::Float64 => Variant::Float64(self.to_f64().unwrap()),
+            Tag::BigDecimal => Variant::BigDecimal(self.clone().try_into().unwrap()),
+            Tag::BigInt => Variant::BigInt(self.clone().try_into().unwrap()),
+            Tag::BigFloat => Variant::BigFloat(self.clone().try_into().unwrap()),
+            Tag::Symbol => Variant::Symbol(self.clone().try_into().unwrap()),
+            Tag::String => Variant::String(self.clone().try_into().unwrap()),
+            Tag::Object => Variant::Object(self.clone().try_into().unwrap()),
+            Tag::Int => Variant::Int(self.to_i32().unwrap()),
+            Tag::Bool => Variant::Bool(self.to_bool().unwrap()),
+            Tag::Null => Variant::Null,
+            Tag::Undefined => Variant::Undefined,
+            Tag::Uninitialized => Variant::Uninitialized,
+            Tag::CatchOffset => Variant::CatchOffset,
+            Tag::Exception => Variant::Exception,
+            Tag::Float64 => Variant::Float64(self.to_f64().unwrap()),
         }
     }
 
