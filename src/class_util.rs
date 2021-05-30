@@ -28,7 +28,7 @@ struct Methods<'q> {
 impl<'q, T: Class + 'static> ClassMethods<'q, T> for Methods<'q> {
     fn add_method<F, R>(&mut self, name: &str, method: F)
     where
-        F: Fn(Context<'q>, &mut T, Data<'q>, &[Data<'q>]) -> Result<'q, R> + UnwindSafe + Send + 'static,
+        F: Fn(Context<'q>, &mut T, Data<'q>, &[Data<'q>]) -> Result<R> + UnwindSafe + Send + 'static,
         R: Into<Data<'q>> + 'q,
     {
         let ctx = self.context;

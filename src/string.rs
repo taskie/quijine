@@ -1,3 +1,4 @@
+use crate::error::{Error, Result};
 use qjncore as qc;
 
 #[derive(Debug)]
@@ -23,13 +24,15 @@ impl<'q> CString<'q> {
     }
 
     #[inline]
-    pub fn to_str(&self) -> Option<&str> {
-        self.value.to_str()
+    pub fn to_str(&self) -> Result<&str> {
+        self.value
+            .to_str()
+            .ok_or_else(|| Error::with_str(crate::ErrorKind::InternalError, "invalid string"))
     }
 
     #[inline]
-    pub fn to_string(&self) -> Option<String> {
-        self.to_str().map(|s| s.to_string())
+    pub fn to_string(&self) -> Result<String> {
+        self.to_str().map(|s| s.to_owned())
     }
 }
 

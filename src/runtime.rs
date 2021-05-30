@@ -1,9 +1,10 @@
 use crate::{
     class::Class,
     context::{Context, ContextScope},
+    error::Result,
 };
 use qjncore as qc;
-use std::{any::TypeId, collections::HashMap, ffi::c_void, fmt};
+use std::{any::TypeId, collections::HashMap, ffi::c_void, fmt, result::Result as StdResult};
 
 pub struct RuntimeOpaque {
     registered_classes: HashMap<TypeId, qc::ClassId>,
@@ -99,17 +100,17 @@ impl RuntimeScope {
     }
 
     #[inline]
-    pub fn run<F, R>(&self, f: F) -> R
+    pub fn run<F, R>(&self, f: F) -> Result<R>
     where
-        F: FnOnce(Runtime) -> R,
+        F: FnOnce(Runtime) -> Result<R>,
     {
         f(self.0)
     }
 
     #[inline]
-    pub fn run_with_context<F, R>(&self, f: F) -> R
+    pub fn run_with_context<F, R>(&self, f: F) -> Result<R>
     where
-        F: FnOnce(Context) -> R,
+        F: FnOnce(Context) -> Result<R>,
     {
         let ctx = self.new_context_scope();
         ctx.with(f)
@@ -134,7 +135,7 @@ impl Default for RuntimeScope {
 }
 
 impl fmt::Debug for RuntimeScope {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> StdResult<(), fmt::Error> {
         f.write_str(format!("RuntimeScope({:?})", self.0).as_str())
     }
 }

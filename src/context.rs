@@ -1,7 +1,7 @@
 use crate::{
     class::Class,
     class_util::register_class,
-    error::{Error, ErrorValue, Result},
+    error::{Error, ErrorKind, ErrorValue, Result},
     runtime::Runtime,
     types::{Bool, Float64, Int, Null, Object, String as QjString, Undefined},
     Data, EvalFlags, RuntimeScope,
@@ -44,21 +44,24 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    fn wrap_result(self, val: qc::Value<'q>) -> Result<'q, Data<'q>> {
+    fn wrap_result(self, val: qc::Value<'q>) -> Result<Data<'q>> {
         if val.is_exception() {
-            Err(Error::with_value(Data::from(self.0.exception(), self.0)))
+            Err(Error::from_js_error(
+                ErrorKind::InternalError,
+                Data::from(self.0.exception(), self.0),
+            ))
         } else {
             Ok(Data::from(val, self.0))
         }
     }
 
     #[inline]
-    pub fn eval(self, code: &str, filename: &str, eval_flags: EvalFlags) -> Result<'q, Data<'q>> {
+    pub fn eval(self, code: &str, filename: &str, eval_flags: EvalFlags) -> Result<Data<'q>> {
         self.wrap_result(self.0.eval(code, filename, eval_flags))
     }
 
     #[inline]
-    pub fn call<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> Result<'q, Data<'q>>
+    pub fn call<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> Result<Data<'q>>
     where
         F: AsRef<Data<'q>>,
         T: AsRef<Data<'q>>,
@@ -117,7 +120,7 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_function<F, R>(self, func: F, name: &str, length: i32) -> Object<'q>
     where
-        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<'q, R> + Send + 'static,
+        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<R> + Send + 'static,
         R: Into<Data<'q>> + 'q,
     {
         self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), name, length)
@@ -169,10 +172,8 @@ impl<'q> Context<'q> {
                     match v {
                         ErrorValue::None => ctx.0.throw(ctx.0.new_string("some error occured")),
                         ErrorValue::String(s) => ctx.0.throw(ctx.0.new_string(s)),
-                        ErrorValue::Value(v) => {
-                            Data::dup(&v);
-                            ctx.0.throw(v.as_value())
-                        }
+                        ErrorValue::JsError(e) => ctx.0.throw(ctx.0.new_string(format!("{}", e))),
+                        ErrorValue::External(e) => ctx.0.throw(ctx.0.new_string(format!("{}", e))),
                     };
                     qc::Value::exception().as_js_value()
                 }
@@ -202,15 +203,21 @@ impl<'q> Context<'q> {
 
     // json
 
-    pub fn parse_json(self, buf: &str, filename: &str) -> Result<'q, Data<'q>> {
+    pub fn parse_json(self, buf: &str, filename: &str) -> Result<Data<'q>> {
         self.wrap_result(self.0.parse_json(buf, filename))
     }
 
-    pub fn json_stringify(self, obj: Data<'q>, replacer: Data<'q>, space0: Data<'q>) -> Result<'q, QjString<'q>> {
-        self.wrap_result(
-            self.0
-                .json_stringify(obj.as_value(), replacer.as_value(), space0.as_value()),
-        )
+    pub fn json_stringify(
+        self,
+        obj: impl AsRef<Data<'q>>,
+        replacer: impl AsRef<Data<'q>>,
+        space0: impl AsRef<Data<'q>>,
+    ) -> Result<QjString<'q>> {
+        self.wrap_result(self.0.json_stringify(
+            obj.as_ref().as_value(),
+            replacer.as_ref().as_value(),
+            space0.as_ref().as_value(),
+        ))
         .map(|v| unsafe { v.into_unchecked() })
     }
 
@@ -252,9 +259,9 @@ impl<'r> ContextScope<'r> {
     }
 
     #[inline]
-    pub fn with<F, R>(&'r self, f: F) -> R
+    pub fn with<F, R>(&'r self, f: F) -> Result<R>
     where
-        F: FnOnce(Context<'r>) -> R,
+        F: FnOnce(Context<'r>) -> Result<R>,
     {
         f(self.0)
     }
@@ -275,4 +282,4 @@ impl fmt::Debug for ContextScope<'_> {
     }
 }
 
-pub(crate) type QjCallback<'q, 'a, R> = Box<dyn Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<'q, R> + 'a>;
+pub(crate) type QjCallback<'q, 'a, R> = Box<dyn Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<R> + 'a>;

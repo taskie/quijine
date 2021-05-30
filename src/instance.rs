@@ -1,10 +1,19 @@
-use crate::{class::Class, string::CString as QjCString, tags::QjVariant, types::String as QjString, Runtime};
+use crate::{
+    class::Class,
+    context::Context,
+    error::{Error, ErrorKind, Result},
+    runtime::Runtime,
+    string::CString as QjCString,
+    tags::QjVariant,
+    types::String as QjString,
+};
 use qjncore as qc;
 use std::{
     convert::TryInto,
     ffi::c_void,
     fmt,
     mem::{self, forget, transmute, transmute_copy},
+    result::Result as StdResult,
     sync::atomic,
 };
 
@@ -42,6 +51,11 @@ impl<'q> Data<'q> {
     #[inline]
     pub(crate) fn as_value(&self) -> qc::Value<'q> {
         self.value
+    }
+
+    #[inline]
+    pub(crate) fn context(&self) -> Context<'q> {
+        Context::from(self.context)
     }
 
     // force conversion
@@ -137,40 +151,52 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub fn to_bool(&self) -> Option<bool> {
-        call_with_context!(self, to_bool)
+    fn ok_or_type_error<T>(&self, v: Option<T>) -> Result<T> {
+        v.ok_or_else(|| Error::from_data(ErrorKind::TypeError, self.clone()))
     }
 
     #[inline]
-    pub fn to_i32(&self) -> Option<i32> {
-        call_with_context!(self, to_i32)
+    pub fn to_bool(&self) -> Result<bool> {
+        self.ok_or_type_error(call_with_context!(self, to_bool))
     }
 
     #[inline]
-    pub fn to_i64(&self) -> Option<i64> {
-        call_with_context!(self, to_i64)
+    pub fn to_i32(&self) -> Result<i32> {
+        self.ok_or_type_error(call_with_context!(self, to_i32))
     }
 
     #[inline]
-    pub fn to_f64(&self) -> Option<f64> {
-        call_with_context!(self, to_f64)
+    pub fn to_i64(&self) -> Result<i64> {
+        self.ok_or_type_error(call_with_context!(self, to_i64))
     }
 
     #[inline]
-    pub fn to_c_string(&self) -> Option<QjCString> {
-        self.value
-            .to_c_string(self.context)
-            .map(|v| QjCString::from(v, self.context))
+    pub fn to_f64(&self) -> Result<f64> {
+        self.ok_or_type_error(call_with_context!(self, to_f64))
     }
 
     #[inline]
-    pub fn to_string(&self) -> Option<String> {
-        self.to_c_string().and_then(|v| v.to_string())
+    pub fn to_c_string(&self) -> Result<QjCString> {
+        self.ok_or_type_error(
+            self.value
+                .to_c_string(self.context)
+                .map(|v| QjCString::from(v, self.context)),
+        )
     }
 
     #[inline]
-    pub(crate) fn to_ptr(&self) -> Option<*mut c_void> {
-        self.value.ptr()
+    pub fn to_string(&self) -> Result<String> {
+        self.ok_or_type_error(
+            self.value
+                .to_c_string(self.context)
+                .and_then(|v| v.to_str())
+                .map(|v| v.to_owned()),
+        )
+    }
+
+    #[inline]
+    pub(crate) fn to_ptr(&self) -> Result<*mut c_void> {
+        self.ok_or_type_error(self.value.ptr())
     }
 
     // object
@@ -240,7 +266,7 @@ impl Clone for Data<'_> {
 }
 
 impl fmt::Debug for Data<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> StdResult<(), fmt::Error> {
         f.write_str(format!("Qj({}, {:?})", self._debug_count, self.value).as_str())
     }
 }

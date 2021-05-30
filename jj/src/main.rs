@@ -3,6 +3,7 @@ use std::{
     convert::From,
     fmt::Formatter,
     io::{self, BufRead},
+    process::exit,
 };
 use structopt::{clap, StructOpt};
 
@@ -41,11 +42,11 @@ impl From<std::io::Error> for std::boxed::Box<JjError> {
     }
 }
 
-impl<'q> From<Error<'q>> for std::boxed::Box<JjError> {
+impl<'q> From<Error> for std::boxed::Box<JjError> {
     fn from(e: Error) -> Self {
         let s: Option<String> = match e.value {
             ErrorValue::String(s) => Some(s),
-            ErrorValue::Value(v) => v.to_string(),
+            ErrorValue::JsError(e) => Some(format!("{}", e)),
             _ => None,
         };
         Box::new(JjError {
@@ -82,33 +83,44 @@ pub struct Opt {
     script: String,
 }
 
+fn check_error<T>(result: Result<T, quijine::Error>) -> T {
+    match result {
+        Ok(result) => result,
+        Err(e) => {
+            println!("{}", e);
+            exit(1);
+        }
+    }
+}
+
 fn main() -> Result<(), Box<JjError>> {
     env_logger::init();
     let opt = Opt::from_args();
     quijine::run_with_context(move |ctx| {
         let script = opt.script.as_str();
         // check a syntax error
-        ctx.eval(script, "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY)?;
+        check_error(ctx.eval(script, "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY));
         let stdin = io::stdin();
         for (i, line) in stdin.lock().lines().enumerate() {
             let line = line?;
-            let result = ctx.parse_json(&line, "<input>")?;
+            let result = check_error(ctx.parse_json(&line, "<input>"));
             ctx.global_object().set("$_", &result);
             ctx.global_object().set("$L", ctx.new_int64(i as i64));
-            let result = ctx.eval(script, "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let result = check_error(ctx.eval(script, "<input>", EvalFlags::TYPE_GLOBAL));
             if !opt.silent {
                 if result.is_null() || result.is_undefined() {
                     continue;
                 } else if opt.raw_output {
-                    if let Some(s) = result.to_string() {
+                    if let Ok(s) = result.to_string() {
                         println!("{}", s);
                         continue;
                     }
                 }
-                let v = ctx.json_stringify(result, ctx.undefined().into(), ctx.undefined().into())?;
-                println!("{}", v.to_string().unwrap())
+                let v = ctx.json_stringify(result, ctx.undefined(), ctx.undefined())?;
+                println!("{}", v.to_string()?)
             }
         }
         Ok(())
-    })
+    })?;
+    Ok(())
 }
