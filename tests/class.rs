@@ -39,12 +39,10 @@ fn new_object_class() -> Result<()> {
             "S1",
             ctx.new_function(
                 |ctx, _this, _args| {
-                    let mut obj = ctx.new_object_class::<S1>();
-                    let s1 = Box::new(S1 {
+                    let obj = ctx.new_object_with_opaque(Box::new(S1 {
                         name: "foo".to_owned(),
                         pos: (3, 4),
-                    });
-                    obj.set_opaque(s1);
+                    }));
                     Ok(obj)
                 },
                 "S1",
@@ -78,12 +76,10 @@ fn multiple_context() -> Result<()> {
             "S1",
             ctx.new_function(
                 |ctx, _this, _args| {
-                    let mut obj = ctx.new_object_class::<S1>();
-                    let s1 = Box::new(S1 {
+                    let obj = ctx.new_object_with_opaque(Box::new(S1 {
                         name: "foo".to_owned(),
                         pos: (3, 4),
-                    });
-                    obj.set_opaque(s1);
+                    }));
                     Ok(obj)
                 },
                 "S1",

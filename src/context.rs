@@ -91,6 +91,13 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
+    pub fn new_object_with_opaque<C: Class + 'static>(self, v: Box<C>) -> Object<'q> {
+        let mut obj = self.new_object_class::<C>();
+        obj.set_opaque(v);
+        obj
+    }
+
+    #[inline]
     pub fn new_bool(self, v: bool) -> Bool<'q> {
         unsafe { self.wrap_result(self.0.new_bool(v)).unwrap().into_unchecked() }
     }
