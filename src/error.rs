@@ -1,10 +1,10 @@
-use crate::{tags::QjAnyTag, Qj};
+use crate::Data;
 use std::{error, fmt, io};
 
 pub enum QjErrorValue<'q> {
     None,
     String(String),
-    Value(Qj<'q, QjAnyTag>),
+    Value(Data<'q>),
 }
 
 impl fmt::Display for QjErrorValue<'_> {
@@ -38,7 +38,7 @@ impl<'q> QjError<'q> {
         }
     }
 
-    pub fn with_value(val: Qj<'q, QjAnyTag>) -> QjError<'q> {
+    pub fn with_value(val: Data<'q>) -> QjError<'q> {
         QjError {
             value: QjErrorValue::Value(val),
         }

@@ -1,14 +1,6 @@
-use crate::{
-    class::QjClass,
-    string::QjCString,
-    tags::{
-        QjAnyTag, QjBigDecimalTag, QjBigFloatTag, QjBigIntTag, QjBoolTag, QjFloat64Tag, QjIntTag, QjNullTag,
-        QjObjectTag, QjReferenceTag, QjStringTag, QjSymbolTag, QjUndefinedTag, QjValueTag, QjVariant,
-    },
-    QjRuntime,
-};
+use crate::{class::QjClass, string::QjCString, tags::QjVariant, types::String as QjString, QjRuntime};
 use qjncore::{Context, Value, ValueTag};
-use std::{ffi::c_void, fmt, marker::PhantomData, mem, sync::atomic};
+use std::{convert::TryInto, ffi::c_void, fmt, intrinsics::transmute, mem, sync::atomic};
 
 static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
 
@@ -18,30 +10,23 @@ macro_rules! call_with_context {
     };
 }
 
-/// `Qj` is a value holder with a context.
-pub struct Qj<'q, T> {
+/// `Data` is a value holder with a context.
+pub struct Data<'q> {
     value: Value<'q>,
     context: Context<'q>,
     _debug_count: u16,
-    _type: PhantomData<T>,
 }
 
-impl<'q, T> Qj<'q, T> {
-    pub(crate) fn from(value: Value<'q>, context: Context<'q>) -> Qj<'q, T> {
+impl<'q> Data<'q> {
+    pub(crate) fn from(value: Value<'q>, context: Context<'q>) -> Data<'q> {
         let count = DEBUG_GLOBAL_COUNT.fetch_add(1, atomic::Ordering::SeqCst);
-        let qj = Qj {
+        let qj = Data {
             value,
             context,
             _debug_count: count,
-            _type: PhantomData,
         };
         qj.debug_trace("from");
         qj
-    }
-
-    #[inline]
-    pub(crate) fn transmute<X>(&self) -> &Qj<'q, X> {
-        unsafe { &*(self as *const Qj<T> as *const Qj<X>) }
     }
 
     // property
@@ -51,9 +36,18 @@ impl<'q, T> Qj<'q, T> {
         self.value
     }
 
+    // force conversion
+
     #[inline]
-    pub(crate) fn context(&self) -> Context<'q> {
-        self.context
+    pub(crate) fn as_data(&self) -> &Data<'q> {
+        self
+    }
+
+    /// # Safety
+    /// Must be type-safe in JavaScript.
+    #[inline]
+    pub(crate) unsafe fn as_any<T: Into<Data<'q>>>(&self) -> &T {
+        transmute(self)
     }
 
     // memory
@@ -103,14 +97,19 @@ impl<'q, T> Qj<'q, T> {
 
     // conversion
 
+    #[inline]
+    pub(crate) fn tag(&self) -> ValueTag {
+        self.value.tag()
+    }
+
     pub fn to_variant(&self) -> QjVariant<'_> {
-        match self.value.tag() {
-            ValueTag::BigDecimal => QjVariant::BigDecimal(self.transmute::<QjBigDecimalTag>().clone()),
-            ValueTag::BigInt => QjVariant::BigInt(self.transmute::<QjBigIntTag>().clone()),
-            ValueTag::BigFloat => QjVariant::BigFloat(self.transmute::<QjBigFloatTag>().clone()),
-            ValueTag::Symbol => QjVariant::Symbol(self.transmute::<QjSymbolTag>().clone()),
-            ValueTag::String => QjVariant::String(self.transmute::<QjStringTag>().clone()),
-            ValueTag::Object => QjVariant::Object(self.transmute::<QjObjectTag>().clone()),
+        match self.tag() {
+            ValueTag::BigDecimal => QjVariant::BigDecimal(self.clone().try_into().unwrap()),
+            ValueTag::BigInt => QjVariant::BigInt(self.clone().try_into().unwrap()),
+            ValueTag::BigFloat => QjVariant::BigFloat(self.clone().try_into().unwrap()),
+            ValueTag::Symbol => QjVariant::Symbol(self.clone().try_into().unwrap()),
+            ValueTag::String => QjVariant::String(TryInto::<QjString>::try_into(self.clone()).unwrap()),
+            ValueTag::Object => QjVariant::Object(self.clone().try_into().unwrap()),
             ValueTag::Int => QjVariant::Int(self.to_i32().unwrap()),
             ValueTag::Bool => QjVariant::Bool(self.to_bool().unwrap()),
             ValueTag::Null => QjVariant::Null,
@@ -162,29 +161,29 @@ impl<'q, T> Qj<'q, T> {
     // object
 
     #[inline]
-    pub fn get<K>(&self, key: K) -> Qj<'q, QjAnyTag>
+    pub fn get<K>(&self, key: K) -> Data<'q>
     where
         K: AsRef<str>,
     {
-        Qj::<QjAnyTag>::from(self.value.property_str(self.context, key), self.context)
+        Data::from(self.value.property_str(self.context, key), self.context)
     }
 
     #[inline]
     pub fn set<K, V>(&self, key: K, val: V)
     where
         K: AsRef<str>,
-        V: AsRef<Qj<'q, QjAnyTag>>,
+        V: AsRef<Data<'q>>,
     {
         let val = val.as_ref();
-        Qj::dup(val);
+        Data::dup(val);
         self.value.set_property_str(self.context, key, val.as_value())
     }
 
     // class
 
     #[inline]
-    pub fn prototype(&self) -> Qj<'q, QjAnyTag> {
-        Qj::from(self.value.prototype(self.context), self.context)
+    pub fn prototype(&self) -> Data<'q> {
+        Data::from(self.value.prototype(self.context), self.context)
     }
 
     #[inline]
@@ -207,69 +206,32 @@ impl<'q, T> Qj<'q, T> {
     }
 }
 
-impl<T> Drop for Qj<'_, T> {
+impl Drop for Data<'_> {
     fn drop(&mut self) {
         unsafe { Self::free(self) }
     }
 }
 
-impl<T> Clone for Qj<'_, T> {
+impl Clone for Data<'_> {
     fn clone(&self) -> Self {
-        let qj = Qj {
+        let qj = Data {
             value: self.value,
             context: self.context,
             _debug_count: self._debug_count,
-            _type: PhantomData,
         };
-        Qj::dup(&qj);
+        Data::dup(&qj);
         qj
     }
 }
 
-impl<T> fmt::Debug for Qj<'_, T> {
+impl fmt::Debug for Data<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         f.write_str(format!("Qj({}, {:?})", self._debug_count, self.value).as_str())
     }
 }
 
-macro_rules! qj_type_map {
-    ($from: ty: $($to: ty),*) => {
-        impl<'q> ::std::convert::AsRef<$crate::Qj<'q, $from>> for $crate::Qj<'q, $from> {
-            #[inline]
-            fn as_ref(&self) -> &Qj<'q, $from> {
-                self.transmute()
-            }
-        }
-
-        $(
-        impl<'q> ::std::convert::AsRef<$crate::Qj<'q, $to>> for $crate::Qj<'q, $from> {
-            #[inline]
-            fn as_ref(&self) -> &Qj<'q, $to> {
-                self.transmute()
-            }
-        }
-
-        impl<'q> ::std::convert::From<$crate::Qj<'q, $from>> for $crate::Qj<'q, $to> {
-            #[inline]
-            fn from(x: Qj<'q, $from>) -> Self {
-                $crate::Qj::dup(&x);
-                $crate::Qj::<$to>::from(x.as_value(), x.context())
-            }
-        }
-        )*
-    };
+impl<'q> AsRef<Data<'q>> for Data<'q> {
+    fn as_ref(&self) -> &Data<'q> {
+        self.as_data()
+    }
 }
-
-qj_type_map!(QjAnyTag: );
-
-qj_type_map!(QjValueTag: QjAnyTag);
-qj_type_map!(QjReferenceTag: QjAnyTag);
-
-qj_type_map!(QjStringTag: QjAnyTag, QjReferenceTag);
-qj_type_map!(QjObjectTag: QjAnyTag, QjReferenceTag);
-
-qj_type_map!(QjIntTag: QjAnyTag, QjValueTag);
-qj_type_map!(QjBoolTag: QjAnyTag, QjValueTag);
-qj_type_map!(QjNullTag: QjAnyTag, QjValueTag);
-qj_type_map!(QjUndefinedTag: QjAnyTag, QjValueTag);
-qj_type_map!(QjFloat64Tag: QjAnyTag, QjValueTag);

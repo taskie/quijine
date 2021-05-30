@@ -21,7 +21,7 @@ pub enum CFunctionEnum {
     IteratorNext = ffi::JSCFunctionEnum_JS_CFUNC_iterator_next,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[repr(i32)]
 pub enum ValueTag {
     BigDecimal = ffi::JS_TAG_BIG_DECIMAL,

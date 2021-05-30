@@ -1,4 +1,4 @@
-use crate::instance::Qj;
+use crate::types::{BigDecimal, BigFloat, BigInt, Object, String, Symbol};
 use std::{fmt, fmt::Formatter};
 
 // any
@@ -30,12 +30,12 @@ pub struct QjFloat64Tag;
 
 #[non_exhaustive]
 pub enum QjVariant<'q> {
-    BigDecimal(Qj<'q, QjBigDecimalTag>),
-    BigInt(Qj<'q, QjBigIntTag>),
-    BigFloat(Qj<'q, QjBigFloatTag>),
-    Symbol(Qj<'q, QjSymbolTag>),
-    String(Qj<'q, QjStringTag>),
-    Object(Qj<'q, QjObjectTag>),
+    BigDecimal(BigDecimal<'q>),
+    BigInt(BigInt<'q>),
+    BigFloat(BigFloat<'q>),
+    Symbol(Symbol<'q>),
+    String(String<'q>),
+    Object(Object<'q>),
     Int(i32),
     Bool(bool),
     Null,

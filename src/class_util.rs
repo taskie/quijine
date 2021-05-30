@@ -1,7 +1,6 @@
 use crate::{
     class::{QjClass, QjClassMethods},
-    tags::{QjAnyTag, QjObjectTag},
-    Qj, QjContext, QjResult, QjRuntime,
+    Data, QjContext, QjResult, QjRuntime,
 };
 use log::trace;
 use qjncore::{self, ClassDef, ClassId, Context, Runtime, Value};
@@ -22,17 +21,14 @@ unsafe fn finalize<T: QjClass + 'static>(rrt: Runtime, val: Value) {
 }
 
 struct Methods<'q> {
-    proto: &'q Qj<'q, QjObjectTag>,
+    proto: &'q Data<'q>,
     context: QjContext<'q>,
 }
 
 impl<'q, T: QjClass + 'static> QjClassMethods<'q, T> for Methods<'q> {
     fn add_method<F>(&mut self, name: &str, method: F)
     where
-        F: 'static
-            + Send
-            + Fn(QjContext<'q>, &mut T, Qj<'q, QjAnyTag>, &[Qj<'q, QjAnyTag>]) -> QjResult<'q, Qj<'q, QjAnyTag>>
-            + Sync,
+        F: 'static + Send + Fn(QjContext<'q>, &mut T, Data<'q>, &[Data<'q>]) -> QjResult<'q, Data<'q>> + Sync,
     {
         let ctx = self.context;
         let f = ctx.new_function(
@@ -73,7 +69,7 @@ pub(crate) fn register_class<T: QjClass + 'static>(rctx: Context, clz: ClassId) 
     };
     // per Context
     let proto = ctx.new_object();
-    Qj::dup(&proto);
+    Data::dup(&proto);
     rctx.set_class_proto(clz, proto.as_value());
     let mut methods = Methods {
         context: ctx,
@@ -82,6 +78,3 @@ pub(crate) fn register_class<T: QjClass + 'static>(rctx: Context, clz: ClassId) 
     T::add_methods(&mut methods);
     T::setup_proto(ctx, &proto);
 }
-
-#[cfg(test)]
-mod tests {}

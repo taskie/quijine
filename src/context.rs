@@ -3,11 +3,11 @@ use crate::{
     class_util::register_class,
     error::{QjError, QjErrorValue, QjResult},
     runtime::QjRuntime,
-    tags::{QjAnyTag, QjBoolTag, QjFloat64Tag, QjIntTag, QjNullTag, QjObjectTag, QjStringTag, QjUndefinedTag},
-    Qj, QjEvalFlags, QjRuntimeGuard,
+    types::{Bool, Float64, Int, Null, Object, String as QjString, Undefined},
+    Data, QjEvalFlags, QjRuntimeGuard,
 };
 use qjncore::{conversion::AsJsValue, raw, ClassId, Context, Value};
-use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int};
+use std::{any::TypeId, collections::HashSet, convert::TryInto, ffi::c_void, fmt, os::raw::c_int};
 
 pub struct QjContextOpaque {
     registered_classes: HashSet<TypeId>,
@@ -43,25 +43,25 @@ impl<'q> QjContext<'q> {
     }
 
     #[inline]
-    fn wrap_result<T>(self, val: Value<'q>) -> QjResult<'q, Qj<'q, T>> {
+    fn wrap_result(self, val: Value<'q>) -> QjResult<'q, Data<'q>> {
         if val.is_exception() {
-            Err(QjError::with_value(Qj::<QjAnyTag>::from(self.0.exception(), self.0)))
+            Err(QjError::with_value(Data::from(self.0.exception(), self.0)))
         } else {
-            Ok(Qj::from(val, self.0))
+            Ok(Data::from(val, self.0))
         }
     }
 
     #[inline]
-    pub fn eval(self, code: &str, filename: &str, eval_flags: QjEvalFlags) -> QjResult<'q, Qj<'q, QjAnyTag>> {
+    pub fn eval(self, code: &str, filename: &str, eval_flags: QjEvalFlags) -> QjResult<'q, Data<'q>> {
         self.wrap_result(self.0.eval(code, filename, eval_flags))
     }
 
     #[inline]
-    pub fn call<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> QjResult<'q, Qj<'q, QjAnyTag>>
+    pub fn call<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> QjResult<'q, Data<'q>>
     where
-        F: AsRef<Qj<'q, QjAnyTag>>,
-        T: AsRef<Qj<'q, QjAnyTag>>,
-        A: AsRef<[Qj<'q, QjAnyTag>]>,
+        F: AsRef<Data<'q>>,
+        T: AsRef<Data<'q>>,
+        A: AsRef<[Data<'q>]>,
     {
         let qc_args: Vec<_> = args.as_ref().iter().map(|v| v.as_value()).collect();
         let val = self
@@ -71,63 +71,61 @@ impl<'q> QjContext<'q> {
     }
 
     #[inline]
-    pub fn global_object(self) -> Qj<'q, QjObjectTag> {
-        self.wrap_result(self.0.global_object()).unwrap()
+    pub fn global_object(self) -> Object<'q> {
+        self.wrap_result(self.0.global_object()).unwrap().try_into().unwrap()
     }
 
     #[inline]
-    pub fn new_object(self) -> Qj<'q, QjObjectTag> {
-        self.wrap_result(self.0.new_object()).unwrap()
+    pub fn new_object(self) -> Object<'q> {
+        self.wrap_result(self.0.new_object()).unwrap().try_into().unwrap()
     }
 
     #[inline]
-    pub fn new_object_class<C: QjClass + 'static>(mut self) -> Qj<'q, QjObjectTag> {
+    pub fn new_object_class<C: QjClass + 'static>(mut self) -> Object<'q> {
         let clz = self.register_class::<C>();
-        self.wrap_result(self.0.new_object_class(clz)).unwrap()
+        self.wrap_result(self.0.new_object_class(clz))
+            .unwrap()
+            .try_into()
+            .unwrap()
     }
 
     #[inline]
-    pub fn new_bool(self, v: bool) -> Qj<'q, QjBoolTag> {
-        self.wrap_result(self.0.new_bool(v)).unwrap()
+    pub fn new_bool(self, v: bool) -> Bool<'q> {
+        self.wrap_result(self.0.new_bool(v)).unwrap().try_into().unwrap()
     }
 
     #[inline]
-    pub fn new_int32(self, v: i32) -> Qj<'q, QjIntTag> {
-        self.wrap_result(self.0.new_int32(v)).unwrap()
+    pub fn new_int32(self, v: i32) -> Int<'q> {
+        self.wrap_result(self.0.new_int32(v)).unwrap().try_into().unwrap()
     }
 
     #[inline]
-    pub fn new_int64(self, v: i64) -> Qj<'q, QjIntTag> {
+    pub fn new_int64(self, v: i64) -> Data<'q> {
         self.wrap_result(self.0.new_int64(v)).unwrap()
     }
 
     #[inline]
-    pub fn new_float64(self, v: f64) -> Qj<'q, QjFloat64Tag> {
-        self.wrap_result(self.0.new_float64(v)).unwrap()
+    pub fn new_float64(self, v: f64) -> Float64<'q> {
+        self.wrap_result(self.0.new_float64(v)).unwrap().try_into().unwrap()
     }
 
     #[inline]
-    pub fn new_string(self, v: &str) -> Qj<'q, QjStringTag> {
-        self.wrap_result(self.0.new_string(v)).unwrap()
-    }
-
-    #[inline]
-    pub fn new_string_from_bytes(self, v: &[u8]) -> Qj<'q, QjStringTag> {
-        self.wrap_result(self.0.new_string_from_bytes(v)).unwrap()
+    pub fn new_string(self, v: &str) -> QjString<'q> {
+        self.wrap_result(self.0.new_string(v)).unwrap().try_into().unwrap()
     }
 
     // callback
 
     #[inline]
-    pub fn new_function<F>(self, func: F, name: &str, length: i32) -> Qj<'q, QjObjectTag>
+    pub fn new_function<F>(self, func: F, name: &str, length: i32) -> Object<'q>
     where
-        F: 'static + Send + Fn(QjContext<'q>, Qj<'q, QjAnyTag>, &[Qj<'q, QjAnyTag>]) -> QjResult<'q, Qj<'q, QjAnyTag>>,
+        F: 'static + Send + Fn(QjContext<'q>, Data<'q>, &[Data<'q>]) -> QjResult<'q, Data<'q>>,
     {
         self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), name, length)
     }
 
     #[inline]
-    pub fn new_callback(self, func: QjCallback<'q, 'static>, _name: &str, length: i32) -> Qj<'q, QjObjectTag> {
+    pub fn new_callback(self, func: QjCallback<'q, 'static>, _name: &str, length: i32) -> Object<'q> {
         unsafe extern "C" fn call(
             ctx: *mut raw::JSContext,
             js_this: raw::JSValue,
@@ -149,18 +147,18 @@ impl<'q> QjContext<'q> {
             let func = cb.array_buffer_to_sized::<QjCallback>(ctx).unwrap();
 
             log::debug!("this");
-            let this = Qj::<QjAnyTag>::from(this, ctx);
-            Qj::dup(&this);
+            let this = Data::from(this, ctx);
+            Data::dup(&this);
             log::debug!("args");
-            let args: Vec<_> = args.iter().map(|v| Qj::<QjAnyTag>::from(*v, ctx)).collect();
-            args.iter().for_each(Qj::dup);
+            let args: Vec<_> = args.iter().map(|v| Data::from(*v, ctx)).collect();
+            args.iter().for_each(Data::dup);
             let ctx = QjContext::from(ctx);
 
             log::debug!("invoke start");
             let r = (*func)(ctx, this, args.as_slice());
             let res = match r {
                 Ok(t) => {
-                    Qj::dup(&t);
+                    Data::dup(&t);
                     t.as_value().as_js_value()
                 }
                 Err(e) => {
@@ -169,7 +167,7 @@ impl<'q> QjContext<'q> {
                         QjErrorValue::None => ctx.0.throw(ctx.0.new_string("some error occured")),
                         QjErrorValue::String(s) => ctx.0.throw(ctx.0.new_string(s)),
                         QjErrorValue::Value(v) => {
-                            Qj::dup(&v);
+                            Data::dup(&v);
                             ctx.0.throw(v.as_value())
                         }
                     };
@@ -185,32 +183,27 @@ impl<'q> QjContext<'q> {
             log::debug!("new c function data");
             let cfd = self.0.new_c_function_data(Some(call), length, 0, vec![cb]);
             self.0.free_value(cb);
-            Qj::from(cfd, self.0)
+            Data::from(cfd, self.0).try_into().unwrap()
         }
     }
 
     // special values
 
-    pub fn undefined(self) -> Qj<'q, QjUndefinedTag> {
-        Qj::<QjUndefinedTag>::from(Value::undefined(), self.0)
+    pub fn undefined(self) -> Undefined<'q> {
+        Data::from(Value::undefined(), self.0).try_into().unwrap()
     }
 
-    pub fn null(self) -> Qj<'q, QjNullTag> {
-        Qj::<QjNullTag>::from(Value::null(), self.0)
+    pub fn null(self) -> Null<'q> {
+        Data::from(Value::null(), self.0).try_into().unwrap()
     }
 
     // json
 
-    pub fn parse_json(self, buf: &str, filename: &str) -> QjResult<'q, Qj<'q, QjAnyTag>> {
+    pub fn parse_json(self, buf: &str, filename: &str) -> QjResult<'q, Data<'q>> {
         self.wrap_result(self.0.parse_json(buf, filename))
     }
 
-    pub fn json_stringify(
-        self,
-        obj: Qj<'q, QjAnyTag>,
-        replacer: Qj<'q, QjAnyTag>,
-        space0: Qj<'q, QjAnyTag>,
-    ) -> QjResult<'q, Qj<'q, QjStringTag>> {
+    pub fn json_stringify(self, obj: Data<'q>, replacer: Data<'q>, space0: Data<'q>) -> QjResult<'q, Data<'q>> {
         self.wrap_result(
             self.0
                 .json_stringify(obj.as_value(), replacer.as_value(), space0.as_value()),
@@ -278,5 +271,4 @@ impl fmt::Debug for QjContextGuard<'_> {
     }
 }
 
-pub(crate) type QjCallback<'q, 'a> =
-    Box<dyn Fn(QjContext<'q>, Qj<'q, QjAnyTag>, &[Qj<'q, QjAnyTag>]) -> QjResult<'q, Qj<'q, QjAnyTag>> + 'a>;
+pub(crate) type QjCallback<'q, 'a> = Box<dyn Fn(QjContext<'q>, Data<'q>, &[Data<'q>]) -> QjResult<'q, Data<'q>> + 'a>;
