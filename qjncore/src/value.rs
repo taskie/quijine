@@ -6,7 +6,7 @@ use crate::{
     enums::ValueTag,
     ffi,
     marker::Covariant,
-    string::CString as LtCString,
+    string::CString as QcCString,
     util, Runtime,
 };
 use log::trace;
@@ -186,10 +186,10 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn to_c_string(self, ctx: Context<'q>) -> Option<LtCString<'q>> {
+    pub fn to_c_string(self, ctx: Context<'q>) -> Option<QcCString<'q>> {
         let c_str = unsafe { ffi::JS_ToCString(ctx.as_ptr(), self.0) };
         if !c_str.is_null() {
-            Some(LtCString::new(c_str))
+            Some(QcCString::new(c_str))
         } else {
             None
         }

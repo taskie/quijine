@@ -6,7 +6,7 @@ use crate::{
     function::{convert_function_arguments, convert_function_result},
     marker::Covariant,
     runtime::Runtime,
-    string::CString as LtCString,
+    string::CString as QcCString,
     util,
     value::Value,
 };
@@ -168,8 +168,8 @@ impl<'q> Context<'q> {
     /// # Safety
     /// You must free a string only once.
     #[inline]
-    pub unsafe fn free_c_string(self, str: LtCString<'q>) {
-        ffi::JS_FreeCString(self.as_ptr(), LtCString::raw(str));
+    pub unsafe fn free_c_string(self, str: QcCString<'q>) {
+        ffi::JS_FreeCString(self.as_ptr(), QcCString::raw(str));
     }
 
     // object

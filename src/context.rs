@@ -134,7 +134,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn new_callback<R>(self, func: QjCallback<'q, 'static, R>, _name: &str, length: i32) -> Object<'q>
+    pub fn new_callback<R>(self, func: Callback<'q, 'static, R>, _name: &str, length: i32) -> Object<'q>
     where
         R: Into<Data<'q>> + 'q,
     {
@@ -156,7 +156,7 @@ impl<'q> Context<'q> {
             }
             let cb = qc::Value::from_raw(*func_data, ctx);
             log::debug!("load pointer from ArrayBuffer");
-            let func = cb.array_buffer_to_sized::<QjCallback<R>>(ctx).unwrap();
+            let func = cb.array_buffer_to_sized::<Callback<R>>(ctx).unwrap();
 
             log::debug!("this");
             let this = Data::from(this, ctx);
@@ -287,4 +287,4 @@ impl fmt::Debug for ContextScope<'_> {
     }
 }
 
-pub(crate) type QjCallback<'q, 'a, R> = Box<dyn Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<R> + 'a>;
+pub(crate) type Callback<'q, 'a, R> = Box<dyn Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<R> + 'a>;
