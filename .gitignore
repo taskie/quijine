@@ -4,3 +4,5 @@
 /libquickjs-sys
 
 *.iml
+
+.vscode
