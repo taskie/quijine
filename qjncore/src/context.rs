@@ -25,6 +25,8 @@ pub struct Context<'q>(NonNull<ffi::JSContext>, Covariant<'q>);
 impl<'q> Context<'q> {
     // lifecycle
 
+    /// # Safety
+    /// The pointer of a context must have a valid lifetime.
     #[inline]
     pub unsafe fn from_ptr(ptr: *mut ffi::JSContext) -> Context<'q> {
         Context(NonNull::new(ptr).unwrap(), PhantomData)
@@ -35,6 +37,8 @@ impl<'q> Context<'q> {
         unsafe { Self::from_ptr(ffi::JS_NewContext(rt.as_ptr())) }
     }
 
+    /// # Safety
+    /// You must free a context only once.
     #[inline]
     pub unsafe fn free(this: Self) {
         ffi::JS_FreeContext(this.0.as_ptr());
@@ -52,9 +56,11 @@ impl<'q> Context<'q> {
         unsafe { ffi::JS_GetContextOpaque(self.0.as_ptr()) }
     }
 
+    // QuickJS C library doesn't dereference an opaque.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     #[inline]
-    pub unsafe fn set_opaque(self, opaque: *mut c_void) {
-        ffi::JS_SetContextOpaque(self.0.as_ptr(), opaque)
+    pub fn set_opaque(self, opaque: *mut c_void) {
+        unsafe { ffi::JS_SetContextOpaque(self.0.as_ptr(), opaque) }
     }
 
     #[inline]
@@ -127,6 +133,8 @@ impl<'q> Context<'q> {
 
     // lifecycle (value)
 
+    /// # Safety
+    /// You must free a value only once.
     #[inline]
     pub unsafe fn free_value(self, value: Value<'q>) {
         ffi::JS_FreeValue(self.as_ptr(), value.as_js_value());
@@ -157,6 +165,8 @@ impl<'q> Context<'q> {
         self.new_string_from_bytes(s.as_ref().as_bytes())
     }
 
+    /// # Safety
+    /// You must free a string only once.
     #[inline]
     pub unsafe fn free_c_string(self, str: LtCString<'q>) {
         ffi::JS_FreeCString(self.as_ptr(), LtCString::raw(str));

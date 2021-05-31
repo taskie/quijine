@@ -59,16 +59,22 @@ impl<'q> Value<'q> {
 
     // lifecycle
 
+    /// # Safety
+    /// value must have the same lifetime as a context.
     #[inline]
     pub unsafe fn from_raw(value: ffi::JSValue, _ctx: Context<'q>) -> Value<'q> {
         Value(value, PhantomData)
     }
 
+    /// # Safety
+    /// value must have the same lifetime as a runtime.
     #[inline]
     pub unsafe fn from_raw_with_runtime(value: ffi::JSValue, _rt: Runtime<'q>) -> Value<'q> {
         Value(value, PhantomData)
     }
 
+    /// # Safety
+    /// value must be the "value" type, not the reference type.
     #[inline]
     pub unsafe fn from_static_raw(value: ffi::JSValue) -> Value<'static> {
         Value(value, PhantomData)
@@ -264,22 +270,26 @@ impl<'q> Value<'q> {
         unsafe { ffi::JS_GetOpaque(self.0, clz.as_js_class_id()) }
     }
 
+    // QuickJS C library doesn't dereference an opaque.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     #[inline]
-    pub unsafe fn set_opaque(self, opaque: *mut c_void) {
-        ffi::JS_SetOpaque(self.0, opaque)
+    pub fn set_opaque(self, opaque: *mut c_void) {
+        unsafe { ffi::JS_SetOpaque(self.0, opaque) }
     }
 
     // array buffer
 
-    pub unsafe fn array_buffer(self, ctx: Context<'q>) -> Option<&[u8]> {
+    pub fn array_buffer(self, ctx: Context<'q>) -> Option<&[u8]> {
         let mut len = 0;
-        let bs: *const u8 = ffi::JS_GetArrayBuffer(ctx.as_ptr(), &mut len, self.0);
+        let bs: *const u8 = unsafe { ffi::JS_GetArrayBuffer(ctx.as_ptr(), &mut len, self.0) };
         if bs.is_null() {
             return None;
         }
-        Some(slice::from_raw_parts(bs, len as usize))
+        Some(unsafe { slice::from_raw_parts(bs, len as usize) })
     }
 
+    /// # Safety
+    /// The content of ArrayBuffer must be created from T ('static).
     pub unsafe fn array_buffer_to_sized<T>(self, ctx: Context<'q>) -> Option<&T> {
         let mut len = 0;
         let bs: *const u8 = ffi::JS_GetArrayBuffer(ctx.as_ptr(), &mut len, self.0);

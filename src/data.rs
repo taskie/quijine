@@ -11,7 +11,7 @@ use std::{
     convert::TryInto,
     ffi::c_void,
     fmt,
-    mem::{self, forget, transmute, transmute_copy},
+    mem::{self, forget, transmute_copy},
     result::Result as StdResult,
     sync::atomic,
 };
@@ -66,7 +66,7 @@ impl<'q> Data<'q> {
     /// Must be type-safe in JavaScript.
     #[inline]
     pub(crate) unsafe fn as_any<T: Into<Data<'q>>>(&self) -> &T {
-        transmute(self)
+        &*(self as *const Data as *const T)
     }
 
     #[inline]
@@ -239,7 +239,7 @@ impl<'q> Data<'q> {
     pub fn set_opaque<C: Class + 'static>(&mut self, mut v: Box<C>) {
         let mut rt = Runtime::from(self.context.runtime());
         let _clz = rt.get_or_register_class_id::<C>();
-        unsafe { self.value.set_opaque(v.as_mut() as *mut C as *mut c_void) };
+        self.value.set_opaque(v.as_mut() as *mut C as *mut c_void);
         mem::forget(v);
     }
 }

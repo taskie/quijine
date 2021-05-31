@@ -250,9 +250,7 @@ impl<'r> ContextScope<'r> {
         let opaque = Box::new(ContextOpaque {
             registered_classes: HashSet::new(),
         });
-        unsafe {
-            ctx.set_opaque(Box::into_raw(opaque) as *mut c_void);
-        }
+        ctx.set_opaque(Box::into_raw(opaque) as *mut c_void);
         ContextScope(Context(ctx))
     }
 

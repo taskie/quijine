@@ -14,16 +14,21 @@ pub struct Runtime<'q>(NonNull<ffi::JSRuntime>, Covariant<'q>);
 impl<'q> Runtime<'q> {
     // lifecycle
 
+    /// # Safety
+    /// The pointer of a runtime must have valid lifetime.
     #[inline]
     pub unsafe fn from_ptr(ptr: *mut ffi::JSRuntime) -> Runtime<'q> {
         Runtime(NonNull::new(ptr).unwrap(), PhantomData)
     }
 
+    #[allow(clippy::new_without_default)]
     #[inline]
     pub fn new() -> Runtime<'q> {
         unsafe { Self::from_ptr(ffi::JS_NewRuntime()) }
     }
 
+    /// # Safety
+    /// You must free a runtime only once.
     #[inline]
     pub unsafe fn free(this: Self) {
         ffi::JS_FreeRuntime(this.0.as_ptr());
@@ -36,9 +41,11 @@ impl<'q> Runtime<'q> {
         unsafe { ffi::JS_GetRuntimeOpaque(self.0.as_ptr()) }
     }
 
+    // QuickJS C library doesn't dereference an opaque.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     #[inline]
-    pub unsafe fn set_opaque(self, opaque: *mut c_void) {
-        ffi::JS_SetRuntimeOpaque(self.0.as_ptr(), opaque)
+    pub fn set_opaque(self, opaque: *mut c_void) {
+        unsafe { ffi::JS_SetRuntimeOpaque(self.0.as_ptr(), opaque) }
     }
 
     #[inline]
@@ -68,6 +75,8 @@ impl<'q> Runtime<'q> {
 
     // value
 
+    /// # Safety
+    /// You must free a value only once.
     #[inline]
     pub unsafe fn free_value(self, value: Value<'q>) {
         ffi::JS_FreeValueRT(self.0.as_ptr(), value.as_js_value());

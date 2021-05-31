@@ -83,9 +83,7 @@ impl RuntimeScope {
             registered_classes: HashMap::new(),
             class_defs: HashMap::new(),
         });
-        unsafe {
-            rt.set_opaque(Box::into_raw(opaque) as *mut c_void);
-        }
+        rt.set_opaque(Box::into_raw(opaque) as *mut c_void);
         RuntimeScope(Runtime::from(rt))
     }
 

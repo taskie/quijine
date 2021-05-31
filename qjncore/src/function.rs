@@ -6,6 +6,10 @@ use crate::{
 };
 use std::{ffi::CString, marker::PhantomData, os::raw::c_int, slice};
 
+/// This function is used by js_c_function macro.
+/// # Safety
+/// * A context and values must have valid lifetime.
+/// * The length of argv must equal to argc.
 #[inline]
 pub unsafe fn convert_function_arguments<'q>(
     ctx: *mut ffi::JSContext,
@@ -20,6 +24,7 @@ pub unsafe fn convert_function_arguments<'q>(
     (ctx, this, args)
 }
 
+/// This function is used by js_c_function macro.
 #[inline]
 pub fn convert_function_result(res: &Value) -> ffi::JSValue {
     res.as_js_value()
@@ -29,10 +34,14 @@ pub fn convert_function_result(res: &Value) -> ffi::JSValue {
 pub struct CFunctionListEntry<'q>(ffi::JSCFunctionListEntry, CString, Invariant<'q>);
 
 impl<'q> CFunctionListEntry<'q> {
+    /// # Safety
+    /// The content of JSCFunctionListEntry must have a valid lifetime.
     pub unsafe fn from_raw(raw: ffi::JSCFunctionListEntry) -> CFunctionListEntry<'q> {
         CFunctionListEntry(raw, CString::from_raw(raw.name as *mut i8), PhantomData)
     }
 
+    /// # Safety
+    /// The content of JSCFunctionListEntry must have a valid lifetime.
     pub unsafe fn from_raw_with_name(raw: ffi::JSCFunctionListEntry, name: CString) -> CFunctionListEntry<'q> {
         CFunctionListEntry(raw, name, PhantomData)
     }
