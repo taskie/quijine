@@ -12,3 +12,4 @@ PREFIX := $(HOME)/.local
 
 install: build
 	install -m755 $(BIN) $(PREFIX)/bin/$(NAME)
+	strip $(PREFIX)/bin/$(NAME)
