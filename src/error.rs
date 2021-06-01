@@ -1,5 +1,5 @@
 use crate::Data;
-use std::{error::Error as StdError, fmt, io, result::Result as StdResult};
+use std::{error::Error as StdError, fmt, result::Result as StdResult, sync::Arc};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ErrorKind {
@@ -11,6 +11,7 @@ pub enum ErrorKind {
     URIError,
     InternalError,
     AggregateError,
+    ExternalError,
 }
 
 impl fmt::Display for ErrorKind {
@@ -24,6 +25,7 @@ impl fmt::Display for ErrorKind {
             ErrorKind::URIError => "URIError",
             ErrorKind::InternalError => "InternalError",
             ErrorKind::AggregateError => "AggregateError",
+            ErrorKind::ExternalError => "ExternalError",
         })
     }
 }
@@ -54,7 +56,7 @@ pub enum ErrorValue {
     None,
     String(String),
     JsError(JsErrorData),
-    External(Box<dyn StdError + Send + Sync + 'static>),
+    External(Arc<dyn StdError + Send + Sync>),
 }
 
 impl fmt::Display for ErrorValue {
@@ -81,13 +83,6 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn from(kind: ErrorKind) -> Error {
-        Error {
-            kind,
-            value: ErrorValue::None,
-        }
-    }
-
     pub fn with_str<T: AsRef<str>>(kind: ErrorKind, message: T) -> Error {
         Error {
             kind,
@@ -95,11 +90,15 @@ impl Error {
         }
     }
 
-    pub fn with_external(kind: ErrorKind, external: Box<dyn StdError + Send + Sync + 'static>) -> Error {
+    pub fn with_external<T: Into<Box<dyn StdError + Send + Sync>>>(kind: ErrorKind, external: T) -> Error {
         Error {
             kind,
-            value: ErrorValue::External(external),
+            value: ErrorValue::External(external.into().into()),
         }
+    }
+
+    pub fn external<T: Into<Box<dyn StdError + Send + Sync>>>(external: T) -> Error {
+        Error::with_external(ErrorKind::ExternalError, external)
     }
 
     pub fn from_data<'q>(kind: ErrorKind, data: impl Into<Data<'q>>) -> Error {
@@ -133,37 +132,30 @@ impl Error {
     }
 }
 
-pub type Result<T> = StdResult<T, Error>;
-
-impl<'q> StdError for Error {}
-
-impl std::convert::From<Error> for io::Error {
-    fn from(err: Error) -> Self {
-        io::Error::new(io::ErrorKind::Other, format!("{}", err))
+impl<'q> StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self.value {
+            ErrorValue::External(ref e) => Some(e.as_ref()),
+            _ => None,
+        }
     }
 }
 
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::with_external(ErrorKind::InternalError, Box::new(err))
+impl From<Box<dyn StdError + Send + Sync>> for Error {
+    fn from(e: Box<dyn StdError + Send + Sync>) -> Self {
+        Error::external(e)
     }
 }
 
-impl From<Box<dyn StdError>> for std::boxed::Box<Error> {
+impl From<Box<dyn StdError>> for Error {
     fn from(e: Box<dyn StdError>) -> Self {
-        Box::new(Error::with_str(ErrorKind::InternalError, format!("{}", e)))
-    }
-}
-
-impl From<Box<dyn StdError + Send + Sync + 'static>> for std::boxed::Box<Error> {
-    fn from(e: Box<dyn StdError + Send + Sync + 'static>) -> Self {
-        Box::new(Error::with_external(ErrorKind::InternalError, e))
+        Error::with_str(ErrorKind::ExternalError, format!("{}", e))
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> StdResult<(), fmt::Error> {
-        f.write_fmt(format_args!("{}Error({})", self.kind, self.value))
+        f.write_fmt(format_args!("{}: {}", self.kind, self.value))
     }
 }
 
@@ -172,3 +164,5 @@ impl fmt::Debug for Error {
         fmt::Display::fmt(self, f)
     }
 }
+
+pub type Result<T> = StdResult<T, Error>;
