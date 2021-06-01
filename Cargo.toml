@@ -5,21 +5,15 @@ authors = ["taskie <t@skie.jp>"]
 edition = "2018"
 
 [dependencies]
-log = "0.4.0"
-bitflags = { version = "1.2.1" }
-lazy_static = "1.4.0"
+log = "0.4"
+bitflags = { version = "1.2" }
+lazy_static = "1.4"
 qjncore = { path = "./qjncore" }
 
-[dependencies.libquickjs-sys]
-version = "0.9.0"
-#path = "./libquickjs-sys"
-#features = ["system"]
-#default-features = false
-
 [dev-dependencies]
-env_logger = "0.7.1"
-rand = "0.7.3"
-rand_xorshift = "0.2.0"
+env_logger = "0.8"
+rand = "0.8"
+rand_xorshift = "0.3"
 
 [workspace]
 members = [
