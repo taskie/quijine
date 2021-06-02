@@ -127,14 +127,14 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_function<F, R>(self, func: F, name: &str, length: i32) -> Object<'q>
     where
-        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<R> + Send + 'static,
+        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<R> + Send + 'q,
         R: Into<Data<'q>> + 'q,
     {
-        self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), name, length)
+        self.new_callback(Box::new(func), name, length)
     }
 
     #[inline]
-    pub fn new_callback<R>(self, func: Callback<'q, 'static, R>, _name: &str, length: i32) -> Object<'q>
+    pub fn new_callback<R>(self, func: Callback<'q, 'q, R>, _name: &str, length: i32) -> Object<'q>
     where
         R: Into<Data<'q>> + 'q,
     {
