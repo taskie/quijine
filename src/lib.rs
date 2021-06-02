@@ -15,7 +15,7 @@ pub use qjncore::EvalFlags;
 pub use class::{Class, ClassMethods};
 pub use context::{Context, ContextScope};
 pub use data::Data;
-pub use error::{Error, ErrorKind, ErrorValue, Result};
+pub use error::{Error, ErrorKind, ErrorValue, ExternalError, ExternalResult, Result};
 pub use runtime::{Runtime, RuntimeScope};
 pub use types::{
     BigDecimal, BigFloat, BigInt, Bool, CatchOffset, Exception, Float64, Int, Null, Object, String, Symbol, Undefined,

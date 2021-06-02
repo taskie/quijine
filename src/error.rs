@@ -164,5 +164,30 @@ impl fmt::Debug for Error {
         fmt::Display::fmt(self, f)
     }
 }
+pub trait ExternalError {
+    fn to_qj_err(self) -> Error;
+}
+
+impl<E> ExternalError for E
+where
+    E: Into<Box<dyn StdError + Send + Sync>>,
+{
+    fn to_qj_err(self) -> Error {
+        Error::external(self)
+    }
+}
 
 pub type Result<T> = StdResult<T, Error>;
+
+pub trait ExternalResult<T> {
+    fn map_err_to_qj(self) -> Result<T>;
+}
+
+impl<T, E> ExternalResult<T> for StdResult<T, E>
+where
+    E: ExternalError,
+{
+    fn map_err_to_qj(self) -> Result<T> {
+        self.map_err(|e| e.to_qj_err())
+    }
+}
