@@ -10,31 +10,32 @@ impl Class for S1 {
         "S1"
     }
 
-    fn add_methods<'q, T: ClassMethods<'q, Self>>(methods: &mut T) {
-        methods.add_method("name", |ctx, t, _this, _args| Ok(ctx.new_string(t.name.as_str())));
+    fn add_methods<'q, T: ClassMethods<'q, Self>>(methods: &mut T) -> Result<()> {
+        methods.add_method("name", |ctx, t, _this, _args| Ok(ctx.new_string(t.name.as_str())?))?;
         methods.add_method("setName", |ctx, t, _this, args| {
             let name = args[0].to_string()?;
             t.name = name;
             Ok(ctx.undefined())
-        });
+        })?;
         methods.add_method("pos", |ctx, t, _this, _args| {
-            let obj = ctx.new_object();
-            obj.set("x", ctx.new_int32(t.pos.0));
-            obj.set("y", ctx.new_int32(t.pos.1));
+            let obj = ctx.new_object()?;
+            obj.set("x", ctx.new_int32(t.pos.0))?;
+            obj.set("y", ctx.new_int32(t.pos.1))?;
             Ok(obj)
-        });
+        })?;
         methods.add_method("move", |ctx, t, _this, args| {
             t.pos.0 += args[0].to_i32()?;
             t.pos.1 += args[1].to_i32()?;
             Ok(ctx.undefined())
-        });
+        })?;
+        Ok(())
     }
 }
 
 #[test]
 fn new_object_class() -> Result<()> {
     quijine::run_with_context(|ctx| {
-        let global = ctx.global_object();
+        let global = ctx.global_object()?;
         global.set(
             "S1",
             ctx.new_function(
@@ -42,15 +43,15 @@ fn new_object_class() -> Result<()> {
                     let obj = ctx.new_object_with_opaque(Box::new(S1 {
                         name: "foo".to_owned(),
                         pos: (3, 4),
-                    }));
+                    }))?;
                     Ok(obj)
                 },
                 "S1",
                 0,
-            ),
-        );
+            )?,
+        )?;
         let result = ctx.eval("const s1 = S1(); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
-        assert!(!result.prototype().is_null());
+        assert!(!result.prototype()?.is_null());
         let name = ctx.eval("s1.name()", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("foo", name.to_string()?);
         let name = ctx.eval("s1.setName('bar'); s1.name()", "<input>", EvalFlags::TYPE_GLOBAL)?;
@@ -70,8 +71,8 @@ fn new_object_class() -> Result<()> {
 
 #[test]
 fn multiple_context() -> Result<()> {
-    fn register(ctx: Context) {
-        let global = ctx.global_object();
+    fn register(ctx: Context) -> Result<()> {
+        let global = ctx.global_object()?;
         global.set(
             "S1",
             ctx.new_function(
@@ -79,30 +80,31 @@ fn multiple_context() -> Result<()> {
                     let obj = ctx.new_object_with_opaque(Box::new(S1 {
                         name: "foo".to_owned(),
                         pos: (3, 4),
-                    }));
+                    }))?;
                     Ok(obj)
                 },
                 "S1",
                 0,
-            ),
-        );
+            )?,
+        )?;
+        Ok(())
     }
     quijine::run(|rt| {
         {
             let ctxs = rt.new_context_scope();
             let ctx = ctxs.get();
-            register(ctx);
+            register(ctx)?;
             let result = ctx.eval("const s1 = S1(); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
-            assert!(!result.prototype().is_null());
+            assert!(!result.prototype()?.is_null());
             let name = ctx.eval("s1.name()", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_eq!("foo", name.to_string()?);
         }
         {
             let ctxs = rt.new_context_scope();
             let ctx = ctxs.get();
-            register(ctx);
+            register(ctx)?;
             let result = ctx.eval("const s1 = S1(); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
-            assert!(!result.prototype().is_null());
+            assert!(!result.prototype()?.is_null());
             let name = ctx.eval("s1.name()", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_eq!("foo", name.to_string()?);
         }

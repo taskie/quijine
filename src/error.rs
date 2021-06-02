@@ -119,11 +119,11 @@ impl Error {
     pub fn from_js_error<'q>(kind: ErrorKind, data: impl Into<Data<'q>>) -> Error {
         let data: Data<'q> = data.into();
         let data = JsErrorData {
-            name: data.get("name").to_string().ok(),
-            message: data.get("message").to_string().ok(),
-            file_name: data.get("fileName").to_string().ok(),
-            line_number: data.get("lineNumber").to_i32().ok(),
-            stack: data.get("stack").to_string().ok(),
+            name: data.get("name").and_then(|v| v.to_string()).ok(),
+            message: data.get("message").and_then(|v| v.to_string()).ok(),
+            file_name: data.get("fileName").and_then(|v| v.to_string()).ok(),
+            line_number: data.get("lineNumber").and_then(|v| v.to_i32()).ok(),
+            stack: data.get("stack").and_then(|v| v.to_string()).ok(),
         };
         Error {
             kind,

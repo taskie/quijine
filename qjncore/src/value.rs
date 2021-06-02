@@ -230,29 +230,42 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn set_property<K, V>(self, ctx: Context<'q>, prop: Atom<'q>, val: V)
+    pub fn set_property<K, V>(self, ctx: Context<'q>, prop: Atom<'q>, val: V) -> Option<bool>
     where
         V: AsJsValue<'q>,
     {
-        unsafe { ffi::JS_SetProperty(ctx.as_ptr(), self.0, Atom::raw(prop), val.as_js_value()) };
+        let ret = unsafe { ffi::JS_SetProperty(ctx.as_ptr(), self.0, Atom::raw(prop), val.as_js_value()) };
+        if ret == -1 {
+            None
+        } else {
+            Some(ret != 0)
+        }
     }
 
     #[inline]
-    pub fn set_property_str<K, V>(self, ctx: Context<'q>, key: K, val: V)
+    pub fn set_property_str<K, V>(self, ctx: Context<'q>, key: K, val: V) -> Option<bool>
     where
         K: AsRef<str>,
         V: AsJsValue<'q>,
     {
         let c_key = CString::new(key.as_ref()).unwrap();
-        unsafe { ffi::JS_SetPropertyStr(ctx.as_ptr(), self.0, c_key.as_ptr(), val.as_js_value()) };
+        let ret = unsafe { ffi::JS_SetPropertyStr(ctx.as_ptr(), self.0, c_key.as_ptr(), val.as_js_value()) };
+        if ret == -1 {
+            None
+        } else {
+            Some(ret != 0)
+        }
     }
 
-    pub fn set_prototype<V>(self, ctx: Context<'q>, proto_val: V)
+    pub fn set_prototype<V>(self, ctx: Context<'q>, proto_val: V) -> Option<bool>
     where
         V: AsJsValue<'q>,
     {
-        unsafe {
-            ffi::JS_SetPrototype(ctx.as_ptr(), self.0, proto_val.as_js_value());
+        let ret = unsafe { ffi::JS_SetPrototype(ctx.as_ptr(), self.0, proto_val.as_js_value()) };
+        if ret == -1 {
+            None
+        } else {
+            Some(ret != 0)
         }
     }
 

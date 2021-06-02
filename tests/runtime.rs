@@ -11,12 +11,12 @@ fn multiple_runtimes() -> Result<()> {
                     let message = rx
                         .recv()
                         .map_err(|e| Error::with_external(ErrorKind::InternalError, Box::new(e.clone())))?;
-                    Ok(ctx.new_string(message.as_str()))
+                    Ok(ctx.new_string(message.as_str())?)
                 },
                 "recv",
                 0,
-            );
-            ctx.global_object().set("recv", recv);
+            )?;
+            ctx.global_object()?.set("recv", recv)?;
             let result = ctx.eval("recv();", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_eq!("Hello, world!".to_owned(), result.to_string()?, "received");
             let result = ctx.eval("recv();", "<input>", EvalFlags::TYPE_GLOBAL)?;
@@ -35,8 +35,8 @@ fn multiple_runtimes() -> Result<()> {
             },
             "send",
             1,
-        );
-        ctx.global_object().set("send", send);
+        )?;
+        ctx.global_object()?.set("send", send)?;
         ctx.eval("send('Hello, world!');", "<input>", EvalFlags::TYPE_GLOBAL)?;
         ctx.eval("send('Goodbye, world!');", "<input>", EvalFlags::TYPE_GLOBAL)?;
         Ok(())

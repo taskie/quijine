@@ -1,6 +1,6 @@
 use crate::{
     class::{Class, ClassMethods},
-    Context, Data, Result, Runtime,
+    Context, Data, Object, Result, Runtime,
 };
 use log::trace;
 use qjncore as qc;
@@ -26,7 +26,7 @@ struct Methods<'q> {
 }
 
 impl<'q, T: Class + 'static> ClassMethods<'q, T> for Methods<'q> {
-    fn add_method<F, R>(&mut self, name: &str, method: F)
+    fn add_method<F, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
     where
         F: Fn(Context<'q>, &mut T, Data<'q>, &[Data<'q>]) -> Result<R> + UnwindSafe + Send + 'static,
         R: Into<Data<'q>> + 'q,
@@ -40,13 +40,14 @@ impl<'q, T: Class + 'static> ClassMethods<'q, T> for Methods<'q> {
             },
             name,
             0,
-        );
+        )?;
         trace!("registering method: {}::{} ({:?})", T::name(), name, f);
-        self.proto.set(name, f);
+        self.proto.set(name, f.clone())?;
+        Ok(f)
     }
 }
 
-pub(crate) fn register_class<T: Class + 'static>(rctx: qc::Context, clz: qc::ClassId) {
+pub(crate) fn register_class<T: Class + 'static>(rctx: qc::Context, clz: qc::ClassId) -> Result<Object> {
     trace!("registering class: {} ({:?})", T::name(), clz);
     let ctx = Context::from(rctx);
     let mut rt = ctx.runtime();
@@ -69,13 +70,14 @@ pub(crate) fn register_class<T: Class + 'static>(rctx: qc::Context, clz: qc::Cla
         rt.new_class(clz, class_def)
     };
     // per Context
-    let proto = ctx.new_object();
+    let proto = ctx.new_object()?;
     Data::dup(&proto);
     rctx.set_class_proto(clz, proto.as_value());
     let mut methods = Methods {
         context: ctx,
         proto: &proto,
     };
-    T::add_methods(&mut methods);
-    T::setup_proto(ctx, &proto);
+    T::add_methods(&mut methods)?;
+    T::setup_proto(ctx, &proto)?;
+    Ok(proto)
 }

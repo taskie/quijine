@@ -45,7 +45,7 @@ fn main() -> Result<()> {
                 .and_then(|v| serde_json::to_string(&v))
                 .map_err(QjError::external)?;
             let result = ctx.parse_json(&json, "<input>")?;
-            ctx.global_object().set("$_", &result);
+            ctx.global_object()?.set("$_", &result)?;
             let result = ctx.eval(script, "<input>", EvalFlags::TYPE_GLOBAL)?;
             if !opt.silent {
                 if result.is_null() || result.is_undefined() {

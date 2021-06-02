@@ -58,7 +58,7 @@ impl<'q> Data<'q> {
     // force conversion
 
     #[inline]
-    pub(crate) fn as_data(&self) -> &Data<'q> {
+    pub(crate) fn as_data_raw(&self) -> &Data<'q> {
         self
     }
 
@@ -70,7 +70,7 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub(crate) unsafe fn into_unchecked<T: Into<Data<'q>>>(self) -> T {
+    pub(crate) unsafe fn into_unchecked<T: AsData<'q>>(self) -> T {
         let ret = transmute_copy(&self);
         forget(self);
         ret
@@ -153,6 +153,18 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
+    pub(crate) unsafe fn wrap_result<T: AsData<'q>>(val: qc::Value<'q>, ctx: qc::Context<'q>) -> Result<T> {
+        if val.is_exception() {
+            Err(Error::from_js_error(
+                ErrorKind::InternalError,
+                Data::from(ctx.exception(), ctx),
+            ))
+        } else {
+            Ok(Data::from(val, ctx).into_unchecked())
+        }
+    }
+
+    #[inline]
     pub fn to_bool(&self) -> Result<bool> {
         self.ok_or_type_error(call_with_context!(self, to_bool))
     }
@@ -199,29 +211,35 @@ impl<'q> Data<'q> {
     // object
 
     #[inline]
-    pub fn get<K>(&self, key: K) -> Data<'q>
+    pub fn get<K>(&self, key: K) -> Result<Data<'q>>
     where
         K: AsRef<str>,
     {
-        Data::from(self.value.property_str(self.context, key), self.context)
+        unsafe { Data::wrap_result(self.value.property_str(self.context, key), self.context) }
     }
 
     #[inline]
-    pub fn set<K, V>(&self, key: K, val: V)
+    pub fn set<K, V>(&self, key: K, val: V) -> Result<bool>
     where
         K: AsRef<str>,
         V: AsRef<Data<'q>>,
     {
         let val = val.as_ref();
         Data::dup(val);
-        self.value.set_property_str(self.context, key, val.as_value())
+        let ret = self.value.set_property_str(self.context, key, val.as_value());
+        ret.ok_or_else(|| {
+            Error::from_js_error(
+                ErrorKind::InternalError,
+                Data::from(self.context.exception(), self.context),
+            )
+        })
     }
 
     // class
 
     #[inline]
-    pub fn prototype(&self) -> Data<'q> {
-        Data::from(self.value.prototype(self.context), self.context)
+    pub fn prototype(&self) -> Result<Data<'q>> {
+        unsafe { Data::wrap_result(self.value.prototype(self.context), self.context) }
     }
 
     #[inline]
@@ -271,5 +289,15 @@ impl fmt::Debug for Data<'_> {
 impl<'q> AsRef<Data<'q>> for Data<'q> {
     fn as_ref(&self) -> &Data<'q> {
         self.as_data()
+    }
+}
+
+pub trait AsData<'q> {
+    fn as_data(&self) -> &Data<'q>;
+}
+
+impl<'q> AsData<'q> for Data<'q> {
+    fn as_data(&self) -> &Data<'q> {
+        self
     }
 }

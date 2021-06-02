@@ -1,5 +1,5 @@
 use crate::{
-    data::Data,
+    data::{AsData, Data},
     error::{Error, ErrorKind},
 };
 pub use qjncore::ValueTag as Tag;
@@ -26,19 +26,27 @@ macro_rules! impl_deref {
     };
 }
 
-macro_rules! impl_from {
-    { $source:ident for $type:ident } => {
-        impl<'q> From<$source<'q>> for $type<'q> {
+macro_rules! impl_as_data {
+    { $source:ident } => {
+        impl<'q> From<$source<'q>> for Data<'q> {
             fn from(v: $source<'q>) -> Self {
                 unsafe { v.as_any::<Self>().clone() }
             }
         }
-        impl<'q> AsRef<$type<'q>> for $source<'q> {
-            fn as_ref(&self) -> &$type<'q> {
+        impl<'q> AsData<'q> for $source<'q> {
+            fn as_data(&self) -> &Data<'q> {
+                self.as_data_raw()
+            }
+        }
+        impl<'q> AsRef<Data<'q>> for $source<'q> {
+            fn as_ref(&self) -> &Data<'q> {
                 self.as_data()
             }
         }
     };
+}
+
+macro_rules! impl_from {
     { $source:ident for $type:ty: |$v:pat| $implementation:expr } => {
         impl<'q> From<$source<'q>> for $type {
             fn from($v: $source<'q>) -> Self {
@@ -69,41 +77,41 @@ macro_rules! impl_try_from {
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Reference<'q>(Data<'q>);
-impl_from! { Reference for Data }
+impl_as_data! { Reference }
 impl_deref! { Data for Reference }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct BigDecimal<'q>(Reference<'q>);
-impl_from! { BigDecimal for Data }
+impl_as_data! { BigDecimal }
 impl_try_from! { Data for BigDecimal if v => v.tag() == Tag::BigDecimal }
 impl_deref! { Reference for BigDecimal }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct BigInt<'q>(Reference<'q>);
-impl_from! { BigInt for Data }
+impl_as_data! { BigInt }
 impl_try_from! { Data for BigInt if v => v.tag() == Tag::BigInt }
 impl_deref! { Reference for BigInt }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct BigFloat<'q>(Reference<'q>);
-impl_from! { BigFloat for Data }
+impl_as_data! { BigFloat }
 impl_try_from! { Data for BigFloat if v => v.tag() == Tag::BigFloat }
 impl_deref! { Reference for BigFloat }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Symbol<'q>(Reference<'q>);
-impl_from! { Symbol for Data }
+impl_as_data! { Symbol }
 impl_try_from! { Data for Symbol if v => v.tag() == Tag::Symbol }
 impl_deref! { Reference for Symbol }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct String<'q>(Reference<'q>);
-impl_from! { String for Data }
+impl_as_data! { String }
 impl_try_from! { Data for String if v => v.tag() == Tag::String }
 impl_deref! { Reference for String }
 
@@ -116,7 +124,7 @@ impl_from! { String for std::string::String: |v| v.to_string().unwrap() }
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Object<'q>(Reference<'q>);
-impl_from! { Object for Data }
+impl_as_data! { Object }
 impl_try_from! { Data for Object if v => v.tag() == Tag::Object }
 impl_deref! { Reference for Object }
 
@@ -124,13 +132,13 @@ impl_deref! { Reference for Object }
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Value<'q>(Data<'q>);
-impl_from! { Value for Data }
+impl_as_data! { Value }
 impl_deref! { Data for Value }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Int<'q>(Value<'q>);
-impl_from! { Int for Data }
+impl_as_data! { Int }
 impl_try_from! { Data for Int if v => v.tag() == Tag::Int }
 impl_deref! { Value for Int }
 
@@ -139,7 +147,7 @@ impl_from!(Int for i32: |v| v.to_i32().unwrap());
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Bool<'q>(Value<'q>);
-impl_from! { Bool for Data }
+impl_as_data! { Bool }
 impl_try_from! { Data for Bool if v => v.tag() == Tag::Bool }
 impl_deref! { Value for Bool }
 
@@ -148,42 +156,42 @@ impl_from! { Bool for bool: |v| v.to_bool().unwrap() }
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Null<'q>(Value<'q>);
-impl_from! { Null for Data }
+impl_as_data! { Null }
 impl_try_from! { Data for Null if v => v.tag() == Tag::Null }
 impl_deref! { Value for Null }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Undefined<'q>(Value<'q>);
-impl_from! { Undefined for Data }
+impl_as_data! { Undefined }
 impl_try_from! { Data for Undefined if v => v.tag() == Tag::Undefined }
 impl_deref! { Value for Undefined }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Uninitialized<'q>(Value<'q>);
-impl_from! { Uninitialized for Data }
+impl_as_data! { Uninitialized }
 impl_try_from! { Data for Uninitialized if v => v.tag() == Tag::Uninitialized }
 impl_deref! { Value for Uninitialized }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct CatchOffset<'q>(Value<'q>);
-impl_from! { CatchOffset for Data }
+impl_as_data! { CatchOffset }
 impl_try_from! { Data for CatchOffset if v => v.tag() == Tag::CatchOffset }
 impl_deref! { Value for CatchOffset }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Exception<'q>(Value<'q>);
-impl_from! { Exception for Data }
+impl_as_data! { Exception }
 impl_try_from! { Data for Exception if v => v.tag() == Tag::Exception }
 impl_deref! { Value for Exception }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Float64<'q>(Value<'q>);
-impl_from! { Float64 for Data }
+impl_as_data! { Float64 }
 impl_try_from! { Data for Float64 if v => v.tag() == Tag::Float64 }
 impl_deref! { Value for Float64 }
 

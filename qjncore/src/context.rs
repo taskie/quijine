@@ -149,12 +149,11 @@ impl<'q> Context<'q> {
 
     // string
 
+    /// This function throws an exception if v is not UTF-8 buffer.
     #[inline]
-    pub fn new_string_from_bytes(self, v: &[u8]) -> Value<'q> {
-        unsafe {
-            let value = ffi::JS_NewStringLen(self.as_ptr(), v.as_ptr() as *const c_char, v.len() as c_size_t);
-            Value::from_raw(value, self)
-        }
+    pub(crate) fn new_string_from_bytes(self, v: &[u8]) -> Value<'q> {
+        let value = unsafe { ffi::JS_NewStringLen(self.as_ptr(), v.as_ptr() as *const c_char, v.len() as c_size_t) };
+        unsafe { Value::from_raw(value, self) }
     }
 
     #[inline]
