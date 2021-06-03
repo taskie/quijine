@@ -19,7 +19,7 @@ macro_rules! js_c_function {
 macro_rules! js_class_finalizer {
     ($f: expr) => {{
         unsafe extern "C" fn wrap(rt: *mut $crate::raw::JSRuntime, val: $crate::raw::JSValue) {
-            let rt = $crate::Runtime::from_ptr(rt);
+            let rt = $crate::Runtime::from_raw(rt);
             let val = $crate::Value::from_raw_with_runtime(val, rt);
             $f(rt, val)
         }
@@ -35,7 +35,7 @@ macro_rules! js_class_gc_mark {
             val: $crate::raw::JSValue,
             mark_func: $crate::raw::JS_MarkFunc,
         ) {
-            let rt = $crate::Runtime::from_ptr(rt);
+            let rt = $crate::Runtime::from_raw(rt);
             let val = $crate::Value::from_raw_with_runtime(val, rt);
             $f(rt, val, mark_func)
         }

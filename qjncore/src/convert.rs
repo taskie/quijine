@@ -1,3 +1,5 @@
+use std::os::raw::c_char;
+
 use crate::{ffi, Value};
 
 pub trait AsJsRuntimePointer {
@@ -72,6 +74,17 @@ pub trait AsValue<'q> {
 impl<'q> AsValue<'q> for Value<'q> {
     #[inline]
     fn as_value(&self) -> Value<'q> {
+        *self
+    }
+}
+
+pub trait AsJsCString<'q> {
+    fn as_js_c_string(&self) -> *const c_char;
+}
+
+impl AsJsCString<'_> for *const c_char {
+    #[inline]
+    fn as_js_c_string(&self) -> *const c_char {
         *self
     }
 }

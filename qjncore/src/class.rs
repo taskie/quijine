@@ -1,4 +1,4 @@
-use crate::{conversion::AsJsClassId, ffi};
+use crate::{convert::AsJsClassId, ffi};
 use lazy_static::lazy_static;
 use std::{ffi::CString, ptr::null_mut, sync::Mutex};
 
@@ -20,13 +20,13 @@ impl ClassId {
         ClassId::none().new_class_id()
     }
 
-    pub(crate) fn new_class_id(self) -> ClassId {
-        let mut before = self.0;
+    pub(crate) fn new_class_id(&mut self) -> ClassId {
         let res = {
             // JS_NewClassID is not thread-safe...
             let _lock = NEW_CLASS_ID_LOCK.lock().unwrap();
-            unsafe { ffi::JS_NewClassID(&mut before) }
+            unsafe { ffi::JS_NewClassID(&mut self.0) }
         };
+        assert_eq!(res, self.0);
         ClassId::from_raw(res)
     }
 }

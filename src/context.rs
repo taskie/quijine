@@ -1,14 +1,12 @@
 use crate::{
-    class::Class,
-    class_util::register_class,
-    data::AsData,
+    class::{register_class, Class},
+    convert::AsData,
     error::{ErrorValue, Result},
     runtime::Runtime,
     types::{Bool, Float64, Int, Null, Object, String as QjString, Undefined},
     Data, EvalFlags, RuntimeScope,
 };
-use qc::conversion::AsJsValue;
-use qjncore::{self as qc, raw};
+use qjncore::{self as qc, raw, AsJsValue};
 use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int};
 
 pub struct ContextOpaque {
@@ -20,13 +18,8 @@ pub struct Context<'q>(qc::Context<'q>);
 
 impl<'q> Context<'q> {
     #[inline]
-    pub(crate) fn from(ctx: qc::Context<'q>) -> Self {
+    pub(crate) fn from_raw(ctx: qc::Context<'q>) -> Self {
         Context(ctx)
-    }
-
-    #[inline]
-    pub(crate) fn into(self) -> qc::Context<'q> {
-        self.0
     }
 
     #[inline]
@@ -79,7 +72,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn new_object_class<C: Class + 'static>(mut self) -> Result<Object<'q>> {
+    pub(crate) fn new_object_class<C: Class + 'static>(mut self) -> Result<Object<'q>> {
         let clz = self.register_class::<C>()?;
         unsafe { self.wrap_result(self.0.new_object_class(clz)) }
     }
@@ -92,7 +85,7 @@ impl<'q> Context<'q> {
     }
 
     unsafe fn new_value<T: AsData<'q>>(self, v: qc::Value<'q>) -> T {
-        Data::from(v, self.0).into_unchecked()
+        Data::from_raw_parts(v, self.0).into_unchecked()
     }
 
     #[inline]
@@ -132,7 +125,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn new_callback<R>(self, func: Callback<'q, 'q, R>, _name: &str, length: i32) -> Result<Object<'q>>
+    pub(crate) fn new_callback<R>(self, func: Box<Callback<'q, 'q, R>>, _name: &str, length: i32) -> Result<Object<'q>>
     where
         R: Into<Data<'q>> + 'q,
     {
@@ -144,7 +137,7 @@ impl<'q> Context<'q> {
             _magic: c_int,
             func_data: *mut raw::JSValue,
         ) -> raw::JSValue {
-            let ctx = qc::Context::from_ptr(ctx);
+            let ctx = qc::Context::from_raw(ctx);
             let this = qc::Value::from_raw(js_this, ctx);
             let mut args: Vec<qc::Value> = Vec::with_capacity(argc as usize);
             for i in 0..argc {
@@ -154,15 +147,15 @@ impl<'q> Context<'q> {
             }
             let cb = qc::Value::from_raw(*func_data, ctx);
             log::debug!("load pointer from ArrayBuffer");
-            let func = cb.array_buffer_to_sized::<Callback<R>>(ctx).unwrap();
+            let func = cb.array_buffer_to_sized::<Box<Callback<R>>>(ctx).unwrap();
 
             log::debug!("this");
-            let this = Data::from(this, ctx);
+            let this = Data::from_raw_parts(this, ctx);
             Data::dup(&this);
             log::debug!("args");
-            let args: Vec<_> = args.iter().map(|v| Data::from(*v, ctx)).collect();
+            let args: Vec<_> = args.iter().map(|v| Data::from_raw_parts(*v, ctx)).collect();
             args.iter().for_each(Data::dup);
-            let ctx = Context::from(ctx);
+            let ctx = Context::from_raw(ctx);
 
             log::debug!("invoke start");
             let r = (*func)(ctx, this, args.as_slice());
@@ -199,11 +192,11 @@ impl<'q> Context<'q> {
     // special values
 
     pub fn undefined(self) -> Undefined<'q> {
-        unsafe { Data::from(qc::Value::undefined(), self.0).into_unchecked() }
+        unsafe { Data::from_raw_parts(qc::Value::undefined(), self.0).into_unchecked() }
     }
 
     pub fn null(self) -> Null<'q> {
-        unsafe { Data::from(qc::Value::null(), self.0).into_unchecked() }
+        unsafe { Data::from_raw_parts(qc::Value::null(), self.0).into_unchecked() }
     }
 
     // json
@@ -212,12 +205,12 @@ impl<'q> Context<'q> {
         unsafe { self.wrap_result(self.0.parse_json(buf, filename)) }
     }
 
-    pub fn json_stringify(
-        self,
-        obj: impl AsRef<Data<'q>>,
-        replacer: impl AsRef<Data<'q>>,
-        space0: impl AsRef<Data<'q>>,
-    ) -> Result<QjString<'q>> {
+    pub fn json_stringify<T, R, S>(self, obj: T, replacer: R, space0: S) -> Result<QjString<'q>>
+    where
+        T: AsRef<Data<'q>>,
+        R: AsRef<Data<'q>>,
+        S: AsRef<Data<'q>>,
+    {
         unsafe {
             self.wrap_result::<QjString>(self.0.json_stringify(
                 obj.as_ref().as_value(),
@@ -229,7 +222,7 @@ impl<'q> Context<'q> {
 
     // class
 
-    pub(crate) fn register_class<T: 'static + Class>(&mut self) -> Result<qc::ClassId> {
+    pub(crate) fn register_class<T: Class + 'static>(&mut self) -> Result<qc::ClassId> {
         let type_id = TypeId::of::<T>();
         let class_id = self.runtime().get_or_register_class_id::<T>();
         if self.opaque().registered_classes.contains(&type_id) {
@@ -275,7 +268,7 @@ impl Drop for ContextScope<'_> {
     fn drop(&mut self) {
         unsafe {
             Box::from_raw((self.0).0.opaque() as *mut ContextOpaque);
-            qc::Context::free(self.0.into())
+            qc::Context::free(self.0 .0)
         }
     }
 }
@@ -286,4 +279,4 @@ impl fmt::Debug for ContextScope<'_> {
     }
 }
 
-pub(crate) type Callback<'q, 'a, R> = Box<dyn Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<R> + 'a>;
+pub(crate) type Callback<'q, 'a, R> = dyn Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<R> + 'a;

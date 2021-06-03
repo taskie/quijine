@@ -1,6 +1,6 @@
 use std::ffi::CString;
 
-use qjncore::{conversion::AsJsValue, ClassDef, ClassId, Context, Runtime};
+use qjncore::{AsJsValue, ClassDef, ClassId, Context, Runtime};
 
 #[test]
 fn test() {

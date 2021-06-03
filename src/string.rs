@@ -14,13 +14,13 @@ impl<'q> CString<'q> {
     }
 
     #[inline]
-    pub fn as_bytes(&self) -> &[u8] {
-        self.value.as_bytes()
+    pub fn to_bytes(&self) -> &[u8] {
+        self.value.to_bytes()
     }
 
     #[inline]
     pub fn to_vec(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
+        self.to_bytes().to_vec()
     }
 
     #[inline]

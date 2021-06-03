@@ -2,7 +2,7 @@ use crate::{
     atom::Atom,
     class::ClassId,
     context::Context,
-    conversion::{AsJsClassId, AsJsContextPointer, AsJsValue},
+    convert::{AsJsAtom, AsJsClassId, AsJsContextPointer, AsJsValue},
     enums::ValueTag,
     ffi,
     marker::Covariant,
@@ -76,7 +76,7 @@ impl<'q> Value<'q> {
     /// # Safety
     /// value must be the "value" type, not the reference type.
     #[inline]
-    pub unsafe fn from_static_raw(value: ffi::JSValue) -> Value<'static> {
+    pub unsafe fn from_raw_static(value: ffi::JSValue) -> Value<'static> {
         Value(value, PhantomData)
     }
 
@@ -84,7 +84,8 @@ impl<'q> Value<'q> {
         unsafe { ffi::JS_VALUE_HAS_REF_COUNT(self.0) }
     }
 
-    pub fn ref_count(self) -> Option<usize> {
+    /// API for debug.
+    pub fn debug_ref_count(self) -> Option<usize> {
         if !self.has_ref_count() {
             return None;
         }
@@ -114,17 +115,17 @@ impl<'q> Value<'q> {
 
     #[inline]
     pub fn undefined() -> Value<'static> {
-        unsafe { Value::from_static_raw(ffi::JS_UNDEFINED) }
+        unsafe { Value::from_raw_static(ffi::JS_UNDEFINED) }
     }
 
     #[inline]
     pub fn null() -> Value<'static> {
-        unsafe { Value::from_static_raw(ffi::JS_NULL) }
+        unsafe { Value::from_raw_static(ffi::JS_NULL) }
     }
 
     #[inline]
     pub fn exception() -> Value<'static> {
-        unsafe { Value::from_static_raw(ffi::JS_EXCEPTION) }
+        unsafe { Value::from_raw_static(ffi::JS_EXCEPTION) }
     }
 
     // conversion
@@ -212,7 +213,7 @@ impl<'q> Value<'q> {
     #[inline]
     pub fn property(self, ctx: Context<'q>, prop: Atom<'q>) -> Value<'q> {
         unsafe {
-            let value = ffi::JS_GetProperty(ctx.as_ptr(), self.0, Atom::raw(prop));
+            let value = ffi::JS_GetProperty(ctx.as_ptr(), self.0, prop.as_js_atom());
             Value::from_raw(value, ctx)
         }
     }
@@ -234,7 +235,7 @@ impl<'q> Value<'q> {
     where
         V: AsJsValue<'q>,
     {
-        let ret = unsafe { ffi::JS_SetProperty(ctx.as_ptr(), self.0, Atom::raw(prop), val.as_js_value()) };
+        let ret = unsafe { ffi::JS_SetProperty(ctx.as_ptr(), self.0, prop.as_js_atom(), val.as_js_value()) };
         if ret == -1 {
             None
         } else {

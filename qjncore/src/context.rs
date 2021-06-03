@@ -1,6 +1,6 @@
 use crate::{
     class::ClassId,
-    conversion::{AsJsClassId, AsJsContextPointer, AsJsRuntimePointer, AsJsValue},
+    convert::{AsJsCString, AsJsClassId, AsJsContextPointer, AsJsRuntimePointer, AsJsValue},
     ffi::{self, c_size_t},
     flags::{EvalFlags, ParseJSONFlags},
     function::{convert_function_arguments, convert_function_result},
@@ -28,13 +28,13 @@ impl<'q> Context<'q> {
     /// # Safety
     /// The pointer of a context must have a valid lifetime.
     #[inline]
-    pub unsafe fn from_ptr(ptr: *mut ffi::JSContext) -> Context<'q> {
+    pub unsafe fn from_raw(ptr: *mut ffi::JSContext) -> Context<'q> {
         Context(NonNull::new(ptr).unwrap(), PhantomData)
     }
 
     #[inline]
     pub fn new(rt: Runtime<'q>) -> Context<'q> {
-        unsafe { Self::from_ptr(ffi::JS_NewContext(rt.as_ptr())) }
+        unsafe { Self::from_raw(ffi::JS_NewContext(rt.as_ptr())) }
     }
 
     /// # Safety
@@ -46,7 +46,7 @@ impl<'q> Context<'q> {
 
     #[inline]
     pub fn dup(this: Self) -> Context<'q> {
-        unsafe { Context::from_ptr(ffi::JS_DupContext(this.0.as_ptr())) }
+        unsafe { Context::from_raw(ffi::JS_DupContext(this.0.as_ptr())) }
     }
 
     // basic
@@ -65,7 +65,7 @@ impl<'q> Context<'q> {
 
     #[inline]
     pub fn runtime(self) -> Runtime<'q> {
-        unsafe { Runtime::from_ptr(ffi::JS_GetRuntime(self.as_ptr())) }
+        unsafe { Runtime::from_raw(ffi::JS_GetRuntime(self.as_ptr())) }
     }
 
     #[inline]
@@ -151,7 +151,7 @@ impl<'q> Context<'q> {
 
     /// This function throws an exception if v is not UTF-8 buffer.
     #[inline]
-    pub(crate) fn new_string_from_bytes(self, v: &[u8]) -> Value<'q> {
+    pub(crate) fn new_string_len(self, v: &[u8]) -> Value<'q> {
         let value = unsafe { ffi::JS_NewStringLen(self.as_ptr(), v.as_ptr() as *const c_char, v.len() as c_size_t) };
         unsafe { Value::from_raw(value, self) }
     }
@@ -161,14 +161,14 @@ impl<'q> Context<'q> {
     where
         T: AsRef<str>,
     {
-        self.new_string_from_bytes(s.as_ref().as_bytes())
+        self.new_string_len(s.as_ref().as_bytes())
     }
 
     /// # Safety
     /// You must free a string only once.
     #[inline]
     pub unsafe fn free_c_string(self, str: QcCString<'q>) {
-        ffi::JS_FreeCString(self.as_ptr(), QcCString::raw(str));
+        ffi::JS_FreeCString(self.as_ptr(), str.as_js_c_string());
     }
 
     // object
@@ -215,9 +215,9 @@ impl<'q> Context<'q> {
     where
         F: AsJsValue<'q>,
         T: AsJsValue<'q>,
-        A: Into<Vec<Value<'q>>>,
+        A: AsRef<[Value<'q>]>,
     {
-        let mut c_args: Vec<_> = args.into().iter().map(|v| v.as_js_value()).collect();
+        let mut c_args: Vec<_> = args.as_ref().iter().map(|v| v.as_js_value()).collect();
         let value = unsafe {
             ffi::JS_Call(
                 self.as_ptr(),
@@ -333,12 +333,12 @@ impl<'q> Context<'q> {
 
     pub fn new_function<F>(self, func: F, length: i32) -> Value<'q>
     where
-        F: 'static + Send + Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q>,
+        F: Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q> + Send + 'q,
     {
         self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), length)
     }
 
-    fn new_callback(self, mut func: Box<Callback<'q, 'static>>, length: i32) -> Value<'q> {
+    fn new_callback(self, mut func: Box<Callback<'q, 'q>>, length: i32) -> Value<'q> {
         unsafe extern "C" fn call(
             ctx: *mut ffi::JSContext,
             js_this: ffi::JSValue,
@@ -356,6 +356,9 @@ impl<'q> Context<'q> {
         }
         log::trace!("save pointer to ArrayBuffer");
         let cb = self.new_array_buffer_copy_from_sized::<*mut Callback>(func.as_mut());
+        if cb.is_exception() {
+            return cb;
+        }
         log::trace!("new c function data");
         self.new_c_function_data(Some(call), length, 0, vec![cb])
     }
@@ -400,4 +403,4 @@ impl<'q> AsJsContextPointer<'q> for Context<'q> {
     }
 }
 
-pub(crate) type Callback<'q, 'a> = dyn Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q> + 'a;
+pub(crate) type Callback<'q, 'a> = dyn Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q> + Send + 'a;

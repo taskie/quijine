@@ -1,5 +1,5 @@
 use crate::{
-    conversion::{AsJsCFunctionListEntry, AsJsValue},
+    convert::{AsJsCFunctionListEntry, AsJsValue},
     ffi,
     marker::Invariant,
     Context, Value,
@@ -17,7 +17,7 @@ pub unsafe fn convert_function_arguments<'q>(
     argc: c_int,
     argv: *mut ffi::JSValue,
 ) -> (Context<'q>, Value<'q>, Vec<Value<'q>>) {
-    let ctx = Context::from_ptr(ctx);
+    let ctx = Context::from_raw(ctx);
     let this = Value::from_raw(js_this, ctx);
     let args = slice::from_raw_parts(argv, argc as usize);
     let args: Vec<Value> = args.iter().map(|v| Value::from_raw(*v, ctx)).collect();

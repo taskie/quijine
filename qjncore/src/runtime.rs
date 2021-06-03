@@ -1,6 +1,6 @@
 use crate::{
     class::{ClassDef, ClassId},
-    conversion::{AsJsClassId, AsJsRuntimePointer, AsJsValue},
+    convert::{AsJsClassId, AsJsRuntimePointer, AsJsValue},
     ffi,
     marker::Covariant,
     value::Value,
@@ -17,14 +17,14 @@ impl<'q> Runtime<'q> {
     /// # Safety
     /// The pointer of a runtime must have valid lifetime.
     #[inline]
-    pub unsafe fn from_ptr(ptr: *mut ffi::JSRuntime) -> Runtime<'q> {
+    pub unsafe fn from_raw(ptr: *mut ffi::JSRuntime) -> Runtime<'q> {
         Runtime(NonNull::new(ptr).unwrap(), PhantomData)
     }
 
     #[allow(clippy::new_without_default)]
     #[inline]
     pub fn new() -> Runtime<'q> {
-        unsafe { Self::from_ptr(ffi::JS_NewRuntime()) }
+        unsafe { Self::from_raw(ffi::JS_NewRuntime()) }
     }
 
     /// # Safety

@@ -101,7 +101,7 @@ impl Error {
         Error::with_external(ErrorKind::ExternalError, external)
     }
 
-    pub fn from_data<'q>(kind: ErrorKind, data: impl Into<Data<'q>>) -> Error {
+    pub fn from_data<'q, T: Into<Data<'q>>>(kind: ErrorKind, data: T) -> Error {
         let data: Data<'q> = data.into();
         let ctx = data.context();
         let json = ctx
@@ -116,7 +116,7 @@ impl Error {
         }
     }
 
-    pub fn from_js_error<'q>(kind: ErrorKind, data: impl Into<Data<'q>>) -> Error {
+    pub fn from_js_error<'q, T: Into<Data<'q>>>(kind: ErrorKind, data: T) -> Error {
         let data: Data<'q> = data.into();
         let data = JsErrorData {
             name: data.get("name").and_then(|v| v.to_string()).ok(),

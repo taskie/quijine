@@ -1,6 +1,6 @@
 use qjncore::{
-    conversion::AsJsCFunctionListEntry, js_c_function, js_class_finalizer, CFunctionListEntry, ClassDef, ClassId,
-    Context, EvalFlags, Runtime, Value,
+    js_c_function, js_class_finalizer, AsJsCFunctionListEntry, CFunctionListEntry, ClassDef, ClassId, Context,
+    EvalFlags, Runtime, Value,
 };
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;

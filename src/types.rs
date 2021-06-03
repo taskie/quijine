@@ -1,5 +1,6 @@
 use crate::{
-    data::{AsData, Data},
+    convert::AsData,
+    data::Data,
     error::{Error, ErrorKind},
 };
 pub use qjncore::ValueTag as Tag;

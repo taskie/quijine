@@ -50,12 +50,12 @@ impl<'r> Runtime<'r> {
         self.0.new_class(id, class_def)
     }
 
-    pub(crate) fn get_class_id<T: 'static + Class>(&self) -> Option<qc::ClassId> {
+    pub(crate) fn class_id<T: Class + 'static>(&self) -> Option<qc::ClassId> {
         self.opaque().registered_classes.get(&TypeId::of::<T>()).cloned()
     }
 
-    pub(crate) fn get_or_register_class_id<T: 'static + Class>(&mut self) -> qc::ClassId {
-        let class_id = self.get_class_id::<T>();
+    pub(crate) fn get_or_register_class_id<T: Class + 'static>(&mut self) -> qc::ClassId {
+        let class_id = self.class_id::<T>();
         if let Some(class_id) = class_id {
             return class_id;
         }
@@ -68,7 +68,7 @@ impl<'r> Runtime<'r> {
         self.opaque_mut().class_defs.insert(class_id, class_def);
     }
 
-    pub(crate) fn get_class_def(&self, class_id: qc::ClassId) -> Option<&qc::ClassDef> {
+    pub(crate) fn class_def(&self, class_id: qc::ClassId) -> Option<&qc::ClassDef> {
         self.opaque().class_defs.get(&class_id)
     }
 }

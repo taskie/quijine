@@ -1,6 +1,7 @@
 use crate::{
     class::Class,
     context::Context,
+    convert::AsData,
     error::{Error, ErrorKind, Result},
     runtime::Runtime,
     string::CString as QjCString,
@@ -32,7 +33,7 @@ pub struct Data<'q> {
 }
 
 impl<'q> Data<'q> {
-    pub(crate) fn from(value: qc::Value<'q>, context: qc::Context<'q>) -> Data<'q> {
+    pub(crate) fn from_raw_parts(value: qc::Value<'q>, context: qc::Context<'q>) -> Data<'q> {
         let count = DEBUG_GLOBAL_COUNT.fetch_add(1, atomic::Ordering::SeqCst);
         let qj = Data {
             value,
@@ -52,7 +53,7 @@ impl<'q> Data<'q> {
 
     #[inline]
     pub(crate) fn context(&self) -> Context<'q> {
-        Context::from(self.context)
+        Context::from_raw(self.context)
     }
 
     // force conversion
@@ -91,7 +92,7 @@ impl<'q> Data<'q> {
     }
 
     fn debug_trace(&self, name: &str) {
-        if let Some(rc) = self.value.ref_count() {
+        if let Some(rc) = self.value.debug_ref_count() {
             log::trace!("{}: {:?} (rc: {})", name, self, rc);
         } else {
             log::trace!("{}: {:?} (value)", name, self);
@@ -157,10 +158,10 @@ impl<'q> Data<'q> {
         if val.is_exception() {
             Err(Error::from_js_error(
                 ErrorKind::InternalError,
-                Data::from(ctx.exception(), ctx),
+                Data::from_raw_parts(ctx.exception(), ctx),
             ))
         } else {
-            Ok(Data::from(val, ctx).into_unchecked())
+            Ok(Data::from_raw_parts(val, ctx).into_unchecked())
         }
     }
 
@@ -230,7 +231,7 @@ impl<'q> Data<'q> {
         ret.ok_or_else(|| {
             Error::from_js_error(
                 ErrorKind::InternalError,
-                Data::from(self.context.exception(), self.context),
+                Data::from_raw_parts(self.context.exception(), self.context),
             )
         })
     }
@@ -243,9 +244,9 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub(crate) fn get_opaque_mut<C: Class + 'static>(&mut self) -> Option<&mut C> {
+    pub(crate) fn opaque_mut<C: Class + 'static>(&mut self) -> Option<&mut C> {
         let rt = Runtime::from(self.context.runtime());
-        let clz = rt.get_class_id::<C>()?;
+        let clz = rt.class_id::<C>()?;
         let p = self.value.opaque(clz) as *mut C;
         if p.is_null() {
             return None;
@@ -254,7 +255,7 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub fn set_opaque<C: Class + 'static>(&mut self, mut v: Box<C>) {
+    pub(crate) fn set_opaque<C: Class + 'static>(&mut self, mut v: Box<C>) {
         let mut rt = Runtime::from(self.context.runtime());
         let _clz = rt.get_or_register_class_id::<C>();
         self.value.set_opaque(v.as_mut() as *mut C as *mut c_void);
@@ -289,15 +290,5 @@ impl fmt::Debug for Data<'_> {
 impl<'q> AsRef<Data<'q>> for Data<'q> {
     fn as_ref(&self) -> &Data<'q> {
         self.as_data()
-    }
-}
-
-pub trait AsData<'q> {
-    fn as_data(&self) -> &Data<'q>;
-}
-
-impl<'q> AsData<'q> for Data<'q> {
-    fn as_data(&self) -> &Data<'q> {
-        self
     }
 }
