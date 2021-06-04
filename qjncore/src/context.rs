@@ -251,6 +251,12 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
+    pub fn eval_function(self, func_obj: Value) -> Value<'q> {
+        let value = unsafe { ffi::JS_EvalFunction(self.as_ptr(), func_obj.as_js_value()) };
+        unsafe { Value::from_raw(value, self) }
+    }
+
+    #[inline]
     pub fn global_object(self) -> Value<'q> {
         unsafe { Value::from_raw(ffi::JS_GetGlobalObject(self.as_ptr()), self) }
     }

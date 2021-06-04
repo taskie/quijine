@@ -2,6 +2,7 @@ use crate::{
     convert::AsData,
     data::Data,
     error::{Error, ErrorKind},
+    util::Opaque,
 };
 pub use qjncore::ValueTag as Tag;
 use std::{
@@ -9,6 +10,7 @@ use std::{
     convert::TryFrom,
     fmt::{self, Formatter},
     ops::{Deref, DerefMut},
+    string::String as StdString,
 };
 
 macro_rules! impl_deref {
@@ -118,9 +120,19 @@ impl_deref! { Reference for String }
 
 impl_from! { String for std::string::String: |v| v.to_string().unwrap() }
 
-// pub struct Module<'q>(Data<'q>);
+#[derive(Clone, Debug)]
+#[repr(transparent)]
+pub struct Module<'q>(Reference<'q>);
+impl_as_data! { Module }
+impl_try_from! { Data for Module if v => v.tag() == Tag::Module }
+impl_deref! { Reference for Module }
 
-// pub struct FunctionBytecode<'q>(Data<'q>);
+#[derive(Clone, Debug)]
+#[repr(transparent)]
+pub struct FunctionBytecode<'q>(Reference<'q>);
+impl_as_data! { FunctionBytecode }
+impl_try_from! { Data for FunctionBytecode if v => v.tag() == Tag::FunctionBytecode }
+impl_deref! { Reference for FunctionBytecode }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
@@ -205,32 +217,45 @@ pub enum Variant<'q> {
     BigFloat(BigFloat<'q>),
     Symbol(Symbol<'q>),
     String(String<'q>),
+    Module(Module<'q>),
+    FunctionBytecode(FunctionBytecode<'q>),
     Object(Object<'q>),
     Int(i32),
     Bool(bool),
     Null,
     Undefined,
     Uninitialized,
-    CatchOffset,
+    CatchOffset(Opaque<4>),
     Exception,
     Float64(f64),
+}
+
+fn format_reference<'q, T: AsRef<Data<'q>>>(name: &str, v: T) -> StdString {
+    format!(
+        "{}({:p}: {})",
+        name,
+        v.as_ref().to_ptr().unwrap(),
+        v.as_ref().to_string().unwrap()
+    )
 }
 
 impl<'q> fmt::Debug for Variant<'q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Variant::BigDecimal(v) => f.write_str(format!("BigDecimal({:p})", v.to_ptr().unwrap()).as_str()),
-            Variant::BigInt(v) => f.write_str(format!("BigInt({:p})", v.to_ptr().unwrap()).as_str()),
-            Variant::BigFloat(v) => f.write_str(format!("BigFloat({:p})", v.to_ptr().unwrap()).as_str()),
+            Variant::BigDecimal(v) => f.write_str(format_reference("BigDecimal", v).as_str()),
+            Variant::BigInt(v) => f.write_str(format_reference("BigInt", v).as_str()),
+            Variant::BigFloat(v) => f.write_str(format_reference("BigFloat", v).as_str()),
             Variant::Symbol(v) => f.write_str(format!("Symbol({:p})", v.to_ptr().unwrap()).as_str()),
-            Variant::String(v) => f.write_str(format!("String({:?})", v.to_string().unwrap()).as_str()),
-            Variant::Object(v) => f.write_str(format!("Object({:p})", v.to_ptr().unwrap()).as_str()),
+            Variant::String(v) => f.write_str(format_reference("String", v).as_str()),
+            Variant::Module(v) => f.write_str(format_reference("Object", v).as_str()),
+            Variant::FunctionBytecode(v) => f.write_str(format_reference("Object", v).as_str()),
+            Variant::Object(v) => f.write_str(format_reference("Object", v).as_str()),
             Variant::Int(v) => f.write_str(format!("Int({})", v).as_str()),
             Variant::Bool(v) => f.write_str(format!("Bool({})", v).as_str()),
             Variant::Null => f.write_str("Null"),
             Variant::Undefined => f.write_str("Undefined"),
             Variant::Uninitialized => f.write_str("Uninitialized"),
-            Variant::CatchOffset => f.write_str("CatchOffset"),
+            Variant::CatchOffset(_) => f.write_str("CatchOffset(_)"),
             Variant::Exception => f.write_str("Exception"),
             Variant::Float64(v) => f.write_str(format!("Float64({})", v).as_str()),
             #[allow(unreachable_patterns)]
@@ -275,10 +300,16 @@ mod tests {
             let s: String = s.into();
             assert_eq!("foo", s);
 
+            let v = ctx.eval("42", "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY)?;
+            assert_match!(Variant::FunctionBytecode(_), v.to_variant());
+
             let v = ctx.eval("({})", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::Object(_), v.to_variant());
 
             let v = ctx.eval("() => {}", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            assert_match!(Variant::Object(_), v.to_variant());
+
+            let v = ctx.eval("[2, 3, 5, 7]", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::Object(_), v.to_variant());
 
             let v = ctx.eval("42", "<input>", EvalFlags::TYPE_GLOBAL)?;

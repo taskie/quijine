@@ -29,6 +29,8 @@ pub enum ValueTag {
     BigFloat = ffi::JS_TAG_BIG_FLOAT,
     Symbol = ffi::JS_TAG_SYMBOL,
     String = ffi::JS_TAG_STRING,
+    Module = ffi::JS_TAG_MODULE,
+    FunctionBytecode = ffi::JS_TAG_FUNCTION_BYTECODE,
     Object = ffi::JS_TAG_OBJECT,
     Int = ffi::JS_TAG_INT,
     Bool = ffi::JS_TAG_BOOL,

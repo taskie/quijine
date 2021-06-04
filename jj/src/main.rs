@@ -1,7 +1,8 @@
 use anyhow::Result;
-use quijine::{self, Context, Data, EvalFlags, ExternalResult, Result as QjResult};
+use quijine::{self, Context, Data, EvalFlags, ExternalResult, FunctionBytecode, Result as QjResult};
 use serde_json::Value;
 use std::{
+    convert::TryInto,
     io::{self, BufReader},
     sync::Arc,
 };
@@ -66,7 +67,8 @@ fn main() -> Result<()> {
         let global = ctx.global_object()?;
         let script = opt.script.as_str();
         // check a syntax error
-        ctx.eval(script, "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY)?;
+        let bytecode = ctx.eval(script, "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY)?;
+        let bytecode: FunctionBytecode = bytecode.try_into()?;
         // read stdin
         let stdin = io::stdin();
         let stdin = stdin.lock();
@@ -80,7 +82,7 @@ fn main() -> Result<()> {
             global.set("$_", &result)?;
             global.set("$I", ctx.new_int32(i as i32))?;
             global.set("$P", ctx.new_function(define_print(opt.clone()), "$P", 0)?)?;
-            let result = ctx.eval(script, "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let result = ctx.eval_function(&bytecode)?;
             if !opt.silent {
                 define_print(opt.clone())(ctx, global.clone().into(), &[result])?;
             }

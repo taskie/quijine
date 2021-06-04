@@ -48,6 +48,13 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
+    pub fn eval_function<T: AsRef<Data<'q>>>(self, func_obj: T) -> Result<Data<'q>> {
+        let func_obj = func_obj.as_ref();
+        Data::dup(func_obj);
+        unsafe { self.wrap_result(self.0.eval_function(func_obj.as_value())) }
+    }
+
+    #[inline]
     pub fn call<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> Result<Data<'q>>
     where
         F: AsRef<Data<'q>>,
