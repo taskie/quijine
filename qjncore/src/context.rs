@@ -157,11 +157,8 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn new_string<T>(self, s: T) -> Value<'q>
-    where
-        T: AsRef<str>,
-    {
-        self.new_string_len(s.as_ref().as_bytes())
+    pub fn new_string(self, s: &str) -> Value<'q> {
+        self.new_string_len(s.as_bytes())
     }
 
     /// # Safety
@@ -211,11 +208,11 @@ impl<'q> Context<'q> {
     // call
 
     #[inline]
-    pub fn call<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> Value<'q>
+    pub fn call<F, T, A>(self, func_obj: F, this_obj: T, args: &[A]) -> Value<'q>
     where
         F: AsJsValue<'q>,
         T: AsJsValue<'q>,
-        A: AsRef<[Value<'q>]>,
+        A: AsJsValue<'q>,
     {
         let mut c_args: Vec<_> = args.as_ref().iter().map(|v| v.as_js_value()).collect();
         let value = unsafe {
@@ -231,13 +228,9 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn eval<C, F>(self, code: C, filename: F, eval_flags: EvalFlags) -> Value<'q>
-    where
-        C: AsRef<str>,
-        F: AsRef<str>,
-    {
-        let c_code = CString::new(code.as_ref()).expect("code");
-        let c_filename = CString::new(filename.as_ref()).expect("filename");
+    pub fn eval(self, code: &str, filename: &str, eval_flags: EvalFlags) -> Value<'q> {
+        let c_code = CString::new(code).expect("code");
+        let c_filename = CString::new(filename).expect("filename");
         let value = unsafe {
             ffi::JS_Eval(
                 self.as_ptr(),
@@ -264,13 +257,9 @@ impl<'q> Context<'q> {
     // json
 
     #[inline]
-    pub fn parse_json<B, F>(self, buf: B, filename: F) -> Value<'q>
-    where
-        B: AsRef<str>,
-        F: AsRef<str>,
-    {
-        let c_buf = CString::new(buf.as_ref()).expect("buf");
-        let c_filename = CString::new(filename.as_ref()).expect("filename");
+    pub fn parse_json(self, buf: &str, filename: &str) -> Value<'q> {
+        let c_buf = CString::new(buf).expect("buf");
+        let c_filename = CString::new(filename).expect("filename");
         unsafe {
             let value = ffi::JS_ParseJSON(
                 self.as_ptr(),
@@ -283,13 +272,9 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn parse_json2<B, F>(self, buf: B, filename: F, flags: ParseJSONFlags) -> Value<'q>
-    where
-        B: AsRef<str>,
-        F: AsRef<str>,
-    {
-        let c_buf = CString::new(buf.as_ref()).expect("buf");
-        let c_filename = CString::new(filename.as_ref()).expect("filename");
+    pub fn parse_json2(self, buf: &str, filename: &str, flags: ParseJSONFlags) -> Value<'q> {
+        let c_buf = CString::new(buf).expect("buf");
+        let c_filename = CString::new(filename).expect("filename");
         unsafe {
             let value = ffi::JS_ParseJSON2(
                 self.as_ptr(),
@@ -318,11 +303,7 @@ impl<'q> Context<'q> {
     // array buffer
 
     #[inline]
-    pub fn new_array_buffer_copy<B>(self, buf: B) -> Value<'q>
-    where
-        B: AsRef<[u8]>,
-    {
-        let buf = buf.as_ref();
+    pub fn new_array_buffer_copy(self, buf: &[u8]) -> Value<'q> {
         unsafe {
             let value = ffi::JS_NewArrayBufferCopy(self.as_ptr(), buf.as_ptr(), buf.len() as c_size_t);
             Value::from_raw(value, self)

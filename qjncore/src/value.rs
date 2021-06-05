@@ -219,11 +219,8 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn property_str<K>(self, ctx: Context<'q>, key: K) -> Value<'q>
-    where
-        K: AsRef<str>,
-    {
-        let c_key = CString::new(key.as_ref()).unwrap();
+    pub fn property_str(self, ctx: Context<'q>, key: &str) -> Value<'q> {
+        let c_key = CString::new(key).unwrap();
         unsafe {
             let value = ffi::JS_GetPropertyStr(ctx.as_ptr(), self.0, c_key.as_ptr());
             Value::from_raw(value, ctx)
@@ -244,12 +241,11 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn set_property_str<K, V>(self, ctx: Context<'q>, key: K, val: V) -> Option<bool>
+    pub fn set_property_str<V>(self, ctx: Context<'q>, key: &str, val: V) -> Option<bool>
     where
-        K: AsRef<str>,
         V: AsJsValue<'q>,
     {
-        let c_key = CString::new(key.as_ref()).unwrap();
+        let c_key = CString::new(key).unwrap();
         let ret = unsafe { ffi::JS_SetPropertyStr(ctx.as_ptr(), self.0, c_key.as_ptr(), val.as_js_value()) };
         if ret == -1 {
             None

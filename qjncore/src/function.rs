@@ -47,31 +47,22 @@ impl<'q> CFunctionListEntry<'q> {
     }
 
     #[inline]
-    pub fn new<S>(name: S, length: u8, func1: ffi::JSCFunction) -> CFunctionListEntry<'q>
-    where
-        S: AsRef<str>,
-    {
-        let c_name = CString::new(name.as_ref()).unwrap();
+    pub fn new(name: &str, length: u8, func1: ffi::JSCFunction) -> CFunctionListEntry<'q> {
+        let c_name = CString::new(name).unwrap();
         let c_def = unsafe { ffi::JS_CFUNC_DEF(c_name.as_ptr(), length, func1) };
         unsafe { CFunctionListEntry::from_raw_with_name(c_def, c_name) }
     }
 
     #[inline]
-    pub fn new_magic<S>(name: S, length: u8, func1: ffi::JSCFunctionMagic, magic: i16) -> CFunctionListEntry<'q>
-    where
-        S: AsRef<str>,
-    {
-        let c_name = CString::new(name.as_ref()).unwrap();
+    pub fn new_magic(name: &str, length: u8, func1: ffi::JSCFunctionMagic, magic: i16) -> CFunctionListEntry<'q> {
+        let c_name = CString::new(name).unwrap();
         let c_def = unsafe { ffi::JS_CFUNC_MAGIC_DEF(c_name.as_ptr(), length, func1, magic) };
         unsafe { CFunctionListEntry::from_raw_with_name(c_def, c_name) }
     }
 
     #[inline]
-    pub fn new_constructor<S>(name: S, length: u8, func1: ffi::JSCFunction) -> CFunctionListEntry<'q>
-    where
-        S: AsRef<str>,
-    {
-        let c_name = CString::new(name.as_ref()).unwrap();
+    pub fn new_constructor(name: &str, length: u8, func1: ffi::JSCFunction) -> CFunctionListEntry<'q> {
+        let c_name = CString::new(name).unwrap();
         let c_def = unsafe { ffi::JS_CFUNC_SPECIAL_DEF_constructor(c_name.as_ptr(), length, func1) };
         unsafe { CFunctionListEntry::from_raw_with_name(c_def, c_name) }
     }

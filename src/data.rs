@@ -218,7 +218,7 @@ impl<'q> Data<'q> {
     where
         K: AsRef<str>,
     {
-        unsafe { Data::wrap_result(self.value.property_str(self.context, key), self.context) }
+        unsafe { Data::wrap_result(self.value.property_str(self.context, key.as_ref()), self.context) }
     }
 
     #[inline]
@@ -236,7 +236,7 @@ impl<'q> Data<'q> {
         K: AsRef<str>,
     {
         Data::dup(&val);
-        let ret = self.value.set_property_str(self.context, key, *val.as_raw());
+        let ret = self.value.set_property_str(self.context, key.as_ref(), *val.as_raw());
         ret.ok_or_else(|| {
             Error::from_js_error(
                 ErrorKind::InternalError,

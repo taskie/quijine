@@ -216,9 +216,9 @@ impl<'q> Context<'q> {
                     let v = e.value;
                     match v {
                         ErrorValue::None => ctx.0.throw(ctx.0.new_string("some error occured")),
-                        ErrorValue::String(s) => ctx.0.throw(ctx.0.new_string(s)),
+                        ErrorValue::String(s) => ctx.0.throw(ctx.0.new_string(&s)),
                         ErrorValue::JsError(_) => qc::Value::undefined(), // use original Error
-                        ErrorValue::External(e) => ctx.0.throw(ctx.0.new_string(format!("{}", e))),
+                        ErrorValue::External(e) => ctx.0.throw(ctx.0.new_string(&format!("{}", e))),
                     };
                     qc::Value::exception().as_js_value()
                 }
