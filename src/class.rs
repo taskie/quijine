@@ -1,13 +1,20 @@
-use crate::{data::Data, types::Object, Context, Result, Runtime};
+use crate::{
+    convert::{FromQj, FromQjMulti, IntoQj},
+    data::Data,
+    types::Object,
+    Context, Result, Runtime,
+};
 use log::trace;
 use qjncore as qc;
 use std::ffi::CString;
 
-pub trait ClassMethods<'q, T: Class> {
-    fn add_method<F, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+pub trait ClassMethods<'q, C: Class> {
+    fn add_method<F, T, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
     where
-        F: Fn(Context<'q>, &mut T, Data<'q>, &[Data<'q>]) -> Result<R> + Send + 'static,
-        R: Into<Data<'q>> + 'q;
+        F: Fn(Context<'q>, &mut C, T, A) -> Result<R> + Send + 'static,
+        T: FromQj<'q>,
+        A: FromQjMulti<'q, 'q>,
+        R: IntoQj<'q> + 'q;
 }
 
 pub trait Class: Sized + Send {
@@ -39,23 +46,25 @@ struct Methods<'q> {
     context: Context<'q>,
 }
 
-impl<'q, T: Class + 'static> ClassMethods<'q, T> for Methods<'q> {
-    fn add_method<F, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+impl<'q, C: Class + 'static> ClassMethods<'q, C> for Methods<'q> {
+    fn add_method<F, T, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
     where
-        F: Fn(Context<'q>, &mut T, Data<'q>, &[Data<'q>]) -> Result<R> + Send + 'static,
-        R: Into<Data<'q>> + 'q,
+        F: Fn(Context<'q>, &mut C, T, A) -> Result<R> + Send + 'static,
+        T: FromQj<'q>,
+        A: FromQjMulti<'q, 'q>,
+        R: IntoQj<'q> + 'q,
     {
         let ctx = self.context;
-        let f = ctx.new_function(
-            move |ctx, this, args| {
+        let f = ctx.new_function_with(
+            move |ctx, this: Data<'q>, args| {
                 let mut cloned = this.clone();
-                let t = cloned.opaque_mut::<T>().unwrap();
-                (method)(ctx, t, this, args)
+                let t = cloned.opaque_mut::<C>().unwrap();
+                (method)(ctx, t, T::from_qj(this)?, args)
             },
             name,
             0,
         )?;
-        trace!("registering method: {}::{} ({:?})", T::name(), name, f);
+        trace!("registering method: {}::{} ({:?})", C::name(), name, f);
         self.proto.set(name, f.clone())?;
         Ok(f)
     }

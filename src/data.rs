@@ -1,7 +1,7 @@
 use crate::{
     class::Class,
     context::Context,
-    convert::AsData,
+    convert::{AsData, FromQj, IntoQj},
     error::{Error, ErrorKind, Result},
     runtime::Runtime,
     string::CString as QjCString,
@@ -214,7 +214,7 @@ impl<'q> Data<'q> {
     // object
 
     #[inline]
-    pub fn get<K>(&self, key: K) -> Result<Data<'q>>
+    pub fn property<K>(&self, key: K) -> Result<Data<'q>>
     where
         K: AsRef<str>,
     {
@@ -222,13 +222,20 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub fn set<K, V>(&self, key: K, val: V) -> Result<bool>
+    pub fn get<K, R>(&self, key: K) -> Result<R>
     where
         K: AsRef<str>,
-        V: AsRef<Data<'q>>,
+        R: FromQj<'q>,
     {
-        let val = val.as_ref();
-        Data::dup(val);
+        R::from_qj(self.property(key)?)
+    }
+
+    #[inline]
+    pub fn set_property<K>(&self, key: K, val: Data<'q>) -> Result<bool>
+    where
+        K: AsRef<str>,
+    {
+        Data::dup(&val);
         let ret = self.value.set_property_str(self.context, key, val.as_value());
         ret.ok_or_else(|| {
             Error::from_js_error(
@@ -238,10 +245,19 @@ impl<'q> Data<'q> {
         })
     }
 
+    #[inline]
+    pub fn set<K, V>(&self, key: K, val: V) -> Result<bool>
+    where
+        K: AsRef<str>,
+        V: IntoQj<'q>,
+    {
+        self.set_property(key, val.into_qj(self.context())?)
+    }
+
     // class
 
     #[inline]
-    pub fn prototype(&self) -> Result<Data<'q>> {
+    pub fn prototype(&self) -> Result<Data> {
         unsafe { Data::wrap_result(self.value.prototype(self.context), self.context) }
     }
 
@@ -286,11 +302,5 @@ impl Clone for Data<'_> {
 impl fmt::Debug for Data<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> StdResult<(), fmt::Error> {
         f.write_str(format!("Qj({}, {:?})", self._debug_count, self.value).as_str())
-    }
-}
-
-impl<'q> AsRef<Data<'q>> for Data<'q> {
-    fn as_ref(&self) -> &Data<'q> {
-        self.as_data()
     }
 }

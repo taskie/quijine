@@ -1,7 +1,8 @@
 use crate::{
-    convert::AsData,
+    context::Context,
+    convert::{AsData, IntoQj},
     data::Data,
-    error::{Error, ErrorKind},
+    error::{Error, ErrorKind, Result},
     util::Opaque,
 };
 pub use qjncore::ValueTag as Tag;
@@ -10,6 +11,7 @@ use std::{
     convert::TryFrom,
     fmt::{self, Formatter},
     ops::{Deref, DerefMut},
+    result::Result as StdResult,
     string::String as StdString,
 };
 
@@ -30,7 +32,7 @@ macro_rules! impl_deref {
 }
 
 macro_rules! impl_as_data {
-    { $source:ident } => {
+    { for $source:ident } => {
         impl<'q> From<$source<'q>> for Data<'q> {
             fn from(v: $source<'q>) -> Self {
                 unsafe { v.as_any::<Self>().clone() }
@@ -39,11 +41,6 @@ macro_rules! impl_as_data {
         impl<'q> AsData<'q> for $source<'q> {
             fn as_data(&self) -> &Data<'q> {
                 self.as_data_raw()
-            }
-        }
-        impl<'q> AsRef<Data<'q>> for $source<'q> {
-            fn as_ref(&self) -> &Data<'q> {
-                self.as_data()
             }
         }
     };
@@ -60,15 +57,37 @@ macro_rules! impl_from {
 }
 
 macro_rules! impl_try_from {
+    { $source:ident for $type:ty: |$v:pat| $implementation:expr } => {
+        impl<'q> TryFrom<$source<'q>> for $type {
+            type Error = Error;
+            fn try_from($v: $source<'q>) -> Result<Self> {
+                $implementation
+            }
+        }
+    };
+}
+
+macro_rules! impl_into_qj {
+    { for $type:ty: |$v: pat, $ctx:pat| $implementation:expr } => {
+        impl<'q> IntoQj<'q> for $type {
+            fn into_qj(self, $ctx: Context<'q>) -> Result<Data<'q>> {
+                let $v = self;
+                $implementation
+            }
+        }
+    };
+}
+
+macro_rules! impl_try_from_data {
     { $source:ident for $target:ident if $value:pat => $check:expr } => {
         impl<'q> TryFrom<$source<'q>> for $target<'q> {
             type Error = Error;
-            fn try_from(v: $source<'q>) -> Result<Self, Self::Error> {
+            fn try_from(v: $source<'q>) -> StdResult<Self, Self::Error> {
                 match &v {
                     $value if $check => Ok(unsafe { v.as_any::<Self>().clone() }),
                     _ => Err(Error::with_str(
                         ErrorKind::TypeError,
-                        format!("can't convert {} to {}", type_name::<$source>(), type_name::<$target>()),
+                        &format!("can't convert {} to {}", type_name::<$source>(), type_name::<$target>()),
                     ))
                 }
             }
@@ -80,135 +99,149 @@ macro_rules! impl_try_from {
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Reference<'q>(Data<'q>);
-impl_as_data! { Reference }
+impl_as_data! { for Reference }
 impl_deref! { Data for Reference }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct BigDecimal<'q>(Reference<'q>);
-impl_as_data! { BigDecimal }
-impl_try_from! { Data for BigDecimal if v => v.tag() == Tag::BigDecimal }
+impl_as_data! { for BigDecimal }
+impl_try_from_data! { Data for BigDecimal if v => v.tag() == Tag::BigDecimal }
 impl_deref! { Reference for BigDecimal }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct BigInt<'q>(Reference<'q>);
-impl_as_data! { BigInt }
-impl_try_from! { Data for BigInt if v => v.tag() == Tag::BigInt }
+impl_as_data! { for BigInt }
+impl_try_from_data! { Data for BigInt if v => v.tag() == Tag::BigInt }
 impl_deref! { Reference for BigInt }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct BigFloat<'q>(Reference<'q>);
-impl_as_data! { BigFloat }
-impl_try_from! { Data for BigFloat if v => v.tag() == Tag::BigFloat }
+impl_as_data! { for BigFloat }
+impl_try_from_data! { Data for BigFloat if v => v.tag() == Tag::BigFloat }
 impl_deref! { Reference for BigFloat }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Symbol<'q>(Reference<'q>);
-impl_as_data! { Symbol }
-impl_try_from! { Data for Symbol if v => v.tag() == Tag::Symbol }
+impl_as_data! { for Symbol }
+impl_try_from_data! { Data for Symbol if v => v.tag() == Tag::Symbol }
 impl_deref! { Reference for Symbol }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct String<'q>(Reference<'q>);
-impl_as_data! { String }
-impl_try_from! { Data for String if v => v.tag() == Tag::String }
+impl_as_data! { for String }
+impl_try_from_data! { Data for String if v => v.tag() == Tag::String }
 impl_deref! { Reference for String }
 
-impl_from! { String for std::string::String: |v| v.to_string().unwrap() }
+impl_from! { String for StdString: |v| v.to_string().unwrap() }
+impl_try_from! { Data for StdString: |v| v.to_string() }
+impl_into_qj! { for &str: |v, ctx| ctx.new_string(v).map(|v| v.into()) }
+impl_into_qj! { for StdString: |v, ctx| ctx.new_string(&v).map(|v| v.into()) }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Module<'q>(Reference<'q>);
-impl_as_data! { Module }
-impl_try_from! { Data for Module if v => v.tag() == Tag::Module }
+impl_as_data! { for Module }
+impl_try_from_data! { Data for Module if v => v.tag() == Tag::Module }
 impl_deref! { Reference for Module }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct FunctionBytecode<'q>(Reference<'q>);
-impl_as_data! { FunctionBytecode }
-impl_try_from! { Data for FunctionBytecode if v => v.tag() == Tag::FunctionBytecode }
+impl_as_data! { for FunctionBytecode }
+impl_try_from_data! { Data for FunctionBytecode if v => v.tag() == Tag::FunctionBytecode }
 impl_deref! { Reference for FunctionBytecode }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Object<'q>(Reference<'q>);
-impl_as_data! { Object }
-impl_try_from! { Data for Object if v => v.tag() == Tag::Object }
+impl_as_data! { for Object }
+impl_try_from_data! { Data for Object if v => v.tag() == Tag::Object }
 impl_deref! { Reference for Object }
 
 // values
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Value<'q>(Data<'q>);
-impl_as_data! { Value }
+impl_as_data! { for Value }
 impl_deref! { Data for Value }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Int<'q>(Value<'q>);
-impl_as_data! { Int }
-impl_try_from! { Data for Int if v => v.tag() == Tag::Int }
+impl_as_data! { for Int }
+impl_try_from_data! { Data for Int if v => v.tag() == Tag::Int }
 impl_deref! { Value for Int }
 
 impl_from!(Int for i32: |v| v.to_i32().unwrap());
+impl_try_from! { Data for i32: |v| v.to_i32() }
+impl_into_qj! { for i32: |v, ctx| Ok(ctx.new_int32(v).into()) }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Bool<'q>(Value<'q>);
-impl_as_data! { Bool }
-impl_try_from! { Data for Bool if v => v.tag() == Tag::Bool }
+impl_as_data! { for Bool }
+impl_try_from_data! { Data for Bool if v => v.tag() == Tag::Bool }
 impl_deref! { Value for Bool }
 
 impl_from! { Bool for bool: |v| v.to_bool().unwrap() }
+impl_try_from! { Data for bool: |v| v.to_bool() }
+impl_into_qj! { for bool: |v, ctx| Ok(ctx.new_bool(v).into()) }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Null<'q>(Value<'q>);
-impl_as_data! { Null }
-impl_try_from! { Data for Null if v => v.tag() == Tag::Null }
+impl_as_data! { for Null }
+impl_try_from_data! { Data for Null if v => v.tag() == Tag::Null }
 impl_deref! { Value for Null }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Undefined<'q>(Value<'q>);
-impl_as_data! { Undefined }
-impl_try_from! { Data for Undefined if v => v.tag() == Tag::Undefined }
+impl_as_data! { for Undefined }
+impl_try_from_data! { Data for Undefined if v => v.tag() == Tag::Undefined }
 impl_deref! { Value for Undefined }
+
+// impl_from! { Undefined for (): |_v| () }
+// XXX: this cause unexpected type conversion: v.set("bar", v.get("foo")?)?;
+// impl_try_from! { Data for (): |v| { ... } }
+// impl_into_qj! { for (): |_v, ctx| Ok(ctx.undefined().into()) }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Uninitialized<'q>(Value<'q>);
-impl_as_data! { Uninitialized }
-impl_try_from! { Data for Uninitialized if v => v.tag() == Tag::Uninitialized }
+impl_as_data! { for Uninitialized }
+impl_try_from_data! { Data for Uninitialized if v => v.tag() == Tag::Uninitialized }
 impl_deref! { Value for Uninitialized }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct CatchOffset<'q>(Value<'q>);
-impl_as_data! { CatchOffset }
-impl_try_from! { Data for CatchOffset if v => v.tag() == Tag::CatchOffset }
+impl_as_data! { for CatchOffset }
+impl_try_from_data! { Data for CatchOffset if v => v.tag() == Tag::CatchOffset }
 impl_deref! { Value for CatchOffset }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Exception<'q>(Value<'q>);
-impl_as_data! { Exception }
-impl_try_from! { Data for Exception if v => v.tag() == Tag::Exception }
+impl_as_data! { for Exception }
+impl_try_from_data! { Data for Exception if v => v.tag() == Tag::Exception }
 impl_deref! { Value for Exception }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Float64<'q>(Value<'q>);
-impl_as_data! { Float64 }
-impl_try_from! { Data for Float64 if v => v.tag() == Tag::Float64 }
+impl_as_data! { for Float64 }
+impl_try_from_data! { Data for Float64 if v => v.tag() == Tag::Float64 }
 impl_deref! { Value for Float64 }
 
 impl_from! { Float64 for f64: |v| v.to_f64().unwrap() }
+impl_try_from! { Data for f64: |v| v.to_f64() }
+impl_into_qj! { for f64: |v, ctx| Ok(ctx.new_float64(v).into()) }
 
 #[non_exhaustive]
 pub enum Variant<'q> {
@@ -230,12 +263,12 @@ pub enum Variant<'q> {
     Float64(f64),
 }
 
-fn format_reference<'q, T: AsRef<Data<'q>>>(name: &str, v: T) -> StdString {
+fn format_reference<'q, T: AsData<'q>>(name: &str, v: &T) -> StdString {
     format!(
         "{}({:p}: {})",
         name,
-        v.as_ref().to_ptr().unwrap(),
-        v.as_ref().to_string().unwrap()
+        v.as_data().to_ptr().unwrap(),
+        v.as_data().to_string().unwrap()
     )
 }
 
@@ -247,8 +280,8 @@ impl<'q> fmt::Debug for Variant<'q> {
             Variant::BigFloat(v) => f.write_str(format_reference("BigFloat", v).as_str()),
             Variant::Symbol(v) => f.write_str(format!("Symbol({:p})", v.to_ptr().unwrap()).as_str()),
             Variant::String(v) => f.write_str(format_reference("String", v).as_str()),
-            Variant::Module(v) => f.write_str(format_reference("Object", v).as_str()),
-            Variant::FunctionBytecode(v) => f.write_str(format_reference("Object", v).as_str()),
+            Variant::Module(v) => f.write_str(format_reference("Module", v).as_str()),
+            Variant::FunctionBytecode(v) => f.write_str(format_reference("FunctionBytecode", v).as_str()),
             Variant::Object(v) => f.write_str(format_reference("Object", v).as_str()),
             Variant::Int(v) => f.write_str(format!("Int({})", v).as_str()),
             Variant::Bool(v) => f.write_str(format!("Bool({})", v).as_str()),
@@ -266,7 +299,7 @@ impl<'q> fmt::Debug for Variant<'q> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{run_with_context, Bool, EvalFlags, Float64, Int, Result, String as QjString, Variant};
+    use crate::{run_with_context, Bool, Data, EvalFlags, Float64, Int, Result, String as QjString, Variant};
     use std::convert::TryInto;
 
     macro_rules! assert_match {
@@ -287,50 +320,50 @@ mod tests {
     #[test]
     fn test() -> Result<()> {
         run_with_context(|ctx| {
-            let v = ctx.eval("2n ** 128n", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let v: Data = ctx.eval("2n ** 128n", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::BigInt(_), v.to_variant());
             assert_eq!("340282366920938463463374607431768211456", v.to_string()?);
 
-            let v = ctx.eval("Symbol('foo')", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let v: Data = ctx.eval("Symbol('foo')", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::Symbol(_), v.to_variant());
 
-            let v = ctx.eval("\"foo\"", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let v: Data = ctx.eval("\"foo\"", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::String(_), v.to_variant());
             let s: QjString = v.try_into()?;
             let s: String = s.into();
             assert_eq!("foo", s);
 
-            let v = ctx.eval("42", "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY)?;
+            let v: Data = ctx.eval("42", "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY)?;
             assert_match!(Variant::FunctionBytecode(_), v.to_variant());
 
-            let v = ctx.eval("({})", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let v: Data = ctx.eval("({})", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::Object(_), v.to_variant());
 
-            let v = ctx.eval("() => {}", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let v: Data = ctx.eval("() => {}", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::Object(_), v.to_variant());
 
-            let v = ctx.eval("[2, 3, 5, 7]", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let v: Data = ctx.eval("[2, 3, 5, 7]", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::Object(_), v.to_variant());
 
-            let v = ctx.eval("42", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let v: Data = ctx.eval("42", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::Int(42), v.to_variant());
             let i: Int = v.try_into()?;
             let i: i32 = i.into();
             assert_eq!(42, i);
 
-            let v = ctx.eval("true", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let v: Data = ctx.eval("true", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::Bool(true), v.to_variant());
             let b: Bool = v.try_into()?;
             let b: bool = b.into();
             assert_eq!(true, b);
 
-            let v = ctx.eval("null", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let v: Data = ctx.eval("null", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::Null, v.to_variant());
 
-            let v = ctx.eval("void 0", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let v: Data = ctx.eval("void 0", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::Undefined, v.to_variant());
 
-            let v = ctx.eval("0.25", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let v: Data = ctx.eval("0.25", "<input>", EvalFlags::TYPE_GLOBAL)?;
             let f = assert_match!(Variant::Float64(f) => f, v.to_variant());
             assert_eq!(0.25, f);
             let f: Float64 = v.try_into()?;

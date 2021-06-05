@@ -1,4 +1,4 @@
-use quijine::{qj_slice, EvalFlags, Result};
+use quijine::{Data, EvalFlags, Object, Result};
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use std::cell::RefCell;
@@ -6,16 +6,15 @@ use std::cell::RefCell;
 #[test]
 fn example_call_js_func_from_rust() -> Result<()> {
     quijine::run_with_context(|ctx| {
-        ctx.eval(
+        let _ = ctx.eval(
             "function foo(x, y) { return x + y; }",
             "<input>",
             EvalFlags::TYPE_GLOBAL,
         )?;
         let global = ctx.global_object()?;
-        let foo = global.get("foo")?;
-        let args = qj_slice![ctx.new_int32(5), ctx.new_int32(3)];
-        let result = ctx.call(foo, global, args)?;
-        assert_eq!(8, result.to_i32()?, "call foo (JS) from Rust");
+        let foo = global.get::<_, Object>("foo")?;
+        let result: i32 = ctx.call_into(foo, global, (5, 3))?;
+        assert_eq!(8, result, "call foo (JS) from Rust");
         Ok(())
     })
 }
@@ -24,18 +23,10 @@ fn example_call_js_func_from_rust() -> Result<()> {
 fn example_call_rust_func_from_js() -> Result<()> {
     quijine::run_with_context(|ctx| {
         let global = ctx.global_object()?;
-        let foo = ctx.new_function(
-            |ctx, _this, args| {
-                let x = args[0].to_f64()?;
-                let y = args[1].to_f64()?;
-                Ok(ctx.new_float64(x + y))
-            },
-            "foo",
-            2,
-        )?;
-        global.set("foo", &foo)?;
-        let result = ctx.eval("foo(5, 3)", "<input>", EvalFlags::TYPE_GLOBAL)?;
-        assert_eq!(8, result.to_i32()?, "call foo (Rust) from JS");
+        let foo = ctx.new_function_with(|_ctx, _this: Data, (x, y): (i32, i32)| Ok(x + y), "foo", 2)?;
+        global.set("foo", foo)?;
+        let result: i32 = ctx.eval_into("foo(5, 3)", "<input>", EvalFlags::TYPE_GLOBAL)?;
+        assert_eq!(8, result, "call foo (Rust) from JS");
         Ok(())
     })
 }
@@ -44,21 +35,25 @@ fn example_call_rust_func_from_js() -> Result<()> {
 fn example_use_rust_rand_from_js() -> Result<()> {
     let rng = Box::new(RefCell::new(XorShiftRng::from_seed([0; 16])));
     let sum = quijine::run_with_context(|ctx| {
-        let r = ctx.new_function(
-            move |ctx, _this, _args| Ok(ctx.new_int32((*rng.as_ref().borrow_mut()).gen())),
-            "f",
+        let rand = ctx.new_function_with(
+            move |_ctx, _this: Data, _args: ()| Ok((*rng.as_ref().borrow_mut()).gen::<u16>() as i32),
+            "rand",
             0,
         )?;
-        let t = ctx.new_object()?;
-        let args = &[];
-        let mut sum = 0i64;
-        for _i in 1..10 {
-            let x = ctx.call(&r, &t, &args)?;
-            let x = x.to_i32()?;
-            sum += x as i64
-        }
+        ctx.global_object()?.set("rand", rand)?;
+        let sum: i32 = ctx.eval_into(
+            r#"
+                let sum = 0;
+                for (let i = 0; i < 10; ++i) {
+                    sum += rand();
+                }
+                sum;
+            "#,
+            "<input>",
+            EvalFlags::TYPE_GLOBAL,
+        )?;
         Ok(sum)
     })?;
-    assert_eq!(3967332714, sum, "call PRNG from JS");
+    assert_eq!(176820, sum, "call PRNG from JS");
     Ok(())
 }

@@ -2,7 +2,6 @@ use anyhow::Result;
 use quijine::{self, Context, Data, EvalFlags, ExternalResult, FunctionBytecode, Result as QjResult};
 use serde_json::Value;
 use std::{
-    convert::TryInto,
     io::{self, BufReader},
     sync::Arc,
 };
@@ -39,7 +38,10 @@ type Handler<'q> = Box<dyn Fn(Context<'q>, Data, &[Data]) -> QjResult<Data<'q>> 
 
 fn define_print<'q>(opt: Arc<Opt>) -> Handler<'q> {
     Box::new(move |ctx: Context<'q>, _this, args| {
-        for arg in args {
+        for (i, arg) in args.iter().enumerate() {
+            if i != 0 {
+                print!(" ");
+            }
             if arg.is_null() || arg.is_undefined() {
                 continue;
             } else if opt.raw_output {
@@ -53,9 +55,10 @@ fn define_print<'q>(opt: Arc<Opt>) -> Handler<'q> {
             } else {
                 ctx.new_string("  ")?.into()
             };
-            let v = ctx.json_stringify(arg, ctx.undefined(), space)?;
-            println!("{}", v.to_string()?)
+            let v: String = ctx.json_stringify_into(arg.clone(), ctx.undefined(), space)?;
+            print!("{}", v);
         }
+        println!();
         Ok(ctx.undefined().into())
     })
 }
@@ -67,8 +70,8 @@ fn main() -> Result<()> {
         let global = ctx.global_object()?;
         let script = opt.script.as_str();
         // check a syntax error
-        let bytecode = ctx.eval(script, "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY)?;
-        let bytecode: FunctionBytecode = bytecode.try_into()?;
+        let bytecode: FunctionBytecode =
+            ctx.eval_into(script, "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY)?;
         // read stdin
         let stdin = io::stdin();
         let stdin = stdin.lock();
@@ -78,11 +81,11 @@ fn main() -> Result<()> {
         for (i, value) in stream.enumerate() {
             // TODO: direct conversion
             let json = value.and_then(|v| serde_json::to_string(&v)).map_err_to_qj()?;
-            let result = ctx.parse_json(&json, "<input>")?;
-            global.set("$_", &result)?;
+            let result: Data = ctx.parse_json(&json, "<input>")?;
+            global.set("$_", result)?;
             global.set("$I", ctx.new_int32(i as i32))?;
             global.set("$P", ctx.new_function(define_print(opt.clone()), "$P", 0)?)?;
-            let result = ctx.eval_function(&bytecode)?;
+            let result = ctx.eval_function(bytecode.clone().into())?;
             if !opt.silent {
                 define_print(opt.clone())(ctx, global.clone().into(), &[result])?;
             }

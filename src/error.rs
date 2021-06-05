@@ -83,10 +83,10 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn with_str<T: AsRef<str>>(kind: ErrorKind, message: T) -> Error {
+    pub fn with_str(kind: ErrorKind, message: &str) -> Error {
         Error {
             kind,
-            value: ErrorValue::String(message.as_ref().to_string()),
+            value: ErrorValue::String(message.to_owned()),
         }
     }
 
@@ -104,9 +104,7 @@ impl Error {
     pub fn from_data<'q, T: Into<Data<'q>>>(kind: ErrorKind, data: T) -> Error {
         let data: Data<'q> = data.into();
         let ctx = data.context();
-        let json = ctx
-            .json_stringify(data, ctx.undefined(), ctx.undefined())
-            .and_then(|s| s.to_string());
+        let json = ctx.json_stringify_into(data, ctx.undefined(), ctx.undefined());
         Error {
             kind,
             value: ErrorValue::String(match json {
@@ -119,11 +117,11 @@ impl Error {
     pub fn from_js_error<'q, T: Into<Data<'q>>>(kind: ErrorKind, data: T) -> Error {
         let data: Data<'q> = data.into();
         let data = JsErrorData {
-            name: data.get("name").and_then(|v| v.to_string()).ok(),
-            message: data.get("message").and_then(|v| v.to_string()).ok(),
-            file_name: data.get("fileName").and_then(|v| v.to_string()).ok(),
-            line_number: data.get("lineNumber").and_then(|v| v.to_i32()).ok(),
-            stack: data.get("stack").and_then(|v| v.to_string()).ok(),
+            name: data.get("name").ok(),
+            message: data.get("message").ok(),
+            file_name: data.get("fileName").ok(),
+            line_number: data.get("lineNumber").ok(),
+            stack: data.get("stack").ok(),
         };
         Error {
             kind,
@@ -149,7 +147,7 @@ impl From<Box<dyn StdError + Send + Sync>> for Error {
 
 impl From<Box<dyn StdError>> for Error {
     fn from(e: Box<dyn StdError>) -> Self {
-        Error::with_str(ErrorKind::ExternalError, format!("{}", e))
+        Error::with_str(ErrorKind::ExternalError, &format!("{}", e))
     }
 }
 

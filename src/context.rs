@@ -1,6 +1,6 @@
 use crate::{
     class::{register_class, Class},
-    convert::AsData,
+    convert::{AsData, FromQj, FromQjMulti, IntoQj, IntoQjMulti},
     error::{ErrorValue, Result},
     runtime::Runtime,
     types::{Bool, Float64, Int, Null, Object, String as QjString, Undefined},
@@ -48,24 +48,50 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn eval_function<T: AsRef<Data<'q>>>(self, func_obj: T) -> Result<Data<'q>> {
-        let func_obj = func_obj.as_ref();
-        Data::dup(func_obj);
+    pub fn eval_into<R: FromQj<'q>>(self, code: &str, filename: &str, eval_flags: EvalFlags) -> Result<R> {
+        R::from_qj(self.eval(code, filename, eval_flags)?)
+    }
+
+    #[inline]
+    pub fn eval_function(self, func_obj: Data<'q>) -> Result<Data<'q>> {
+        Data::dup(&func_obj);
         unsafe { self.wrap_result(self.0.eval_function(func_obj.as_value())) }
     }
 
     #[inline]
-    pub fn call<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> Result<Data<'q>>
-    where
-        F: AsRef<Data<'q>>,
-        T: AsRef<Data<'q>>,
-        A: AsRef<[Data<'q>]>,
-    {
-        let qc_args: Vec<_> = args.as_ref().iter().map(|v| v.as_value()).collect();
-        let val = self
-            .0
-            .call(func_obj.as_ref().as_value(), this_obj.as_ref().as_value(), qc_args);
+    pub fn eval_function_into<F: IntoQj<'q>, R: FromQj<'q>>(self, func_obj: F) -> Result<R> {
+        R::from_qj(self.eval_function(func_obj.into_qj(self)?)?)
+    }
+
+    #[inline]
+    pub fn call(self, func_obj: Data<'q>, this_obj: Data<'q>, args: &[Data<'q>]) -> Result<Data<'q>> {
+        let qc_args: Vec<_> = args.iter().map(|v| v.as_value()).collect();
+        let val = self.0.call(func_obj.as_value(), this_obj.as_value(), qc_args);
         unsafe { self.wrap_result(val) }
+    }
+
+    #[inline]
+    pub fn call_into<F, T, A, R>(self, func_obj: F, this_obj: T, args: A) -> Result<R>
+    where
+        F: IntoQj<'q>,
+        T: IntoQj<'q>,
+        A: IntoQjMulti<'q>,
+        R: FromQj<'q>,
+    {
+        let qj_args = args.into_qj_multi(self)?;
+        R::from_qj(self.call(func_obj.into_qj(self)?, this_obj.into_qj(self)?, qj_args.as_ref())?)
+    }
+
+    #[inline]
+    pub fn call_into_void<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> Result<()>
+    where
+        F: IntoQj<'q>,
+        T: IntoQj<'q>,
+        A: IntoQjMulti<'q>,
+    {
+        let qj_args = args.into_qj_multi(self)?;
+        self.call(func_obj.into_qj(self)?, this_obj.into_qj(self)?, qj_args.as_ref())?;
+        Ok(())
     }
 
     #[inline]
@@ -123,12 +149,26 @@ impl<'q> Context<'q> {
     // callback
 
     #[inline]
-    pub fn new_function<F, R>(self, func: F, name: &str, length: i32) -> Result<Object<'q>>
+    pub fn new_function<F>(self, func: F, name: &str, length: i32) -> Result<Object<'q>>
     where
-        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<R> + Send + 'q,
-        R: Into<Data<'q>> + 'q,
+        F: Fn(Context<'q>, Data<'q>, &'q [Data<'q>]) -> Result<Data<'q>> + Send + 'q,
     {
         self.new_callback(Box::new(func), name, length)
+    }
+
+    #[inline]
+    pub fn new_function_with<F, T, A, R>(self, func: F, name: &str, length: i32) -> Result<Object<'q>>
+    where
+        F: Fn(Context<'q>, T, A) -> Result<R> + Send + 'q,
+        T: FromQj<'q>,
+        A: FromQjMulti<'q, 'q>,
+        R: IntoQj<'q> + 'q,
+    {
+        self.new_function(
+            move |ctx, this, args| func(ctx, T::from_qj(this)?, A::from_qj_multi(args)?)?.into_qj(ctx),
+            name,
+            length,
+        )
     }
 
     #[inline]
@@ -212,19 +252,31 @@ impl<'q> Context<'q> {
         unsafe { self.wrap_result(self.0.parse_json(buf, filename)) }
     }
 
-    pub fn json_stringify<T, R, S>(self, obj: T, replacer: R, space0: S) -> Result<QjString<'q>>
-    where
-        T: AsRef<Data<'q>>,
-        R: AsRef<Data<'q>>,
-        S: AsRef<Data<'q>>,
-    {
+    pub fn parse_json_into<R: FromQj<'q>>(self, buf: &str, filename: &str) -> Result<R> {
+        R::from_qj(self.parse_json(buf, filename)?)
+    }
+
+    pub fn json_stringify(self, obj: Data<'q>, replacer: Data<'q>, space0: Data<'q>) -> Result<QjString<'q>> {
         unsafe {
             self.wrap_result::<QjString>(self.0.json_stringify(
-                obj.as_ref().as_value(),
-                replacer.as_ref().as_value(),
-                space0.as_ref().as_value(),
+                obj.into_qj(self)?.as_value(),
+                replacer.into_qj(self)?.as_value(),
+                space0.into_qj(self)?.as_value(),
             ))
         }
+    }
+
+    pub fn json_stringify_into<O, P, S, R>(self, obj: O, replacer: P, space0: S) -> Result<R>
+    where
+        O: IntoQj<'q>,
+        P: IntoQj<'q>,
+        S: IntoQj<'q>,
+        R: FromQj<'q>,
+    {
+        R::from_qj(
+            self.json_stringify(obj.into_qj(self)?, replacer.into_qj(self)?, space0.into_qj(self)?)?
+                .into(),
+        )
     }
 
     // class
@@ -286,4 +338,4 @@ impl fmt::Debug for ContextScope<'_> {
     }
 }
 
-pub(crate) type Callback<'q, 'a, R> = dyn Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> Result<R> + 'a;
+pub(crate) type Callback<'q, 'a, R> = dyn Fn(Context<'q>, Data<'q>, &'a [Data<'q>]) -> Result<R> + 'a;

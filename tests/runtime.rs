@@ -1,4 +1,4 @@
-use quijine::{Error, ErrorKind, EvalFlags, Result};
+use quijine::{Data, Error, ErrorKind, EvalFlags, Result};
 
 #[test]
 fn multiple_runtimes() -> Result<()> {
@@ -6,29 +6,28 @@ fn multiple_runtimes() -> Result<()> {
     let (tx, rx) = channel::<String>();
     let th = std::thread::spawn(move || {
         quijine::run_with_context(move |ctx| {
-            let recv = ctx.new_function(
-                move |ctx, _this, _args| {
+            let recv = ctx.new_function_with(
+                move |_ctx, _this: Data, _args: ()| {
                     let message = rx
                         .recv()
                         .map_err(|e| Error::with_external(ErrorKind::InternalError, Box::new(e.clone())))?;
-                    Ok(ctx.new_string(message.as_str())?)
+                    Ok(message)
                 },
                 "recv",
                 0,
             )?;
             ctx.global_object()?.set("recv", recv)?;
-            let result = ctx.eval("recv();", "<input>", EvalFlags::TYPE_GLOBAL)?;
-            assert_eq!("Hello, world!".to_owned(), result.to_string()?, "received");
-            let result = ctx.eval("recv();", "<input>", EvalFlags::TYPE_GLOBAL)?;
-            assert_eq!("Goodbye, world!".to_owned(), result.to_string()?, "received");
+            let result: String = ctx.eval_into("recv();", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            assert_eq!("Hello, world!".to_owned(), result, "received");
+            let result: String = ctx.eval_into("recv();", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            assert_eq!("Goodbye, world!".to_owned(), result, "received");
             Ok(())
         })
         .unwrap();
     });
     quijine::run_with_context(move |ctx| {
-        let send = ctx.new_function(
-            move |ctx, _this, args| {
-                let message = args[0].to_string()?;
+        let send = ctx.new_function_with(
+            move |ctx, _this: Data, (message,): (String,)| {
                 tx.send(message)
                     .map_err(|e| Error::with_external(ErrorKind::InternalError, Box::new(e.clone())))?;
                 Ok(ctx.undefined())
