@@ -95,7 +95,7 @@ pub(crate) fn register_class<T: Class + 'static>(rctx: qc::Context, clz: qc::Cla
     // per Context
     let proto = ctx.new_object()?;
     Data::dup(&proto);
-    rctx.set_class_proto(clz, proto.as_value());
+    rctx.set_class_proto(clz, *proto.as_raw());
     let mut methods = Methods {
         context: ctx,
         proto: &proto,

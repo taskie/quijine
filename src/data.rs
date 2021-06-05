@@ -47,8 +47,8 @@ impl<'q> Data<'q> {
     // property
 
     #[inline]
-    pub(crate) fn as_value(&self) -> qc::Value<'q> {
-        self.value
+    pub(crate) fn as_raw(&self) -> &qc::Value<'q> {
+        &self.value
     }
 
     #[inline]
@@ -236,7 +236,7 @@ impl<'q> Data<'q> {
         K: AsRef<str>,
     {
         Data::dup(&val);
-        let ret = self.value.set_property_str(self.context, key, val.as_value());
+        let ret = self.value.set_property_str(self.context, key, *val.as_raw());
         ret.ok_or_else(|| {
             Error::from_js_error(
                 ErrorKind::InternalError,

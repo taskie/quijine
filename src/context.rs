@@ -55,7 +55,7 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn eval_function(self, func_obj: Data<'q>) -> Result<Data<'q>> {
         Data::dup(&func_obj);
-        unsafe { self.wrap_result(self.0.eval_function(func_obj.as_value())) }
+        unsafe { self.wrap_result(self.0.eval_function(*func_obj.as_raw())) }
     }
 
     #[inline]
@@ -65,8 +65,8 @@ impl<'q> Context<'q> {
 
     #[inline]
     pub fn call(self, func_obj: Data<'q>, this_obj: Data<'q>, args: &[Data<'q>]) -> Result<Data<'q>> {
-        let qc_args: Vec<_> = args.iter().map(|v| v.as_value()).collect();
-        let val = self.0.call(func_obj.as_value(), this_obj.as_value(), qc_args);
+        let qc_args: Vec<_> = args.iter().map(|v| *v.as_raw()).collect();
+        let val = self.0.call(*func_obj.as_raw(), *this_obj.as_raw(), &qc_args);
         unsafe { self.wrap_result(val) }
     }
 
@@ -210,7 +210,7 @@ impl<'q> Context<'q> {
                 Ok(t) => {
                     let t = t.into();
                     Data::dup(&t);
-                    t.as_value().as_js_value()
+                    t.as_raw().as_js_value()
                 }
                 Err(e) => {
                     let v = e.value;
@@ -258,11 +258,10 @@ impl<'q> Context<'q> {
 
     pub fn json_stringify(self, obj: Data<'q>, replacer: Data<'q>, space0: Data<'q>) -> Result<QjString<'q>> {
         unsafe {
-            self.wrap_result::<QjString>(self.0.json_stringify(
-                obj.into_qj(self)?.as_value(),
-                replacer.into_qj(self)?.as_value(),
-                space0.into_qj(self)?.as_value(),
-            ))
+            self.wrap_result::<QjString>(
+                self.0
+                    .json_stringify(*obj.as_raw(), *replacer.as_raw(), *space0.as_raw()),
+            )
         }
     }
 
