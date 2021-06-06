@@ -17,6 +17,7 @@ pub use qjncore::{EvalFlags, GPNFlags};
 pub use atom::{Atom, PropertyEnum};
 pub use class::{Class, ClassMethods};
 pub use context::{Context, ContextScope};
+pub use convert::{AsData, FromQj, FromQjMulti, IntoQj, IntoQjAtom, IntoQjMulti};
 pub use data::Data;
 pub use error::{Error, ErrorKind, ErrorValue, ExternalError, ExternalResult, Result};
 pub use runtime::{Runtime, RuntimeScope};
