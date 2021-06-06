@@ -5,7 +5,7 @@ fn multiple_runtimes() -> Result<()> {
     use std::sync::mpsc::channel;
     let (tx, rx) = channel::<String>();
     let th = std::thread::spawn(move || {
-        quijine::run_with_context(move |ctx| {
+        quijine::context(move |ctx| {
             let recv = ctx.new_function_with(
                 move |_ctx, _this: Data, _args: ()| {
                     let message = rx
@@ -25,7 +25,7 @@ fn multiple_runtimes() -> Result<()> {
         })
         .unwrap();
     });
-    quijine::run_with_context(move |ctx| {
+    quijine::context(move |ctx| {
         let send = ctx.new_function_with(
             move |ctx, _this: Data, (message,): (String,)| {
                 tx.send(message)

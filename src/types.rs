@@ -299,7 +299,7 @@ impl<'q> fmt::Debug for Variant<'q> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{run_with_context, Bool, Data, EvalFlags, Float64, Int, Result, String as QjString, Variant};
+    use crate::{context, Bool, Data, EvalFlags, Float64, Int, Result, String as QjString, Variant};
     use std::convert::TryInto;
 
     macro_rules! assert_match {
@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn test() -> Result<()> {
-        run_with_context(|ctx| {
+        context(|ctx| {
             let v: Data = ctx.eval("2n ** 128n", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::BigInt(_), v.to_variant());
             assert_eq!("340282366920938463463374607431768211456", v.to_string()?);

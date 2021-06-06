@@ -2,7 +2,7 @@ use quijine::{EvalFlags, Result};
 
 #[test]
 fn rust_to_js() -> Result<()> {
-    quijine::run_with_context(|ctx| {
+    quijine::context(|ctx| {
         let js_assert_eq = ctx.eval(
             r#"
                 (a, b) => {
@@ -25,7 +25,7 @@ fn rust_to_js() -> Result<()> {
 
 #[test]
 fn js_to_rust() -> Result<()> {
-    quijine::run_with_context(|ctx| {
+    quijine::context(|ctx| {
         let v: String = ctx.parse_json_into("\"hello\"", "<input>")?;
         assert_eq!("hello", v);
         let v: bool = ctx.parse_json_into("true", "<input>")?;

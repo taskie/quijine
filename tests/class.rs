@@ -33,7 +33,7 @@ impl Class for S1 {
 
 #[test]
 fn new_object_class() -> Result<()> {
-    quijine::run_with_context(|ctx| {
+    quijine::context(|ctx| {
         let global = ctx.global_object()?;
         global.set(
             "S1",

@@ -27,24 +27,19 @@ pub use types::{
 };
 
 #[inline]
-pub fn new_runtime_scope() -> RuntimeScope {
-    RuntimeScope::new()
-}
-
-#[inline]
 pub fn run<F, R>(f: F) -> Result<R>
 where
     F: FnOnce(Runtime) -> Result<R>,
 {
-    let rts = new_runtime_scope();
+    let rts = RuntimeScope::new();
     rts.run(f)
 }
 
 #[inline]
-pub fn run_with_context<F, R>(f: F) -> Result<R>
+pub fn context<F, R>(f: F) -> Result<R>
 where
     F: FnOnce(Context) -> Result<R>,
 {
-    let rts = new_runtime_scope();
+    let rts = RuntimeScope::new();
     rts.run_with_context(f)
 }

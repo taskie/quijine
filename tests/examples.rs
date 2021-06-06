@@ -5,7 +5,7 @@ use std::cell::RefCell;
 
 #[test]
 fn example_call_js_func_from_rust() -> Result<()> {
-    quijine::run_with_context(|ctx| {
+    quijine::context(|ctx| {
         let _ = ctx.eval(
             "function foo(x, y) { return x + y; }",
             "<input>",
@@ -21,7 +21,7 @@ fn example_call_js_func_from_rust() -> Result<()> {
 
 #[test]
 fn example_call_rust_func_from_js() -> Result<()> {
-    quijine::run_with_context(|ctx| {
+    quijine::context(|ctx| {
         let global = ctx.global_object()?;
         let foo = ctx.new_function_with(|_ctx, _this: Data, (x, y): (i32, i32)| Ok(x + y), "foo", 2)?;
         global.set("foo", foo)?;
@@ -34,7 +34,7 @@ fn example_call_rust_func_from_js() -> Result<()> {
 #[test]
 fn example_use_rust_rand_from_js() -> Result<()> {
     let rng = Box::new(RefCell::new(XorShiftRng::from_seed([0; 16])));
-    let sum = quijine::run_with_context(|ctx| {
+    let sum = quijine::context(|ctx| {
         let rand = ctx.new_function_with(
             move |_ctx, _this: Data, _args: ()| Ok((*rng.as_ref().borrow_mut()).gen::<u16>() as i32),
             "rand",

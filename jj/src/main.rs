@@ -66,7 +66,7 @@ fn define_print<'q>(opt: Arc<Opt>) -> Handler<'q> {
 fn main() -> Result<()> {
     env_logger::init();
     let opt = Arc::new(Opt::from_args());
-    quijine::run_with_context(move |ctx| {
+    quijine::context(move |ctx| {
         let global = ctx.global_object()?;
         let script = opt.script.as_str();
         // check a syntax error

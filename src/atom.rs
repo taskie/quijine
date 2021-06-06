@@ -170,11 +170,11 @@ impl fmt::Debug for PropertyEnum<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{run_with_context, Result};
+    use crate::{context, Result};
     use qjncore::{EvalFlags, GPNFlags};
     #[test]
     fn test() -> Result<()> {
-        run_with_context(|ctx| {
+        context(|ctx| {
             let global = ctx.global_object()?;
             let k_foo = ctx.new_atom("foo")?;
             let k_bar = "bar";
