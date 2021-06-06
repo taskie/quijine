@@ -1,12 +1,14 @@
 use crate::{
+    atom::{Atom, PropertyEnum},
     class::Class,
     context::Context,
-    convert::{AsData, FromQj, IntoQj},
+    convert::{AsData, FromQj, IntoQj, IntoQjAtom},
     error::{Error, ErrorKind, Result},
     runtime::Runtime,
     string::CString as QjCString,
     types::{Tag, Variant},
 };
+use qc::GPNFlags;
 use qjncore as qc;
 use std::{
     convert::TryInto,
@@ -158,10 +160,7 @@ impl<'q> Data<'q> {
     #[inline]
     pub(crate) unsafe fn wrap_result<T: AsData<'q>>(val: qc::Value<'q>, ctx: qc::Context<'q>) -> Result<T> {
         if val.is_exception() {
-            Err(Error::from_js_error(
-                ErrorKind::InternalError,
-                Data::from_raw_parts(ctx.exception(), ctx),
-            ))
+            Err(Context::from_raw(ctx).internal_js_error())
         } else {
             Ok(Data::from_raw_parts(val, ctx).into_unchecked())
         }
@@ -211,47 +210,69 @@ impl<'q> Data<'q> {
         self.ok_or_type_error(self.value.ptr())
     }
 
+    // atom
+
+    pub fn to_atom(&self) -> Result<Atom<'q>> {
+        self.context().data_to_atom(self)
+    }
+
     // object
 
     #[inline]
-    pub fn property<K>(&self, key: K) -> Result<Data<'q>>
-    where
-        K: AsRef<str>,
-    {
-        unsafe { Data::wrap_result(self.value.property_str(self.context, key.as_ref()), self.context) }
+    pub fn property(&self, key: Atom<'q>) -> Result<Data<'q>> {
+        unsafe { Data::wrap_result(self.value.property(self.context, *key.as_raw()), self.context) }
     }
 
     #[inline]
     pub fn get<K, R>(&self, key: K) -> Result<R>
     where
-        K: AsRef<str>,
+        K: IntoQjAtom<'q>,
         R: FromQj<'q>,
     {
-        R::from_qj(self.property(key)?)
+        R::from_qj(self.property(key.into_qj_atom(self.context())?)?)
     }
 
     #[inline]
-    pub fn set_property<K>(&self, key: K, val: Data<'q>) -> Result<bool>
-    where
-        K: AsRef<str>,
-    {
+    pub fn set_property(&self, key: Atom<'q>, val: Data<'q>) -> Result<bool> {
         Data::dup(&val);
-        let ret = self.value.set_property_str(self.context, key.as_ref(), *val.as_raw());
-        ret.ok_or_else(|| {
-            Error::from_js_error(
-                ErrorKind::InternalError,
-                Data::from_raw_parts(self.context.exception(), self.context),
-            )
-        })
+        let ret = self.value.set_property(self.context, *key.as_raw(), *val.as_raw());
+        ret.ok_or_else(|| Context::from_raw(self.context).internal_js_error())
     }
 
     #[inline]
     pub fn set<K, V>(&self, key: K, val: V) -> Result<bool>
     where
-        K: AsRef<str>,
+        K: IntoQjAtom<'q>,
         V: IntoQj<'q>,
     {
-        self.set_property(key, val.into_qj(self.context())?)
+        let ctx = self.context();
+        self.set_property(key.into_qj_atom(ctx)?, val.into_qj(ctx)?)
+    }
+
+    #[inline]
+    pub fn has_property(&self, key: Atom<'q>) -> Result<bool> {
+        let ret = self.value.has_property(self.context, *key.as_raw());
+        ret.ok_or_else(|| Context::from_raw(self.context).internal_js_error())
+    }
+
+    #[inline]
+    pub fn has_key<K>(&self, key: K) -> Result<bool>
+    where
+        K: IntoQjAtom<'q>,
+    {
+        self.has_property(key.into_qj_atom(self.context())?)
+    }
+
+    #[inline]
+    pub fn own_property_names(&self, flags: GPNFlags) -> Result<Vec<PropertyEnum<'q>>> {
+        if let Some(vs) = self.value.own_property_names(self.context, flags) {
+            Ok(vs
+                .iter()
+                .map(|v| PropertyEnum::from_raw_parts(v.clone(), self.context))
+                .collect())
+        } else {
+            Err(Context::from_raw(self.context).internal_js_error())
+        }
     }
 
     // class

@@ -255,8 +255,8 @@ pub unsafe fn JS_GetProperty(ctx: *mut JSContext, this_obj: JSValue, prop: JSAto
 
 #[inline]
 #[allow(non_snake_case)]
-pub unsafe fn JS_SetProperty(ctx: *mut JSContext, this_obj: JSValue, prop: JSAtom, _val: JSValue) -> c_int {
-    JS_SetPropertyInternal(ctx, this_obj, prop, this_obj, JS_PROP_THROW as i32)
+pub unsafe fn JS_SetProperty(ctx: *mut JSContext, this_obj: JSValue, prop: JSAtom, val: JSValue) -> c_int {
+    JS_SetPropertyInternal(ctx, this_obj, prop, val, JS_PROP_THROW as i32)
 }
 
 #[inline]

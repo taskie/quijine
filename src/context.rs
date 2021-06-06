@@ -1,10 +1,11 @@
 use crate::{
+    atom::Atom,
     class::{register_class, Class},
     convert::{AsData, FromQj, FromQjMulti, IntoQj, IntoQjMulti},
     error::{ErrorValue, Result},
     runtime::Runtime,
     types::{Bool, Float64, Int, Null, Object, String as QjString, Undefined},
-    Data, EvalFlags, RuntimeScope,
+    Data, Error, ErrorKind, EvalFlags, RuntimeScope,
 };
 use qjncore::{self as qc, raw, AsJsValue};
 use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int};
@@ -40,6 +41,23 @@ impl<'q> Context<'q> {
     #[inline]
     unsafe fn wrap_result<T: AsData<'q>>(self, val: qc::Value<'q>) -> Result<T> {
         Data::wrap_result(val, self.0)
+    }
+
+    #[inline]
+    unsafe fn wrap_result_atom(self, val: qc::Atom<'q>) -> Result<Atom> {
+        if val.is_null() {
+            Err(Error::with_str(ErrorKind::InternalError, "null atom"))
+        } else {
+            Ok(Atom::from_raw_parts(val, self.0))
+        }
+    }
+
+    #[inline]
+    pub(crate) fn internal_js_error(self) -> Error {
+        Error::from_js_error(
+            ErrorKind::InternalError,
+            Data::from_raw_parts(self.0.exception(), self.0),
+        )
     }
 
     #[inline]
@@ -144,6 +162,28 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_string(self, v: &str) -> Result<QjString<'q>> {
         unsafe { self.wrap_result(self.0.new_string(v)) }
+    }
+
+    // atom
+
+    #[inline]
+    pub fn new_atom(self, s: &str) -> Result<Atom<'q>> {
+        unsafe { self.wrap_result_atom(self.0.new_atom(s)) }
+    }
+
+    #[inline]
+    pub(crate) fn atom_to_data(self, atom: &Atom<'q>) -> Result<Data<'q>> {
+        unsafe { self.wrap_result(self.0.atom_to_value(*atom.as_raw())) }
+    }
+
+    #[inline]
+    pub(crate) fn atom_to_string(self, atom: &Atom<'q>) -> Result<QjString<'q>> {
+        unsafe { self.wrap_result(self.0.atom_to_string(*atom.as_raw())) }
+    }
+
+    #[inline]
+    pub(crate) fn data_to_atom(self, v: &Data<'q>) -> Result<Atom<'q>> {
+        unsafe { self.wrap_result_atom(self.0.value_to_atom(*v.as_raw())) }
     }
 
     // callback

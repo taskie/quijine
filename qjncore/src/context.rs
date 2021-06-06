@@ -1,4 +1,5 @@
 use crate::{
+    atom::Atom,
     class::ClassId,
     convert::{AsJsCString, AsJsClassId, AsJsContextPointer, AsJsRuntimePointer, AsJsValue},
     ffi::{self, c_size_t},
@@ -9,6 +10,7 @@ use crate::{
     string::CString as QcCString,
     util,
     value::Value,
+    AsJsAtom,
 };
 use std::{
     ffi::{c_void, CString},
@@ -166,6 +168,48 @@ impl<'q> Context<'q> {
     #[inline]
     pub unsafe fn free_c_string(self, str: QcCString<'q>) {
         ffi::JS_FreeCString(self.as_ptr(), str.as_js_c_string());
+    }
+
+    // atom
+
+    #[inline]
+    pub(crate) fn new_atom_len(self, v: &[u8]) -> Atom<'q> {
+        let atom = unsafe { ffi::JS_NewAtomLen(self.as_ptr(), v.as_ptr() as *const c_char, v.len() as c_size_t) };
+        unsafe { Atom::from_raw(atom, self) }
+    }
+
+    #[inline]
+    pub fn new_atom(self, s: &str) -> Atom<'q> {
+        self.new_atom_len(s.as_bytes())
+    }
+
+    #[inline]
+    pub fn dup_atom(self, atom: Atom<'q>) -> Atom<'q> {
+        let atom = unsafe { ffi::JS_DupAtom(self.as_ptr(), atom.as_js_atom()) };
+        unsafe { Atom::from_raw(atom, self) }
+    }
+
+    #[inline]
+    pub fn free_atom(self, atom: Atom<'q>) {
+        unsafe { ffi::JS_FreeAtom(self.as_ptr(), atom.as_js_atom()) };
+    }
+
+    #[inline]
+    pub fn atom_to_value(self, atom: Atom<'q>) -> Value<'q> {
+        let v = unsafe { ffi::JS_AtomToValue(self.as_ptr(), atom.as_js_atom()) };
+        unsafe { Value::from_raw(v, self) }
+    }
+
+    #[inline]
+    pub fn atom_to_string(self, atom: Atom<'q>) -> Value<'q> {
+        let v = unsafe { ffi::JS_AtomToString(self.as_ptr(), atom.as_js_atom()) };
+        unsafe { Value::from_raw(v, self) }
+    }
+
+    #[inline]
+    pub fn value_to_atom(self, v: Value<'q>) -> Atom<'q> {
+        let atom = unsafe { ffi::JS_ValueToAtom(self.as_ptr(), v.as_js_value()) };
+        unsafe { Atom::from_raw(atom, self) }
     }
 
     // object

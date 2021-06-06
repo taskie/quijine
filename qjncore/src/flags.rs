@@ -31,3 +31,15 @@ bitflags! {
         const EXT = 0b0001;
     }
 }
+
+bitflags! {
+    pub struct GPNFlags: u32 {
+        const STRING_MASK = ffi::JS_GPN_STRING_MASK;
+        const SYMBOL_MASK = ffi::JS_GPN_SYMBOL_MASK;
+        const PRIVATE_MASK = ffi::JS_GPN_PRIVATE_MASK;
+        /// only include the enumerable properties
+        const ENUM_ONLY = ffi::JS_GPN_ENUM_ONLY;
+        /// set the JSPropertyEnum.is_enumerable field
+        const SET_ENUM = ffi::JS_GPN_SET_ENUM;
+    }
+}

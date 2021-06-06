@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::{context::Context, data::Data, error::Result, Error, ErrorKind};
+use crate::{atom::Atom, context::Context, data::Data, error::Result, Error, ErrorKind};
 
 pub trait AsData<'q> {
     fn as_data(&self) -> &Data<'q>;
@@ -141,3 +141,13 @@ impl_into_qj_multi_for_tuple! { for 1 => (0 => T0) }
 impl_into_qj_multi_for_tuple! { for 2 => (0 => T0, 1 => T1) }
 impl_into_qj_multi_for_tuple! { for 3 => (0 => T0, 1 => T1, 2 => T2) }
 impl_into_qj_multi_for_tuple! { for 4 => (0 => T0, 1 => T1, 2 => T2, 3 => T4) }
+
+pub trait IntoQjAtom<'q> {
+    fn into_qj_atom(self, ctx: Context<'q>) -> Result<Atom<'q>>;
+}
+
+impl<'q> IntoQjAtom<'q> for Atom<'q> {
+    fn into_qj_atom(self, _ctx: Context<'q>) -> Result<Atom<'q>> {
+        Ok(self)
+    }
+}

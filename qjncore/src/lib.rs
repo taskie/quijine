@@ -16,7 +16,7 @@ mod value;
 pub mod macros;
 pub mod raw;
 
-pub use atom::Atom;
+pub use atom::{Atom, PropertyEnum};
 pub use class::{ClassDef, ClassId};
 pub use context::Context;
 pub use convert::{
@@ -24,7 +24,7 @@ pub use convert::{
     AsValue,
 };
 pub use enums::ValueTag;
-pub use flags::EvalFlags;
+pub use flags::{EvalFlags, GPNFlags};
 pub use function::{convert_function_arguments, convert_function_result, CFunctionListEntry};
 pub use runtime::Runtime;
 pub use string::CString;

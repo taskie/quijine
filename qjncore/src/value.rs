@@ -1,13 +1,15 @@
 use crate::{
-    atom::Atom,
+    atom::{Atom, PropertyEnum},
     class::ClassId,
     context::Context,
     convert::{AsJsAtom, AsJsClassId, AsJsContextPointer, AsJsValue},
     enums::ValueTag,
     ffi,
+    flags::GPNFlags,
     marker::Covariant,
+    runtime::Runtime,
     string::CString as QcCString,
-    util, Runtime,
+    util,
 };
 use log::trace;
 use std::{
@@ -16,6 +18,7 @@ use std::{
     marker::PhantomData,
     mem::{size_of, transmute},
     os::raw::c_int,
+    ptr::null_mut,
     slice,
 };
 
@@ -228,11 +231,21 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn set_property<K, V>(self, ctx: Context<'q>, prop: Atom<'q>, val: V) -> Option<bool>
+    pub fn set_property<V>(self, ctx: Context<'q>, prop: Atom<'q>, val: V) -> Option<bool>
     where
         V: AsJsValue<'q>,
     {
         let ret = unsafe { ffi::JS_SetProperty(ctx.as_ptr(), self.0, prop.as_js_atom(), val.as_js_value()) };
+        if ret == -1 {
+            None
+        } else {
+            Some(ret != 0)
+        }
+    }
+
+    #[inline]
+    pub fn has_property(self, ctx: Context<'q>, prop: Atom<'q>) -> Option<bool> {
+        let ret = unsafe { ffi::JS_HasProperty(ctx.as_ptr(), self.0, prop.as_js_atom()) };
         if ret == -1 {
             None
         } else {
@@ -252,6 +265,33 @@ impl<'q> Value<'q> {
         } else {
             Some(ret != 0)
         }
+    }
+
+    pub fn own_property_names(self, ctx: Context<'q>, flags: GPNFlags) -> Option<Vec<PropertyEnum<'q>>> {
+        let mut ptab: *mut ffi::JSPropertyEnum = null_mut();
+        let mut plen: u32 = 0;
+        let ret = unsafe {
+            ffi::JS_GetOwnPropertyNames(
+                ctx.as_ptr(),
+                &mut ptab,
+                &mut plen,
+                self.as_js_value(),
+                flags.bits() as c_int,
+            )
+        };
+        if ret == -1 {
+            return None;
+        }
+        let enums = unsafe { std::slice::from_raw_parts(ptab, plen as usize) };
+        let ret = enums
+            .iter()
+            .map(|v| unsafe { PropertyEnum::from_raw(*v, ctx) })
+            .collect();
+        // see js_free_prop_enum
+        unsafe {
+            ffi::js_free(ctx.as_ptr(), ptab as *mut c_void);
+        }
+        Some(ret)
     }
 
     pub fn set_prototype<V>(self, ctx: Context<'q>, proto_val: V) -> Option<bool>

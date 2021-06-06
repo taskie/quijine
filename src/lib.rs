@@ -1,3 +1,4 @@
+mod atom;
 mod class;
 mod context;
 mod convert;
@@ -11,8 +12,9 @@ mod util;
 #[macro_use]
 pub mod macros;
 
-pub use qjncore::EvalFlags;
+pub use qjncore::{EvalFlags, GPNFlags};
 
+pub use atom::{Atom, PropertyEnum};
 pub use class::{Class, ClassMethods};
 pub use context::{Context, ContextScope};
 pub use data::Data;
