@@ -6,7 +6,7 @@ use std::cell::RefCell;
 #[test]
 fn example_call_js_func_from_rust() -> Result<()> {
     quijine::context(|ctx| {
-        let _ = ctx.eval(
+        ctx.eval(
             "function foo(x, y) { return x + y; }",
             "<input>",
             EvalFlags::TYPE_GLOBAL,

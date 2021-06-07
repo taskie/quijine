@@ -71,12 +71,6 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn eval_into_void(self, code: &str, filename: &str, eval_flags: EvalFlags) -> Result<()> {
-        self.eval(code, filename, eval_flags)?;
-        Ok(())
-    }
-
-    #[inline]
     pub fn eval_function(self, func_obj: Data<'q>) -> Result<Data<'q>> {
         Data::dup(&func_obj);
         unsafe { self.wrap_result(self.0.eval_function(*func_obj.as_raw())) }

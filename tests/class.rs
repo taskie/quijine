@@ -170,7 +170,7 @@ fn new_object_class_arc() -> Result<()> {
             global.set("s2", s2.clone())?;
             let b: bool = ctx.eval_into("s2.name() === 'foo'", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert!(b);
-            ctx.eval_into_void("s2.setName('bar')", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            ctx.eval("s2.setName('bar')", "<input>", EvalFlags::TYPE_GLOBAL)?;
         }
         {
             let ctxs = rt.new_context_scope();
@@ -180,7 +180,7 @@ fn new_object_class_arc() -> Result<()> {
             global.set("s2", s2.clone())?;
             let b: bool = ctx.eval_into("s2.name() === 'bar'", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert!(b);
-            ctx.eval_into_void("s2.move(1, -1)", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            ctx.eval("s2.move(1, -1)", "<input>", EvalFlags::TYPE_GLOBAL)?;
         }
         Ok(())
     })?;
