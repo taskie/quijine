@@ -120,7 +120,8 @@ unsafe impl Send for RuntimeScope {}
 impl Drop for RuntimeScope {
     fn drop(&mut self) {
         unsafe {
-            Box::from_raw((self.0).0.opaque() as *mut RuntimeOpaque);
+            // opaque must be bound until values in the runtime will be freed
+            let _opaque = Box::from_raw((self.0).0.opaque() as *mut RuntimeOpaque);
             qc::Runtime::free(self.0.into())
         }
     }

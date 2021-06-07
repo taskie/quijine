@@ -12,7 +12,7 @@ fn example_call_js_func_from_rust() -> Result<()> {
             EvalFlags::TYPE_GLOBAL,
         )?;
         let global = ctx.global_object()?;
-        let foo = global.get::<_, Object>("foo")?;
+        let foo: Object = global.get("foo")?;
         let result: i32 = ctx.call_into(foo, global, (5, 3))?;
         assert_eq!(8, result, "call foo (JS) from Rust");
         Ok(())
