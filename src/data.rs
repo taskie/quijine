@@ -1,6 +1,6 @@
 use crate::{
     atom::{Atom, PropertyEnum},
-    class::{Class, ClassObjectOpaque},
+    class::Class,
     context::Context,
     convert::{AsData, FromQj, IntoQj, IntoQjAtom},
     error::{Error, ErrorKind, Result},
@@ -283,35 +283,32 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    unsafe fn opaque_internal<C: Class + 'static>(&self) -> Option<&mut ClassObjectOpaque<C>> {
+    fn opaque_internal<C: Class + 'static>(&self) -> Option<&mut C> {
         let rt = Runtime::from(self.context.runtime());
         let clz = rt.class_id::<C>()?;
-        let p = self.value.opaque(clz) as *mut ClassObjectOpaque<C>;
+        let p = self.value.opaque(clz) as *mut C;
         if p.is_null() {
             return None;
         }
-        Some(&mut *p)
+        Some(unsafe { &mut *p })
     }
 
-    /// # Safety
-    /// opaque pointer must be *mut ClassObjectOpaque<C>.
     #[inline]
-    pub unsafe fn opaque<C: Class + 'static>(&self) -> Option<&ClassObjectOpaque<C>> {
+    pub fn opaque<C: Class + 'static>(&self) -> Option<&C> {
         self.opaque_internal().map(|v| &*v)
     }
 
-    /// # Safety
-    /// opaque pointer must be *mut ClassObjectOpaque<C>.
     #[inline]
-    pub unsafe fn opaque_mut<C: Class + 'static>(&mut self) -> Option<&mut ClassObjectOpaque<C>> {
+    pub fn opaque_mut<C: Class + 'static>(&mut self) -> Option<&mut C> {
         self.opaque_internal()
     }
 
     #[inline]
-    pub(crate) fn set_opaque<C: Class + 'static>(&mut self, v: ClassObjectOpaque<C>) {
+    pub(crate) fn set_opaque<C: Class + 'static>(&mut self, v: C) {
         let mut rt = Runtime::from(self.context.runtime());
         let _clz = rt.get_or_register_class_id::<C>();
         let v = Box::new(v);
+        // this Box will be dropped in class::finalize.
         let p = Box::into_raw(v);
         self.value.set_opaque(p as *mut c_void);
     }

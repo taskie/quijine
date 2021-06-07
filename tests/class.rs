@@ -2,9 +2,17 @@ use std::{cell::RefCell, sync::Arc};
 
 use quijine::{Class, ClassMethods, Context, Data, EvalFlags, Result};
 
+#[derive(Clone, Debug)]
 struct S1 {
     name: String,
     pos: (i32, i32),
+}
+
+impl S1 {
+    fn move_(&mut self, x: i32, y: i32) {
+        self.pos.0 += x;
+        self.pos.1 += y;
+    }
 }
 
 impl Class for S1 {
@@ -14,7 +22,7 @@ impl Class for S1 {
 
     fn add_methods<'q, T: ClassMethods<'q, Self>>(methods: &mut T) -> Result<()> {
         methods.add_method("name", |_ctx, t, _this: Data, _args: ()| Ok(t.name.clone()))?;
-        methods.add_method("setName", |ctx, t, _this: Data, (name,): (String,)| {
+        methods.add_method_mut("setName", |ctx, t, _this: Data, (name,): (String,)| {
             t.name = name;
             Ok(ctx.undefined())
         })?;
@@ -24,9 +32,8 @@ impl Class for S1 {
             obj.set("y", t.pos.1)?;
             Ok(obj)
         })?;
-        methods.add_method("move", |ctx, t, _this: Data, args: (i32, i32)| {
-            t.pos.0 += args.0;
-            t.pos.1 += args.1;
+        methods.add_method_mut("move", |ctx, t, _this: Data, (x, y): (i32, i32)| {
+            t.move_(x, y);
             Ok(ctx.undefined())
         })?;
         Ok(())
@@ -41,7 +48,7 @@ fn new_object_class() -> Result<()> {
             "S1",
             ctx.new_function_with(
                 |ctx, _this: Data, (name,): (String,)| {
-                    let obj = ctx.new_object_with_box(Box::new(S1 { name, pos: (0, 0) }))?;
+                    let obj = ctx.new_object_with_opaque(S1 { name, pos: (0, 0) })?;
                     Ok(obj)
                 },
                 "S1",
@@ -62,12 +69,11 @@ fn new_object_class() -> Result<()> {
         assert_eq!(2, x);
         let y: i32 = ctx.eval_into("s1.pos().y", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!(3, y);
-        unsafe { s1.opaque_mut::<S1>() }.unwrap().with_mut(|s1| {
-            assert_eq!("bar", s1.name);
-            assert_eq!((2, 3), s1.pos);
-            s1.name = "baz".to_owned();
-            s1.pos = (4, 5);
-        });
+        let s1 = s1.opaque_mut::<S1>().unwrap();
+        assert_eq!("bar", s1.name);
+        assert_eq!((2, 3), s1.pos);
+        s1.name = "baz".to_owned();
+        s1.pos = (4, 5);
         let name: String = ctx.eval_into("s1.name()", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("baz", name);
         let x: i32 = ctx.eval_into("s1.pos().x", "<input>", EvalFlags::TYPE_GLOBAL)?;
@@ -86,7 +92,7 @@ fn multiple_context() -> Result<()> {
             "S1",
             ctx.new_function_with(
                 |ctx, _this: Data, (name,): (String,)| {
-                    let obj = ctx.new_object_with_box(Box::new(S1 { name, pos: (0, 0) }))?;
+                    let obj = ctx.new_object_with_opaque(S1 { name, pos: (0, 0) })?;
                     Ok(obj)
                 },
                 "S1",
@@ -118,37 +124,69 @@ fn multiple_context() -> Result<()> {
     })
 }
 
+#[derive(Clone, Debug)]
+struct S2(Arc<RefCell<S1>>);
+
+impl Class for S2 {
+    fn name() -> &'static str {
+        "S2"
+    }
+
+    fn add_methods<'q, T: ClassMethods<'q, Self>>(methods: &mut T) -> Result<()> {
+        methods.add_method("name", |_ctx, t, _this: Data, _args: ()| Ok(t.0.borrow().name.clone()))?;
+        methods.add_method("setName", |ctx, t, _this: Data, (name,): (String,)| {
+            let mut t = t.0.borrow_mut();
+            t.name = name;
+            Ok(ctx.undefined())
+        })?;
+        methods.add_method("pos", |ctx, t, _this: Data, _args: ()| {
+            let t = t.0.borrow();
+            let obj = ctx.new_object()?;
+            obj.set("x", t.pos.0)?;
+            obj.set("y", t.pos.1)?;
+            Ok(obj)
+        })?;
+        methods.add_method_mut("move", |ctx, t, _this: Data, (x, y): (i32, i32)| {
+            let mut t = t.0.borrow_mut();
+            t.move_(x, y);
+            Ok(ctx.undefined())
+        })?;
+        Ok(())
+    }
+}
+
 #[test]
 fn new_object_class_arc() -> Result<()> {
-    let s1_arc = Arc::new(RefCell::new(S1 {
+    let s2 = S2(Arc::new(RefCell::new(S1 {
         name: "foo".to_owned(),
         pos: (0, 0),
-    }));
+    })));
     quijine::run(|rt| {
         {
             let ctxs = rt.new_context_scope();
             let ctx = ctxs.get();
             let global = ctx.global_object()?;
-            let s1 = ctx.new_object_with_arc(s1_arc.clone())?;
-            global.set("s1", s1.clone())?;
-            let b: bool = ctx.eval_into("s1.name() === 'foo'", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let s2 = ctx.new_object_with_opaque(s2.clone())?;
+            global.set("s2", s2.clone())?;
+            let b: bool = ctx.eval_into("s2.name() === 'foo'", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert!(b);
-            ctx.eval_into_void("s1.setName('bar')", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            ctx.eval_into_void("s2.setName('bar')", "<input>", EvalFlags::TYPE_GLOBAL)?;
         }
         {
             let ctxs = rt.new_context_scope();
             let ctx = ctxs.get();
             let global = ctx.global_object()?;
-            let s1 = ctx.new_object_with_arc(s1_arc.clone())?;
-            global.set("s1", s1.clone())?;
-            let b: bool = ctx.eval_into("s1.name() === 'bar'", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let s2 = ctx.new_object_with_opaque(s2.clone())?;
+            global.set("s2", s2.clone())?;
+            let b: bool = ctx.eval_into("s2.name() === 'bar'", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert!(b);
-            ctx.eval_into_void("s1.move(1, -1)", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            ctx.eval_into_void("s2.move(1, -1)", "<input>", EvalFlags::TYPE_GLOBAL)?;
         }
         Ok(())
     })?;
-    assert_eq!(1, Arc::strong_count(&s1_arc));
-    assert_eq!("bar", s1_arc.borrow().name);
-    assert_eq!((1, -1), s1_arc.borrow().pos);
+    assert_eq!(1, Arc::strong_count(&s2.0));
+    let s2 = s2.0.borrow();
+    assert_eq!("bar", s2.name);
+    assert_eq!((1, -1), s2.pos);
     Ok(())
 }

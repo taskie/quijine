@@ -1,6 +1,6 @@
 use crate::{
     atom::Atom,
-    class::{register_class, Class, ClassObjectOpaque},
+    class::{register_class, Class},
     convert::{AsData, FromQj, FromQjMulti, IntoQj, IntoQjMulti},
     error::{ErrorValue, Result},
     runtime::Runtime,
@@ -8,7 +8,7 @@ use crate::{
     Data, Error, ErrorKind, EvalFlags, RuntimeScope,
 };
 use qjncore::{self as qc, raw, AsJsValue};
-use std::{any::TypeId, cell::RefCell, collections::HashSet, ffi::c_void, fmt, os::raw::c_int, rc::Rc, sync::Arc};
+use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int};
 
 pub struct ContextOpaque {
     registered_classes: HashSet<TypeId>,
@@ -135,23 +135,9 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn new_object_with_box<C: Class + 'static>(self, v: Box<C>) -> Result<Object<'q>> {
+    pub fn new_object_with_opaque<C: Class + 'static>(self, v: C) -> Result<Object<'q>> {
         let mut obj = self.new_object_class::<C>()?;
-        obj.set_opaque(ClassObjectOpaque::with_box(v));
-        Ok(obj)
-    }
-
-    #[inline]
-    pub fn new_object_with_rc<C: Class + 'static>(self, v: Rc<RefCell<C>>) -> Result<Object<'q>> {
-        let mut obj = self.new_object_class::<C>()?;
-        obj.set_opaque(ClassObjectOpaque::with_rc(v));
-        Ok(obj)
-    }
-
-    #[inline]
-    pub fn new_object_with_arc<C: Class + 'static>(self, v: Arc<RefCell<C>>) -> Result<Object<'q>> {
-        let mut obj = self.new_object_class::<C>()?;
-        obj.set_opaque(ClassObjectOpaque::with_arc(v));
+        obj.set_opaque(v);
         Ok(obj)
     }
 
