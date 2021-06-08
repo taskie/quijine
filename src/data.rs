@@ -124,6 +124,11 @@ impl<'q> Data<'q> {
         self.value.is_uninitialized()
     }
 
+    #[inline]
+    pub fn is_array(&self) -> bool {
+        self.value.is_array(self.context)
+    }
+
     // conversion
 
     #[inline]

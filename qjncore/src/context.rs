@@ -249,6 +249,11 @@ impl<'q> Context<'q> {
         unsafe { Value::from_raw(ffi::JS_NewObject(self.as_ptr()), self) }
     }
 
+    #[inline]
+    pub fn new_array(self) -> Value<'q> {
+        unsafe { Value::from_raw(ffi::JS_NewArray(self.as_ptr()), self) }
+    }
+
     // call
 
     #[inline]

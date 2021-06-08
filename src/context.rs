@@ -135,6 +135,11 @@ impl<'q> Context<'q> {
         Ok(obj)
     }
 
+    #[inline]
+    pub fn new_array(self) -> Result<Object<'q>> {
+        unsafe { self.wrap_result(self.0.new_array()) }
+    }
+
     unsafe fn new_value<T: AsData<'q>>(self, v: qc::Value<'q>) -> T {
         Data::from_raw_parts(v, self.0).into_unchecked()
     }
