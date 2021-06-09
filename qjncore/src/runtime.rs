@@ -1,11 +1,16 @@
 use crate::{
     class::{ClassDef, ClassId},
     convert::{AsJsClassId, AsJsRuntimePointer, AsJsValue},
-    ffi,
+    ffi::{self, c_size_t},
     marker::Covariant,
     value::Value,
 };
-use std::{ffi::c_void, fmt, marker::PhantomData, ptr::NonNull};
+use std::{
+    ffi::{c_void, CStr},
+    fmt,
+    marker::PhantomData,
+    ptr::NonNull,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -35,6 +40,26 @@ impl<'q> Runtime<'q> {
     }
 
     // basic
+
+    #[inline]
+    pub fn set_runtime_info(self, info: &'q CStr) {
+        unsafe { ffi::JS_SetRuntimeInfo(self.0.as_ptr(), info.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn set_memory_limit(self, memory_limit: usize) {
+        unsafe { ffi::JS_SetMemoryLimit(self.0.as_ptr(), memory_limit as c_size_t) }
+    }
+
+    #[inline]
+    pub fn set_gc_threshold(self, gc_threshold: usize) {
+        unsafe { ffi::JS_SetGCThreshold(self.0.as_ptr(), gc_threshold as c_size_t) }
+    }
+
+    #[inline]
+    pub fn set_max_stack_size(self, stack_size: usize) {
+        unsafe { ffi::JS_SetMaxStackSize(self.0.as_ptr(), stack_size as c_size_t) }
+    }
 
     #[inline]
     pub fn opaque(self) -> *mut c_void {

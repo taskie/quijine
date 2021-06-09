@@ -31,6 +31,21 @@ impl<'r> Runtime<'r> {
     }
 
     #[inline]
+    pub fn set_memory_limit(self, memory_limit: usize) {
+        self.0.set_memory_limit(memory_limit);
+    }
+
+    #[inline]
+    pub fn set_gc_threshold(self, gc_threshold: usize) {
+        self.0.set_gc_threshold(gc_threshold);
+    }
+
+    #[inline]
+    pub fn set_max_stack_size(self, stack_size: usize) {
+        self.0.set_max_stack_size(stack_size)
+    }
+
+    #[inline]
     pub fn run_gc(self) {
         self.0.run_gc();
     }
