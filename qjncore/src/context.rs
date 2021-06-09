@@ -39,6 +39,11 @@ impl<'q> Context<'q> {
         unsafe { Self::from_raw(ffi::JS_NewContext(rt.as_ptr())) }
     }
 
+    #[inline]
+    pub fn new_raw(rt: Runtime<'q>) -> Context<'q> {
+        unsafe { Self::from_raw(ffi::JS_NewContextRaw(rt.as_ptr())) }
+    }
+
     /// # Safety
     /// You must free a context only once.
     #[inline]
@@ -423,6 +428,88 @@ impl<'q> Context<'q> {
             );
             Value::from_raw(value, self)
         }
+    }
+
+    // intrinsics
+
+    #[inline]
+    pub fn add_intrinsic_base_objects(self) {
+        unsafe { ffi::JS_AddIntrinsicBaseObjects(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_date(self) {
+        unsafe { ffi::JS_AddIntrinsicDate(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_eval(self) {
+        unsafe { ffi::JS_AddIntrinsicEval(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_string_normalize(self) {
+        unsafe { ffi::JS_AddIntrinsicStringNormalize(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_reg_exp_compiler(self) {
+        unsafe { ffi::JS_AddIntrinsicRegExpCompiler(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_reg_exp(self) {
+        unsafe { ffi::JS_AddIntrinsicRegExp(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_json(self) {
+        unsafe { ffi::JS_AddIntrinsicJSON(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_proxy(self) {
+        unsafe { ffi::JS_AddIntrinsicProxy(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_map_set(self) {
+        unsafe { ffi::JS_AddIntrinsicMapSet(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_typed_arrays(self) {
+        unsafe { ffi::JS_AddIntrinsicTypedArrays(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_promise(self) {
+        unsafe { ffi::JS_AddIntrinsicPromise(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_big_int(self) {
+        unsafe { ffi::JS_AddIntrinsicBigInt(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_big_float(self) {
+        unsafe { ffi::JS_AddIntrinsicBigFloat(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_big_decimal(self) {
+        unsafe { ffi::JS_AddIntrinsicBigDecimal(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_intrinsic_operators(self) {
+        unsafe { ffi::JS_AddIntrinsicOperators(self.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn add_enable_bigint_ext(self, enable: bool) {
+        unsafe { ffi::JS_EnableBignumExt(self.as_ptr(), enable as c_int) }
     }
 }
 

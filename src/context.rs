@@ -24,6 +24,11 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
+    pub(crate) fn as_raw(self) -> qc::Context<'q> {
+        self.0
+    }
+
+    #[inline]
     pub fn runtime(self) -> Runtime<'q> {
         Runtime::from(self.0.runtime())
     }
@@ -340,13 +345,25 @@ impl<'q> Context<'q> {
 pub struct ContextScope<'r>(Context<'r>);
 
 impl<'r> ContextScope<'r> {
-    pub fn new(rt: Runtime) -> ContextScope {
-        let ctx = qc::Context::new(rt.into());
+    fn new_internal(rt: Runtime, raw: bool) -> ContextScope {
+        let ctx = if raw {
+            qc::Context::new_raw(rt.into())
+        } else {
+            qc::Context::new(rt.into())
+        };
         let opaque = Box::new(ContextOpaque {
             registered_classes: HashSet::new(),
         });
         ctx.set_opaque(Box::into_raw(opaque) as *mut c_void);
         ContextScope(Context(ctx))
+    }
+
+    pub fn new(rt: Runtime) -> ContextScope {
+        Self::new_internal(rt, false)
+    }
+
+    pub fn new_raw(rt: Runtime) -> ContextScope {
+        Self::new_internal(rt, true)
     }
 
     pub fn new_with_scope(rts: &RuntimeScope) -> ContextScope {
