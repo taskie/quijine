@@ -199,12 +199,29 @@ impl<'q> Value<'q> {
         }
     }
 
-    // is * (object)
+    // function
 
     #[inline]
     pub fn is_function(self, ctx: Context<'q>) -> bool {
         unsafe { ffi::JS_IsFunction(ctx.as_ptr(), self.0) != 0 }
     }
+
+    #[inline]
+    pub fn is_constructor(self, ctx: Context<'q>) -> bool {
+        unsafe { ffi::JS_IsConstructor(ctx.as_ptr(), self.0) != 0 }
+    }
+
+    #[inline]
+    pub fn set_constructor(self, ctx: Context<'q>, proto: Value) {
+        unsafe { ffi::JS_SetConstructor(ctx.as_ptr(), self.0, proto.0) }
+    }
+
+    #[inline]
+    pub fn set_constructor_bit(self, ctx: Context<'q>, val: bool) -> bool {
+        unsafe { ffi::JS_SetConstructorBit(ctx.as_ptr(), self.0, val as c_int) != 0 }
+    }
+
+    // array
 
     #[inline]
     pub fn is_array(self, ctx: Context<'q>) -> bool {

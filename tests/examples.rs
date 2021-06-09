@@ -95,10 +95,11 @@ fn example_use_rust_struct_from_js() -> Result<()> {
             "Random",
             0,
         )?;
+        random.set_constructor_bit(true)?;
         ctx.global_object()?.set("Random", random)?;
         let sum: i32 = ctx.eval_into(
             r#"
-                const rand = Random();
+                const rand = new Random();
                 let sum = 0;
                 for (let i = 0; i < 10; ++i) {
                     sum += rand.genU16();

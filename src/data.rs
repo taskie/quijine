@@ -280,6 +280,23 @@ impl<'q> Data<'q> {
         }
     }
 
+    // function
+
+    #[inline]
+    pub fn is_function(&self) -> bool {
+        self.value.is_function(self.context)
+    }
+
+    #[inline]
+    pub fn is_constructor(&self) -> bool {
+        self.value.is_constructor(self.context)
+    }
+
+    #[inline]
+    pub fn set_constructor_bit(&self, val: bool) -> Result<bool> {
+        Ok(self.value.set_constructor_bit(self.context, val))
+    }
+
     // class
 
     #[inline]

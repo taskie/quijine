@@ -281,7 +281,7 @@ impl<'q> Context<'q> {
             let cb = self.0.new_array_buffer_copy_from_sized(func);
             let _buf: Object = self.wrap_result(cb)?;
             log::debug!("new c function data");
-            let cfd = self.0.new_c_function_data(Some(call::<R>), length, 0, vec![cb]);
+            let cfd = self.0.new_c_function_data(Some(call::<R>), length, 0, &[cb]);
             self.wrap_result(cfd)
         }
     }

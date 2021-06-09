@@ -2,6 +2,7 @@ use crate::{
     atom::Atom,
     class::ClassId,
     convert::{AsJsCString, AsJsClassId, AsJsContextPointer, AsJsRuntimePointer, AsJsValue},
+    enums::CFunctionEnum,
     ffi::{self, c_size_t},
     flags::{EvalFlags, ParseJSONFlags},
     function::{convert_function_arguments, convert_function_result},
@@ -372,6 +373,7 @@ impl<'q> Context<'q> {
 
     // callback
 
+    #[inline]
     pub fn new_function<F>(self, func: F, length: i32) -> Value<'q>
     where
         F: Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q> + Send + 'q,
@@ -401,9 +403,10 @@ impl<'q> Context<'q> {
             return cb;
         }
         log::trace!("new c function data");
-        self.new_c_function_data(Some(call), length, 0, vec![cb])
+        self.new_c_function_data(Some(call), length, 0, &[cb])
     }
 
+    #[inline]
     pub fn new_c_function(self, func: ffi::JSCFunction, name: &str, length: i32) -> Value<'q> {
         let c_name = CString::new(name).unwrap();
         unsafe {
@@ -412,11 +415,61 @@ impl<'q> Context<'q> {
         }
     }
 
-    pub fn new_c_function_data<D>(self, func: ffi::JSCFunctionData, length: i32, magic: i32, data: D) -> Value<'q>
-    where
-        D: Into<Vec<Value<'q>>>,
-    {
-        let mut js_data: Vec<_> = data.into().into_iter().map(|v| v.as_js_value()).collect();
+    #[inline]
+    pub fn new_c_function2(
+        self,
+        func: ffi::JSCFunction,
+        name: &str,
+        length: i32,
+        cproto: CFunctionEnum,
+        magic: i32,
+    ) -> Value<'q> {
+        let c_name = CString::new(name).unwrap();
+        unsafe {
+            let value = ffi::JS_NewCFunction2(
+                self.as_ptr(),
+                func,
+                c_name.as_ptr(),
+                length,
+                cproto as u32,
+                magic as c_int,
+            );
+            Value::from_raw(value, self)
+        }
+    }
+
+    #[inline]
+    pub fn new_c_function_magic(
+        self,
+        func: ffi::JSCFunctionMagic,
+        name: &str,
+        length: i32,
+        cproto: CFunctionEnum,
+        magic: i32,
+    ) -> Value<'q> {
+        let c_name = CString::new(name).unwrap();
+        unsafe {
+            let value = ffi::JS_NewCFunctionMagic(
+                self.as_ptr(),
+                func,
+                c_name.as_ptr(),
+                length,
+                cproto as u32,
+                magic as c_int,
+            );
+            Value::from_raw(value, self)
+        }
+    }
+
+    #[inline]
+    pub fn new_c_function_data(
+        self,
+        func: ffi::JSCFunctionData,
+        length: i32,
+        magic: i32,
+        data: &[Value<'q>],
+    ) -> Value<'q> {
+        let mut js_data: Vec<_> = data.iter().map(|v| v.as_js_value()).collect();
         unsafe {
             let value = ffi::JS_NewCFunctionData(
                 self.as_ptr(),
