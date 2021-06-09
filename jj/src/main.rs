@@ -1,10 +1,15 @@
 use anyhow::Result;
+use colored_json::ColoredFormatter;
 use quijine::{self, Context, Data, EvalFlags, ExternalResult, FunctionBytecode, Result as QjResult};
-use serde_json::Value;
+use serde::Serialize;
+use serde_json::{
+    ser::{CompactFormatter, PrettyFormatter},
+    Value,
+};
 use serde_quijine::to_qj;
 use std::{
     fs::File,
-    io::{self, BufReader, Read},
+    io::{self, BufReader, BufWriter, Read, Write},
     process::exit,
     sync::Arc,
 };
@@ -24,8 +29,14 @@ pub enum JjError {
 #[structopt(long_version(option_env!("LONG_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))))]
 #[structopt(setting(clap::AppSettings::ColoredHelp))]
 pub struct Opt {
+    #[structopt(short = "C", long)]
+    color_output: bool,
+
     #[structopt(short = "c", long)]
     compact_output: bool,
+
+    #[structopt(short = "M", long, overrides_with = "color-output")]
+    monochrome_output: bool,
 
     #[structopt(short = "n", long)]
     silent: bool,
@@ -33,41 +44,72 @@ pub struct Opt {
     #[structopt(short = "r", long)]
     raw_output: bool,
 
+    #[structopt(long)]
+    unbuffered: bool,
+
     #[structopt(name = "SCRIPT")]
-    script: String,
+    script: Option<String>,
 
     #[structopt(name = "FILE")]
     files: Vec<String>,
 }
 
-type Handler<'q> = Box<dyn Fn(Context<'q>, Data, &[Data]) -> QjResult<Data<'q>> + Send + 'static>;
+impl Opt {
+    fn is_colored(&self) -> bool {
+        self.color_output || (!self.monochrome_output && atty::is(atty::Stream::Stdout))
+    }
+}
 
-fn define_print<'q>(opt: Arc<Opt>) -> Handler<'q> {
-    Box::new(move |ctx: Context<'q>, _this, args| {
-        let ret = Ok(ctx.undefined().into());
-        let arg = args.get(0);
-        let arg = match arg {
-            Some(v) => v,
-            None => return ret,
-        };
-        if arg.is_null() || arg.is_undefined() {
+type Handler<'q> = Box<dyn Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> QjResult<Data<'q>> + Send + 'static>;
+
+fn print<'q, 'a, 'b>(opt: &'a Opt, ctx: Context<'q>, _this: Data<'q>, args: &'b [Data<'q>]) -> QjResult<Data<'q>> {
+    let ret = Ok(ctx.undefined().into());
+    let arg = args.get(0);
+    let arg = match arg {
+        Some(v) => v,
+        None => return ret,
+    };
+    if arg.is_null() || arg.is_undefined() {
+        return ret;
+    }
+    if opt.raw_output {
+        if let Ok(s) = arg.to_string() {
+            println!("{}", s);
             return ret;
         }
-        if opt.raw_output {
-            if let Ok(s) = arg.to_string() {
-                println!("{}", s);
-                return ret;
-            }
-        }
-        let space: Data = if opt.compact_output {
-            ctx.undefined().into()
+    }
+    let stdout = io::stdout();
+    let stdout = stdout.lock();
+    let mut buf = BufWriter::new(stdout);
+    let val: Value = serde_quijine::from_qj(arg.clone()).map_err_to_qj()?;
+    #[allow(clippy::collapsible_else_if)]
+    if opt.is_colored() {
+        if opt.compact_output {
+            let mut ser = serde_json::Serializer::with_formatter(&mut buf, ColoredFormatter::new(CompactFormatter));
+            val.serialize(&mut ser).map_err_to_qj()?;
         } else {
-            ctx.new_string("  ")?.into()
-        };
-        let v: String = ctx.json_stringify_into(arg.clone(), ctx.undefined(), space)?;
-        println!("{}", v);
-        ret
-    })
+            let mut ser =
+                serde_json::Serializer::with_formatter(&mut buf, ColoredFormatter::new(PrettyFormatter::new()));
+            val.serialize(&mut ser).map_err_to_qj()?;
+        }
+    } else {
+        if opt.compact_output {
+            let mut ser = serde_json::Serializer::with_formatter(&mut buf, CompactFormatter);
+            val.serialize(&mut ser).map_err_to_qj()?;
+        } else {
+            let mut ser = serde_json::Serializer::with_formatter(&mut buf, PrettyFormatter::new());
+            val.serialize(&mut ser).map_err_to_qj()?;
+        }
+    }
+    writeln!(buf).map_err_to_qj()?;
+    if opt.unbuffered || atty::is(atty::Stream::Stdout) {
+        buf.flush().map_err_to_qj()?;
+    }
+    ret
+}
+
+fn define_print<'q>(opt: Arc<Opt>) -> Handler<'q> {
+    Box::new(move |ctx: Context<'q>, this, args| print(&opt, ctx, this, args))
 }
 
 fn process<'q, R: Read>(
@@ -80,6 +122,7 @@ fn process<'q, R: Read>(
     let de = serde_json::Deserializer::from_reader(r);
     let stream = de.into_iter::<Value>();
     let global = ctx.global_object()?;
+    let print_obj = ctx.new_function(define_print(opt.clone()), "_P", 0)?;
     for (i, value) in stream.enumerate() {
         let value = match value {
             Ok(v) => v,
@@ -92,7 +135,7 @@ fn process<'q, R: Read>(
         global.set("_", result)?;
         global.set("_F", filename)?;
         global.set("_I", i as i32)?;
-        global.set("_P", ctx.new_function(define_print(opt.clone()), "_P", 0)?)?;
+        global.set("_P", print_obj.clone())?;
         let result = ctx.eval_function(bytecode.clone().into());
         let result = match result {
             Ok(v) => v,
@@ -102,7 +145,7 @@ fn process<'q, R: Read>(
             }
         };
         if !opt.silent {
-            define_print(opt.clone())(ctx, global.clone().into(), &[result])?;
+            print(&opt, ctx, global.clone().into(), &[result])?;
         }
     }
     Ok(())
@@ -123,9 +166,14 @@ fn process_file<'q>(opt: Arc<Opt>, ctx: Context<'q>, bytecode: FunctionBytecode<
 
 fn main() -> Result<()> {
     env_logger::init();
+    #[cfg(windows)]
+    let _enabled = colored_json::enable_ansi_support();
     let opt = Arc::new(Opt::from_args());
     quijine::context(move |ctx| {
-        let script = opt.script.as_str();
+        let script = match opt.script {
+            Some(ref s) => s.as_str(),
+            None => "_",
+        };
         // check a syntax error
         let bytecode: FunctionBytecode = ctx
             .eval_into(script, "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY)
