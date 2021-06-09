@@ -38,7 +38,8 @@ impl<'q> CString<'q> {
 
 impl Drop for CString<'_> {
     fn drop(&mut self) {
-        log::debug!("drop: {:?}", self.to_str());
+        #[cfg(feature = "debug_leak")]
+        log::trace!("drop: {:?}", self.to_str());
         unsafe { self.context.free_c_string(self.value) }
     }
 }

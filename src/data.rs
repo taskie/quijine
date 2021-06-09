@@ -10,15 +10,17 @@ use crate::{
 };
 use qc::GPNFlags;
 use qjncore as qc;
+#[cfg(feature = "debug_leak")]
+use std::sync::atomic;
 use std::{
     convert::TryInto,
     ffi::c_void,
     fmt,
     mem::{forget, transmute_copy},
     result::Result as StdResult,
-    sync::atomic,
 };
 
+#[cfg(feature = "debug_leak")]
 static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
 
 macro_rules! call_with_context {
@@ -31,15 +33,18 @@ macro_rules! call_with_context {
 pub struct Data<'q> {
     value: qc::Value<'q>,
     context: qc::Context<'q>,
+    #[cfg(feature = "debug_leak")]
     _debug_count: u16,
 }
 
 impl<'q> Data<'q> {
     pub(crate) fn from_raw_parts(value: qc::Value<'q>, context: qc::Context<'q>) -> Data<'q> {
+        #[cfg(feature = "debug_leak")]
         let count = DEBUG_GLOBAL_COUNT.fetch_add(1, atomic::Ordering::SeqCst);
         let qj = Data {
             value,
             context,
+            #[cfg(feature = "debug_leak")]
             _debug_count: count,
         };
         qj.debug_trace("from");
@@ -83,8 +88,8 @@ impl<'q> Data<'q> {
 
     #[inline]
     pub(crate) unsafe fn free(this: &Self) {
-        this.context.free_value(this.value);
         this.debug_trace("free");
+        this.context.free_value(this.value);
     }
 
     #[inline]
@@ -93,7 +98,10 @@ impl<'q> Data<'q> {
         this.debug_trace("dup");
     }
 
+    #[allow(unused_variables)]
+    #[inline]
     fn debug_trace(&self, name: &str) {
+        #[cfg(feature = "debug_leak")]
         if let Some(rc) = self.value.debug_ref_count() {
             log::trace!("{}: {:?} (rc: {})", name, self, rc);
         } else {
@@ -347,6 +355,7 @@ impl Clone for Data<'_> {
         let qj = Data {
             value: self.value,
             context: self.context,
+            #[cfg(feature = "debug_leak")]
             _debug_count: self._debug_count,
         };
         Data::dup(&qj);
@@ -355,6 +364,12 @@ impl Clone for Data<'_> {
 }
 
 impl fmt::Debug for Data<'_> {
+    #[cfg(not(feature = "debug_leak"))]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> StdResult<(), fmt::Error> {
+        f.write_str(format!("Qj({:?})", self.value).as_str())
+    }
+
+    #[cfg(feature = "debug_leak")]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> StdResult<(), fmt::Error> {
         f.write_str(format!("Qj({}, {:?})", self._debug_count, self.value).as_str())
     }
