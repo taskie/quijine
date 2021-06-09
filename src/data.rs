@@ -54,7 +54,7 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub(crate) fn context(&self) -> Context<'q> {
+    pub fn context(&self) -> Context<'q> {
         Context::from_raw(self.context)
     }
 
