@@ -1,7 +1,7 @@
+use crate::error::{Error, Result};
 use quijine::{Context, Data, Object};
 use serde::{ser, Serialize};
-
-use crate::error::{Error, Result};
+use std::convert::TryInto;
 
 pub fn to_qj<T>(context: Context, input: T) -> Result<Data>
 where
@@ -65,7 +65,13 @@ impl<'q, 'a> ser::Serializer for Serializer<'q> {
     }
 
     fn serialize_u64(self, v: u64) -> Result<Self::Ok> {
-        Ok(self.context.new_float64(v as f64).into())
+        // dirty hacking: Value of serde_json has an integer as u64
+        let i: Option<i32> = v.try_into().ok();
+        if let Some(i) = i {
+            Ok(self.context.new_int32(i).into())
+        } else {
+            Ok(self.context.new_float64(v as f64).into())
+        }
     }
 
     fn serialize_f32(self, v: f32) -> Result<Self::Ok> {
