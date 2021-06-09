@@ -180,6 +180,7 @@ dependencies = [
  "log",
  "quijine",
  "serde_json",
+ "serde_quijine",
  "structopt",
  "thiserror",
 ]

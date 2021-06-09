@@ -1,6 +1,7 @@
 use anyhow::Result;
 use quijine::{self, Context, Data, EvalFlags, ExternalResult, FunctionBytecode, Result as QjResult};
 use serde_json::Value;
+use serde_quijine::to_qj;
 use std::{
     fs::File,
     io::{self, BufReader, Read},
@@ -80,16 +81,14 @@ fn process<'q, R: Read>(
     let stream = de.into_iter::<Value>();
     let global = ctx.global_object()?;
     for (i, value) in stream.enumerate() {
-        // TODO: direct conversion
-        let json = value.and_then(|v| serde_json::to_string(&v));
-        let json = match json {
+        let value = match value {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("ParseError: {}: {}", filename, e);
                 exit(4);
             }
         };
-        let result: Data = ctx.parse_json(&json, filename)?;
+        let result: Data = to_qj(ctx, value)?;
         global.set("_", result)?;
         global.set("_F", filename)?;
         global.set("_I", i as i32)?;
