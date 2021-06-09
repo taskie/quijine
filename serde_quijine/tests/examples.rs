@@ -1,14 +1,15 @@
 use quijine::{EvalFlags, Result as QjResult};
-use serde::Serialize;
-use serde_quijine::to_qj;
+use serde::{Deserialize, Serialize};
+use serde_quijine::{from_qj, to_qj};
+
+#[derive(Serialize, Deserialize)]
+struct S1 {
+    name: String,
+    pos: (i32, i32),
+}
 
 #[test]
 fn example_ser() -> QjResult<()> {
-    #[derive(Serialize)]
-    struct S1 {
-        name: String,
-        pos: (i32, i32),
-    }
     quijine::context(|ctx| {
         let s1 = S1 {
             name: "foo".to_owned(),
@@ -29,6 +30,25 @@ fn example_ser() -> QjResult<()> {
         ctx.eval(code, "<input>", EvalFlags::TYPE_GLOBAL)?;
         let s1_json: String = ctx.json_stringify_into(s1_qj, ctx.undefined(), ctx.undefined())?;
         assert_eq!(r#"{"name":"foo","pos":[3,4]}"#, s1_json);
+        Ok(())
+    })?;
+    Ok(())
+}
+
+#[test]
+fn example_de() -> QjResult<()> {
+    quijine::context(|ctx| {
+        let code = r#"
+            const s1 = {
+                name: "foo",
+                pos: [3, 4],
+            };
+            s1;
+        "#;
+        let s1_data = ctx.eval(code, "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let s1: S1 = from_qj(s1_data)?;
+        assert_eq!("foo", s1.name);
+        assert_eq!((3, 4), s1.pos);
         Ok(())
     })?;
     Ok(())

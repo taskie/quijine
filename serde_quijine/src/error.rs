@@ -1,5 +1,5 @@
 use quijine::{Error as QjError, ErrorKind};
-use serde::ser;
+use serde::{de, ser};
 
 #[derive(Debug)]
 pub struct Error(QjError);
@@ -13,6 +13,15 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {}
 
 impl ser::Error for Error {
+    fn custom<T>(msg: T) -> Self
+    where
+        T: std::fmt::Display,
+    {
+        Error(QjError::with_str(ErrorKind::InternalError, &format!("{}", msg)))
+    }
+}
+
+impl de::Error for Error {
     fn custom<T>(msg: T) -> Self
     where
         T: std::fmt::Display,
