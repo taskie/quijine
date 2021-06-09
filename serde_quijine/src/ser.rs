@@ -16,7 +16,7 @@ pub struct Serializer<'q> {
 }
 
 impl<'q> Serializer<'q> {
-    fn new(context: Context<'q>) -> Self {
+    pub fn new(context: Context<'q>) -> Self {
         Serializer { context }
     }
 }
@@ -172,11 +172,11 @@ impl<'q, 'a> ser::Serializer for Serializer<'q> {
     }
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        Ok(MapSerializer::new(self.context.new_object()?, self.context))
+        Ok(MapSerializer::new(self.context.new_object()?))
     }
 
     fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
-        Ok(ObjectSerializer::new(self.context.new_object()?, self.context))
+        Ok(ObjectSerializer::new(self.context.new_object()?))
     }
 
     fn serialize_struct_variant(
@@ -259,12 +259,11 @@ impl<'q> ser::SerializeTupleStruct for ArraySerializer<'q> {
 
 pub struct ObjectSerializer<'q> {
     object: Object<'q>,
-    context: Context<'q>,
 }
 
 impl<'q> ObjectSerializer<'q> {
-    pub fn new(object: Object<'q>, context: Context<'q>) -> Self {
-        Self { object, context }
+    pub fn new(object: Object<'q>) -> Self {
+        Self { object }
     }
 }
 
@@ -273,7 +272,7 @@ impl<'q> ser::SerializeStruct for ObjectSerializer<'q> {
     type Ok = Data<'q>;
 
     fn serialize_field<T: ?Sized + Serialize>(&mut self, key: &'static str, value: &T) -> Result<()> {
-        let value = value.serialize(Serializer::new(self.context))?;
+        let value = value.serialize(Serializer::new(self.object.context()))?;
         self.object.set(key, value)?;
         Ok(())
     }
@@ -285,17 +284,12 @@ impl<'q> ser::SerializeStruct for ObjectSerializer<'q> {
 
 pub struct MapSerializer<'q> {
     object: Object<'q>,
-    context: Context<'q>,
     next_key: Option<Data<'q>>,
 }
 
 impl<'q> MapSerializer<'q> {
-    pub fn new(object: Object<'q>, context: Context<'q>) -> Self {
-        Self {
-            object,
-            context,
-            next_key: None,
-        }
+    pub fn new(object: Object<'q>) -> Self {
+        Self { object, next_key: None }
     }
 }
 
@@ -305,12 +299,12 @@ impl<'q> ser::SerializeMap for MapSerializer<'q> {
 
     fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<()> {
         debug_assert!(self.next_key.is_none());
-        self.next_key = Some(key.serialize(Serializer::new(self.context))?);
+        self.next_key = Some(key.serialize(Serializer::new(self.object.context()))?);
         Ok(())
     }
 
     fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
-        let value = value.serialize(Serializer::new(self.context))?;
+        let value = value.serialize(Serializer::new(self.object.context()))?;
         self.object.set(self.next_key.take().unwrap(), value)?;
         Ok(())
     }
