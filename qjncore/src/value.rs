@@ -191,12 +191,7 @@ impl<'q> Value<'q> {
 
     #[inline]
     pub fn to_c_string(self, ctx: Context<'q>) -> Option<QcCString<'q>> {
-        let c_str = unsafe { ffi::JS_ToCString(ctx.as_ptr(), self.0) };
-        if !c_str.is_null() {
-            Some(QcCString::new(c_str))
-        } else {
-            None
-        }
+        QcCString::new(unsafe { ffi::JS_ToCString(ctx.as_ptr(), self.0) })
     }
 
     // function

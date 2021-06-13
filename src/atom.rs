@@ -35,7 +35,7 @@ impl<'q> Atom<'q> {
     // memory
 
     #[inline]
-    pub(crate) unsafe fn free(this: &Self) {
+    pub(crate) unsafe fn free(this: &mut Self) {
         this.context.free_atom(this.atom);
     }
 
@@ -131,7 +131,7 @@ impl<'q> PropertyEnum<'q> {
     // memory
 
     #[inline]
-    pub(crate) unsafe fn free(this: &Self) {
+    pub(crate) unsafe fn free(this: &mut Self) {
         this.context.free_atom(this.property_enum.atom());
     }
 

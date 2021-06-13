@@ -204,18 +204,13 @@ impl<'q> Data<'q> {
         self.ok_or_type_error(
             self.value
                 .to_c_string(self.context)
-                .map(|v| QjCString::from(v, self.context)),
+                .map(|v| QjCString::from_raw_parts(v, self.context)),
         )
     }
 
     #[inline]
     pub fn to_string(&self) -> Result<String> {
-        self.ok_or_type_error(
-            self.value
-                .to_c_string(self.context)
-                .and_then(|v| v.to_str())
-                .map(|v| v.to_owned()),
-        )
+        self.to_c_string().and_then(|s| s.to_string())
     }
 
     #[inline]
@@ -281,7 +276,12 @@ impl<'q> Data<'q> {
         if let Some(vs) = self.value.own_property_names(self.context, flags) {
             Ok(vs
                 .iter()
-                .map(|v| PropertyEnum::from_raw_parts(v.clone(), self.context))
+                .map(|v| {
+                    let v = PropertyEnum::from_raw_parts(v.clone(), self.context);
+                    // must be dupped
+                    PropertyEnum::dup(&v);
+                    v
+                })
                 .collect())
         } else {
             Err(Context::from_raw(self.context).internal_js_error())

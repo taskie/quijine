@@ -1,31 +1,41 @@
 use crate::{convert::AsJsCString, marker::Invariant};
-use std::{ffi::CStr, marker::PhantomData, os::raw::c_char};
+use std::{ffi::CStr, marker::PhantomData, os::raw::c_char, ptr::NonNull};
 
 #[derive(Clone, Copy, Debug)]
-pub struct CString<'q>(*const c_char, Invariant<'q>);
+pub struct CString<'q>(NonNull<c_char>, Invariant<'q>);
 
+/// Represents the return value of `JS_ToCString`.
 impl<'q> CString<'q> {
-    pub(crate) fn new(c_str: *const c_char) -> CString<'q> {
-        CString(c_str, PhantomData)
+    #[inline]
+    pub(crate) fn new(c_str: *const c_char) -> Option<CString<'q>> {
+        if !c_str.is_null() {
+            Some(CString(
+                unsafe { NonNull::new_unchecked(c_str as *mut c_char) },
+                PhantomData,
+            ))
+        } else {
+            None
+        }
     }
 
-    pub fn to_str(self) -> Option<&'q str> {
-        std::str::from_utf8(self.to_bytes()).ok()
+    /// # Safety
+    /// The underlying pointer must not be freed.
+    #[inline]
+    pub unsafe fn to_c_str(self) -> &'q CStr {
+        CStr::from_ptr(self.0.as_ptr())
     }
 
-    pub fn to_bytes(self) -> &'q [u8] {
-        let nulled = self.to_bytes_with_nul();
-        &nulled[..nulled.len() - 1]
-    }
-
-    pub fn to_bytes_with_nul(self) -> &'q [u8] {
-        unsafe { CStr::from_ptr(self.0).to_bytes_with_nul() }
+    /// # Safety
+    /// The underlying pointer must not be freed.
+    #[inline]
+    pub unsafe fn to_str(self) -> Option<&'q str> {
+        self.to_c_str().to_str().ok()
     }
 }
 
 impl<'q> AsJsCString<'q> for CString<'q> {
     #[inline]
     fn as_js_c_string(&self) -> *const c_char {
-        self.0
+        self.0.as_ptr()
     }
 }

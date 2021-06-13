@@ -9,25 +9,19 @@ pub struct CString<'q> {
 
 impl<'q> CString<'q> {
     #[inline]
-    pub fn from(value: qc::CString<'q>, context: qc::Context<'q>) -> CString<'q> {
+    pub fn from_raw_parts(value: qc::CString<'q>, context: qc::Context<'q>) -> CString<'q> {
         CString { value, context }
     }
 
-    #[inline]
-    pub fn to_bytes(&self) -> &[u8] {
-        self.value.to_bytes()
-    }
-
-    #[inline]
-    pub fn to_vec(&self) -> Vec<u8> {
-        self.to_bytes().to_vec()
+    unsafe fn free(this: &mut Self) {
+        #[cfg(feature = "debug_leak")]
+        log::trace!("free: {:?}", this.to_str());
+        this.context.free_c_string(this.value)
     }
 
     #[inline]
     pub fn to_str(&self) -> Result<&str> {
-        self.value
-            .to_str()
-            .ok_or_else(|| Error::with_str(crate::ErrorKind::InternalError, "invalid string"))
+        unsafe { self.value.to_str() }.ok_or_else(|| Error::with_str(crate::ErrorKind::InternalError, "invalid string"))
     }
 
     #[inline]
@@ -38,8 +32,6 @@ impl<'q> CString<'q> {
 
 impl Drop for CString<'_> {
     fn drop(&mut self) {
-        #[cfg(feature = "debug_leak")]
-        log::trace!("drop: {:?}", self.to_str());
-        unsafe { self.context.free_c_string(self.value) }
+        unsafe { CString::free(self) };
     }
 }
