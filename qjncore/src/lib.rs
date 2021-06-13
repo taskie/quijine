@@ -9,11 +9,12 @@ mod function;
 mod marker;
 mod runtime;
 mod string;
-mod util;
 mod value;
 
 #[macro_use]
 pub mod macros;
+#[doc(hidden)]
+pub mod internal;
 pub mod raw;
 
 pub use atom::{Atom, PropertyEnum};

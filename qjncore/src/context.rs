@@ -6,10 +6,10 @@ use crate::{
     ffi::{self, c_size_t},
     flags::{EvalFlags, ParseJSONFlags},
     function::{convert_function_arguments, convert_function_result},
+    internal::ref_sized_to_slice,
     marker::Covariant,
     runtime::Runtime,
     string::CString as QcCString,
-    util,
     value::Value,
     AsJsAtom,
 };
@@ -17,8 +17,9 @@ use std::{
     ffi::{c_void, CString},
     fmt,
     marker::PhantomData,
+    mem::size_of,
     os::raw::{c_char, c_int},
-    ptr::NonNull,
+    ptr::{null_mut, NonNull},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -357,6 +358,32 @@ impl<'q> Context<'q> {
 
     // array buffer
 
+    /// # Safety
+    /// `buf`, `len` and `free_func` must match
+    #[inline]
+    pub unsafe fn new_array_buffer(
+        self,
+        buf: *mut u8,
+        len: usize,
+        free_func: ffi::JSFreeArrayBufferDataFunc,
+        opaque: *mut c_void,
+        is_shared: bool,
+    ) -> Value<'q> {
+        let value = ffi::JS_NewArrayBuffer(self.as_ptr(), buf, len as c_size_t, free_func, opaque, is_shared as i32);
+        Value::from_raw(value, self)
+    }
+
+    #[inline]
+    pub fn new_array_buffer_from_boxed<T>(self, boxed: Box<T>) -> Value<'q> {
+        let len = size_of::<T>();
+        let ptr = Box::into_raw(boxed);
+        unsafe extern "C" fn free_func<T>(_rrt: *mut ffi::JSRuntime, _opaque: *mut c_void, ptr: *mut c_void) {
+            let _box = Box::from_raw(ptr as *mut T);
+            // dropped
+        }
+        unsafe { self.new_array_buffer(ptr as *mut u8, len, Some(free_func::<T>), null_mut(), false) }
+    }
+
     #[inline]
     pub fn new_array_buffer_copy(self, buf: &[u8]) -> Value<'q> {
         unsafe {
@@ -366,9 +393,8 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn new_array_buffer_copy_from_sized<T: 'q>(self, t: T) -> Value<'q> {
-        let buf = util::to_vec(t);
-        self.new_array_buffer_copy(buf.as_slice())
+    pub fn new_array_buffer_copy_from_ref<T>(self, t: &T) -> Value<'q> {
+        self.new_array_buffer_copy(ref_sized_to_slice(t))
     }
 
     // callback
@@ -393,12 +419,12 @@ impl<'q> Context<'q> {
             let (ctx, this, args) = convert_function_arguments(ctx, js_this, argc, argv);
             let cb = Value::from_raw(*func_data, ctx);
             log::trace!("load pointer from ArrayBuffer");
-            let func = cb.array_buffer_to_sized::<*mut Callback>(ctx).unwrap();
+            let func = cb.array_buffer_as_ref::<*mut Callback>(ctx).unwrap();
             let any = (**func)(ctx, this, args.as_slice());
             convert_function_result(&any)
         }
         log::trace!("save pointer to ArrayBuffer");
-        let cb = self.new_array_buffer_copy_from_sized::<*mut Callback>(func.as_mut());
+        let cb = self.new_array_buffer_copy_from_ref(&func.as_mut());
         if cb.is_exception() {
             return cb;
         }

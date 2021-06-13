@@ -244,7 +244,7 @@ impl<'q> Context<'q> {
             }
             let cb = qc::Value::from_raw(*func_data, ctx);
             log::debug!("load pointer from ArrayBuffer");
-            let func = cb.array_buffer_to_sized::<Box<Callback<R>>>(ctx).unwrap();
+            let func = cb.array_buffer_as_ref::<Box<Callback<R>>>(ctx).unwrap();
 
             log::debug!("this");
             let this = Data::from_raw_parts(this, ctx);
@@ -255,7 +255,7 @@ impl<'q> Context<'q> {
             let ctx = Context::from_raw(ctx);
 
             log::debug!("invoke start");
-            let r = (*func)(ctx, this, args.as_slice());
+            let r = (**func)(ctx, this, args.as_slice());
             let res = match r {
                 Ok(t) => {
                     let t = t.into();
@@ -278,8 +278,10 @@ impl<'q> Context<'q> {
         }
         unsafe {
             log::debug!("save pointer to ArrayBuffer");
-            let cb = self.0.new_array_buffer_copy_from_sized(func);
-            let _buf: Object = self.wrap_result(cb)?;
+            // Box of Sized
+            let func_box = Box::new(func);
+            let cb = self.0.new_array_buffer_from_boxed(func_box);
+            let _cb: Object = self.wrap_result(cb)?; // check errors
             log::debug!("new c function data");
             let cfd = self.0.new_c_function_data(Some(call::<R>), length, 0, &[cb]);
             self.wrap_result(cfd)

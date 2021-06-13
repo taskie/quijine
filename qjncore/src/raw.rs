@@ -1,1 +1,1 @@
-pub use crate::ffi::{JSContext, JSRuntime, JSValue};
+pub use crate::ffi::{JSContext, JSFreeArrayBufferDataFunc, JSRuntime, JSValue};

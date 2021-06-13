@@ -6,17 +6,17 @@ use crate::{
     enums::ValueTag,
     ffi,
     flags::GPNFlags,
+    internal::{ref_sized_from_bytes, ref_sized_to_vec},
     marker::Covariant,
     runtime::Runtime,
     string::CString as QcCString,
-    util,
 };
 use log::trace;
 use std::{
     ffi::{c_void, CString},
     fmt,
     marker::PhantomData,
-    mem::{size_of, transmute},
+    mem::transmute,
     os::raw::c_int,
     ptr::null_mut,
     slice,
@@ -356,15 +356,9 @@ impl<'q> Value<'q> {
     }
 
     /// # Safety
-    /// The content of ArrayBuffer must be created from T ('static).
-    pub unsafe fn array_buffer_to_sized<T>(self, ctx: Context<'q>) -> Option<&T> {
-        let mut len = 0;
-        let bs: *const u8 = ffi::JS_GetArrayBuffer(ctx.as_ptr(), &mut len, self.0);
-        if bs.is_null() {
-            return None;
-        }
-        assert_eq!(size_of::<T>(), len as usize);
-        Some(&*(bs as *const T))
+    /// The content of ArrayBuffer must be created from `T`.
+    pub unsafe fn array_buffer_as_ref<T>(self, ctx: Context<'q>) -> Option<&T> {
+        self.array_buffer(ctx).map(|v| ref_sized_from_bytes(v))
     }
 
     // C property
@@ -380,7 +374,7 @@ impl fmt::Debug for Value<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         let mut repr = String::new();
         let tag = self.tag();
-        for x in util::to_vec(self.0) {
+        for x in ref_sized_to_vec(&self.0) {
             repr.push_str(format!("{:02x}", x).as_str())
         }
         f.write_str(format!("Value(tag={:?}, {})", tag, repr).as_str())
