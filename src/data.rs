@@ -171,15 +171,6 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub(crate) unsafe fn wrap_result<T: AsData<'q>>(val: qc::Value<'q>, ctx: qc::Context<'q>) -> Result<T> {
-        if val.is_exception() {
-            Err(Context::from_raw(ctx).internal_js_error())
-        } else {
-            Ok(Data::from_raw_parts(val, ctx).into_unchecked())
-        }
-    }
-
-    #[inline]
     pub fn to_bool(&self) -> Result<bool> {
         self.ok_or_type_error(call_with_context!(self, to_bool))
     }
@@ -228,7 +219,10 @@ impl<'q> Data<'q> {
 
     #[inline]
     pub fn property(&self, key: Atom<'q>) -> Result<Data<'q>> {
-        unsafe { Data::wrap_result(self.value.property(self.context, *key.as_raw()), self.context) }
+        unsafe {
+            self.context()
+                .wrap_result(self.value.property(self.context, *key.as_raw()))
+        }
     }
 
     #[inline]
@@ -244,7 +238,7 @@ impl<'q> Data<'q> {
     pub fn set_property(&self, key: Atom<'q>, val: Data<'q>) -> Result<bool> {
         Data::dup(&val);
         let ret = self.value.set_property(self.context, *key.as_raw(), *val.as_raw());
-        ret.map_err(|_| Context::from_raw(self.context).internal_js_error())
+        self.context().map_err_to_exception(ret)
     }
 
     #[inline]
@@ -260,7 +254,7 @@ impl<'q> Data<'q> {
     #[inline]
     pub fn has_property(&self, key: Atom<'q>) -> Result<bool> {
         let ret = self.value.has_property(self.context, *key.as_raw());
-        ret.map_err(|_| Context::from_raw(self.context).internal_js_error())
+        self.context().map_err_to_exception(ret)
     }
 
     #[inline]
@@ -309,7 +303,7 @@ impl<'q> Data<'q> {
 
     #[inline]
     pub fn prototype(&self) -> Result<Data> {
-        unsafe { Data::wrap_result(self.value.prototype(self.context), self.context) }
+        unsafe { self.context().wrap_result(self.value.prototype(self.context)) }
     }
 
     #[inline]

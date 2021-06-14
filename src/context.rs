@@ -8,7 +8,7 @@ use crate::{
     Data, Error, ErrorKind, EvalFlags, RuntimeScope,
 };
 use qjncore::{self as qc, raw, AsJsValue};
-use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int};
+use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int, result::Result as StdResult};
 
 pub struct ContextOpaque {
     registered_classes: HashSet<TypeId>,
@@ -44,8 +44,21 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    unsafe fn wrap_result<T: AsData<'q>>(self, val: qc::Value<'q>) -> Result<T> {
-        Data::wrap_result(val, self.0)
+    pub(crate) fn map_err_to_exception<T, E>(self, val: StdResult<T, E>) -> Result<T> {
+        if let Ok(v) = val {
+            Ok(v)
+        } else {
+            Err(self.internal_js_error())
+        }
+    }
+
+    #[inline]
+    pub(crate) unsafe fn wrap_result<T: AsData<'q>>(self, val: qc::Value<'q>) -> Result<T> {
+        if val.is_exception() {
+            Err(self.internal_js_error())
+        } else {
+            Ok(Data::from_raw_parts(val, self.0).into_unchecked())
+        }
     }
 
     #[inline]
