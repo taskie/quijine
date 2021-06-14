@@ -4,6 +4,7 @@ mod class;
 mod context;
 mod convert;
 mod enums;
+mod error;
 mod ffi;
 mod flags;
 mod function;

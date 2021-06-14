@@ -244,7 +244,7 @@ impl<'q> Data<'q> {
     pub fn set_property(&self, key: Atom<'q>, val: Data<'q>) -> Result<bool> {
         Data::dup(&val);
         let ret = self.value.set_property(self.context, *key.as_raw(), *val.as_raw());
-        ret.ok_or_else(|| Context::from_raw(self.context).internal_js_error())
+        ret.map_err(|_| Context::from_raw(self.context).internal_js_error())
     }
 
     #[inline]
@@ -260,7 +260,7 @@ impl<'q> Data<'q> {
     #[inline]
     pub fn has_property(&self, key: Atom<'q>) -> Result<bool> {
         let ret = self.value.has_property(self.context, *key.as_raw());
-        ret.ok_or_else(|| Context::from_raw(self.context).internal_js_error())
+        ret.map_err(|_| Context::from_raw(self.context).internal_js_error())
     }
 
     #[inline]
@@ -273,7 +273,7 @@ impl<'q> Data<'q> {
 
     #[inline]
     pub fn own_property_names(&self, flags: GPNFlags) -> Result<Vec<PropertyEnum<'q>>> {
-        if let Some(vs) = self.value.own_property_names(self.context, flags) {
+        if let Ok(vs) = self.value.own_property_names(self.context, flags) {
             Ok(vs
                 .iter()
                 .map(|v| {

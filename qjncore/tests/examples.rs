@@ -57,12 +57,14 @@ fn test() {
         rt.new_class(*id.borrow(), &prng_class);
         let prng_proto = ctx.new_object();
         prng_proto.set_property_function_list(ctx, prng_proto_js_funcs.as_ref());
-        prng_proto.set_property_str(ctx, "answer", ctx.new_int32(42));
+        prng_proto.set_property_str(ctx, "answer", ctx.new_int32(42)).unwrap();
         ctx.set_class_proto(*id.borrow(), prng_proto);
         eprintln!("{:?}", prng_proto);
     });
     let global = ctx.global_object();
-    global.set_property_str(ctx, "PRNG", ctx.new_c_function(js_c_function!(prng_new), "PRNG", 0));
+    global
+        .set_property_str(ctx, "PRNG", ctx.new_c_function(js_c_function!(prng_new), "PRNG", 0))
+        .unwrap();
     let ret = ctx.eval("var prng = PRNG(); prng", "<input>", EvalFlags::TYPE_GLOBAL);
     assert_eq!(false, ctx.exception().is_exception(), "no exception");
     unsafe {

@@ -4,6 +4,7 @@ use crate::{
     context::Context,
     convert::{AsJsAtom, AsJsClassId, AsJsContextPointer, AsJsValue},
     enums::ValueTag,
+    error::Error,
     ffi,
     flags::{GPNFlags, PropFlags},
     internal::{ref_sized_from_bytes, ref_sized_to_vec},
@@ -243,65 +244,65 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn set_property<V>(self, ctx: Context<'q>, prop: Atom<'q>, val: V) -> Option<bool>
+    pub fn set_property<V>(self, ctx: Context<'q>, prop: Atom<'q>, val: V) -> Result<bool, Error>
     where
         V: AsJsValue<'q>,
     {
         let ret = unsafe { ffi::JS_SetProperty(ctx.as_ptr(), self.0, prop.as_js_atom(), val.as_js_value()) };
         if ret == -1 {
-            None
+            Err(Error::HasException)
         } else {
-            Some(ret != 0)
+            Ok(ret != 0)
         }
     }
 
     #[inline]
-    pub fn has_property(self, ctx: Context<'q>, prop: Atom<'q>) -> Option<bool> {
+    pub fn has_property(self, ctx: Context<'q>, prop: Atom<'q>) -> Result<bool, Error> {
         let ret = unsafe { ffi::JS_HasProperty(ctx.as_ptr(), self.0, prop.as_js_atom()) };
         if ret == -1 {
-            None
+            Err(Error::HasException)
         } else {
-            Some(ret != 0)
+            Ok(ret != 0)
         }
     }
 
     #[inline]
-    pub fn set_property_str<V>(self, ctx: Context<'q>, key: &str, val: V) -> Option<bool>
+    pub fn set_property_str<V>(self, ctx: Context<'q>, key: &str, val: V) -> Result<bool, Error>
     where
         V: AsJsValue<'q>,
     {
         let c_key = CString::new(key).unwrap();
         let ret = unsafe { ffi::JS_SetPropertyStr(ctx.as_ptr(), self.0, c_key.as_ptr(), val.as_js_value()) };
         if ret == -1 {
-            None
+            Err(Error::HasException)
         } else {
-            Some(ret != 0)
+            Ok(ret != 0)
         }
     }
 
     /// return `None` if exception (Proxy object only)
     #[inline]
-    pub fn is_extensible(self, ctx: Context<'q>) -> Option<bool> {
+    pub fn is_extensible(self, ctx: Context<'q>) -> Result<bool, Error> {
         let ret = unsafe { ffi::JS_IsExtensible(ctx.as_ptr(), self.0) };
         if ret == -1 {
-            None
+            Err(Error::HasException)
         } else {
-            Some(ret != 0)
+            Ok(ret != 0)
         }
     }
 
     /// return `None` if exception (Proxy object only)
     #[inline]
-    pub fn prevent_extensions(self, ctx: Context<'q>) -> Option<bool> {
+    pub fn prevent_extensions(self, ctx: Context<'q>) -> Result<bool, Error> {
         let ret = unsafe { ffi::JS_PreventExtensions(ctx.as_ptr(), self.0) };
         if ret == -1 {
-            None
+            Err(Error::HasException)
         } else {
-            Some(ret != 0)
+            Ok(ret != 0)
         }
     }
 
-    pub fn own_property_names(self, ctx: Context<'q>, flags: GPNFlags) -> Option<Vec<PropertyEnum<'q>>> {
+    pub fn own_property_names(self, ctx: Context<'q>, flags: GPNFlags) -> Result<Vec<PropertyEnum<'q>>, Error> {
         let mut ptab: *mut ffi::JSPropertyEnum = null_mut();
         let mut plen: u32 = 0;
         let ret = unsafe {
@@ -314,7 +315,7 @@ impl<'q> Value<'q> {
             )
         };
         if ret == -1 {
-            return None;
+            return Err(Error::HasException);
         }
         let enums = unsafe { std::slice::from_raw_parts(ptab, plen as usize) };
         let ret = enums
@@ -325,18 +326,18 @@ impl<'q> Value<'q> {
         unsafe {
             ffi::js_free(ctx.as_ptr(), ptab as *mut c_void);
         }
-        Some(ret)
+        Ok(ret)
     }
 
-    pub fn own_property(self, ctx: Context<'q>, prop: Atom<'q>) -> Option<Option<PropertyDescriptor<'q>>> {
+    pub fn own_property(self, ctx: Context<'q>, prop: Atom<'q>) -> Result<Option<PropertyDescriptor<'q>>, Error> {
         let mut desc = MaybeUninit::<ffi::JSPropertyDescriptor>::zeroed();
         let ret = unsafe { ffi::JS_GetOwnProperty(ctx.as_ptr(), desc.as_mut_ptr(), self.0, prop.as_js_atom()) };
         if ret == -1 {
-            None
+            Err(Error::HasException)
         } else if ret == 0 {
-            Some(None)
+            Ok(None)
         } else {
-            Some(Some(PropertyDescriptor::from_raw(unsafe { desc.assume_init() }, ctx)))
+            Ok(Some(PropertyDescriptor::from_raw(unsafe { desc.assume_init() }, ctx)))
         }
     }
 
@@ -348,7 +349,7 @@ impl<'q> Value<'q> {
         getter: Value<'q>,
         setter: Value<'q>,
         flags: PropFlags,
-    ) -> Option<bool> {
+    ) -> Result<bool, Error> {
         let ret = unsafe {
             ffi::JS_DefineProperty(
                 ctx.as_ptr(),
@@ -361,9 +362,9 @@ impl<'q> Value<'q> {
             )
         };
         if ret == -1 {
-            None
+            Err(Error::HasException)
         } else {
-            Some(ret != 0)
+            Ok(ret != 0)
         }
     }
 
@@ -373,14 +374,14 @@ impl<'q> Value<'q> {
         prop: Atom<'q>,
         val: Value<'q>,
         flags: PropFlags,
-    ) -> Option<bool> {
+    ) -> Result<bool, Error> {
         let ret = unsafe {
             ffi::JS_DefinePropertyValue(ctx.as_ptr(), self.0, prop.as_js_atom(), val.0, flags.bits() as c_int)
         };
         if ret == -1 {
-            None
+            Err(Error::HasException)
         } else {
-            Some(ret != 0)
+            Ok(ret != 0)
         }
     }
 
@@ -391,7 +392,7 @@ impl<'q> Value<'q> {
         getter: Value<'q>,
         setter: Value<'q>,
         flags: PropFlags,
-    ) -> Option<bool> {
+    ) -> Result<bool, Error> {
         let ret = unsafe {
             ffi::JS_DefinePropertyGetSet(
                 ctx.as_ptr(),
@@ -403,21 +404,21 @@ impl<'q> Value<'q> {
             )
         };
         if ret == -1 {
-            None
+            Err(Error::HasException)
         } else {
-            Some(ret != 0)
+            Ok(ret != 0)
         }
     }
 
-    pub fn set_prototype<V>(self, ctx: Context<'q>, proto_val: V) -> Option<bool>
+    pub fn set_prototype<V>(self, ctx: Context<'q>, proto_val: V) -> Result<bool, Error>
     where
         V: AsJsValue<'q>,
     {
         let ret = unsafe { ffi::JS_SetPrototype(ctx.as_ptr(), self.0, proto_val.as_js_value()) };
         if ret == -1 {
-            None
+            Err(Error::HasException)
         } else {
-            Some(ret != 0)
+            Ok(ret != 0)
         }
     }
 
