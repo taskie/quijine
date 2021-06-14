@@ -372,6 +372,7 @@ impl<'q> Value<'q> {
         }
     }
 
+    /// shortcut to add or redefine a new property value
     #[inline]
     pub fn define_property_value(
         self,
@@ -390,6 +391,7 @@ impl<'q> Value<'q> {
         }
     }
 
+    /// shortcut to add getter & setter
     #[inline]
     pub fn define_property_get_set(
         self,

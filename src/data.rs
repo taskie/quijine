@@ -8,7 +8,7 @@ use crate::{
     string::CString as QjCString,
     types::{Tag, Variant},
 };
-use qc::GPNFlags;
+use qc::{GPNFlags, PropFlags};
 use qjncore as qc;
 #[cfg(feature = "debug_leak")]
 use std::sync::atomic;
@@ -266,6 +266,18 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
+    pub fn is_extensible(&self) -> Result<bool> {
+        self.context()
+            .map_err_to_exception(self.value.is_extensible(self.context))
+    }
+
+    #[inline]
+    pub fn prevent_extensions(&self) -> Result<bool> {
+        self.context()
+            .map_err_to_exception(self.value.prevent_extensions(self.context))
+    }
+
+    #[inline]
     pub fn own_property_names(&self, flags: GPNFlags) -> Result<Vec<PropertyEnum<'q>>> {
         if let Ok(vs) = self.value.own_property_names(self.context, flags) {
             Ok(vs
@@ -280,6 +292,85 @@ impl<'q> Data<'q> {
         } else {
             Err(Context::from_raw(self.context).internal_js_error())
         }
+    }
+
+    #[inline]
+    pub fn own_property(&self, prop: Atom<'q>) -> Result<Option<PropertyDescriptor>> {
+        let ret = self.value.own_property(self.context, *prop.as_raw());
+        self.context()
+            .map_err_to_exception(ret)
+            .map(|v| v.map(|desc| PropertyDescriptor::from_raw_parts(desc, self.context)))
+    }
+
+    #[inline]
+    pub fn define_property(
+        &self,
+        prop: Atom<'q>,
+        val: Data<'q>,
+        getter: Data<'q>,
+        setter: Data<'q>,
+        flags: PropFlags,
+    ) -> Result<bool> {
+        let ret = self.value.define_property(
+            self.context,
+            *prop.as_raw(),
+            *val.as_raw(),
+            *getter.as_raw(),
+            *setter.as_raw(),
+            flags,
+        );
+        self.context().map_err_to_exception(ret)
+    }
+
+    #[inline]
+    pub fn define_property_value(&self, prop: Atom<'q>, val: Data<'q>, flags: PropFlags) -> Result<bool> {
+        Data::dup(&val);
+        let ret = self
+            .value
+            .define_property_value(self.context, *prop.as_raw(), *val.as_raw(), flags);
+        self.context().map_err_to_exception(ret)
+    }
+
+    #[inline]
+    pub fn define_property_value_with<K: IntoQjAtom<'q>, V: IntoQj<'q>>(
+        &self,
+        prop: K,
+        val: V,
+        flags: PropFlags,
+    ) -> Result<bool> {
+        self.define_property_value(prop.into_qj_atom(self.context())?, val.into_qj(self.context())?, flags)
+    }
+
+    #[inline]
+    pub fn define_property_get_set(
+        &self,
+        prop: Atom<'q>,
+        getter: Data<'q>,
+        setter: Data<'q>,
+        flags: PropFlags,
+    ) -> Result<bool> {
+        Data::dup(&getter);
+        Data::dup(&setter);
+        let ret =
+            self.value
+                .define_property_get_set(self.context, *prop.as_raw(), *getter.as_raw(), *setter.as_raw(), flags);
+        self.context().map_err_to_exception(ret)
+    }
+
+    #[inline]
+    pub fn define_property_get_set_with<K: IntoQjAtom<'q>, G: IntoQj<'q>, S: IntoQj<'q>>(
+        &self,
+        prop: K,
+        getter: G,
+        setter: S,
+        flags: PropFlags,
+    ) -> Result<bool> {
+        self.define_property_get_set(
+            prop.into_qj_atom(self.context())?,
+            getter.into_qj(self.context())?,
+            setter.into_qj(self.context())?,
+            flags,
+        )
     }
 
     // function
@@ -366,5 +457,43 @@ impl fmt::Debug for Data<'_> {
     #[cfg(feature = "debug_leak")]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> StdResult<(), fmt::Error> {
         f.write_str(format!("Qj({}, {:?})", self._debug_count, self.value).as_str())
+    }
+}
+pub struct PropertyDescriptor<'q> {
+    flags: PropFlags,
+    value: Data<'q>,
+    getter: Data<'q>,
+    setter: Data<'q>,
+}
+
+impl<'q> PropertyDescriptor<'q> {
+    #[inline]
+    pub(crate) fn from_raw_parts(desc: qc::PropertyDescriptor<'q>, ctx: qc::Context<'q>) -> PropertyDescriptor<'q> {
+        PropertyDescriptor {
+            flags: desc.flags(),
+            value: Data::from_raw_parts(desc.value(), ctx),
+            getter: Data::from_raw_parts(desc.getter(), ctx),
+            setter: Data::from_raw_parts(desc.setter(), ctx),
+        }
+    }
+
+    #[inline]
+    pub fn flags(&self) -> PropFlags {
+        self.flags
+    }
+
+    #[inline]
+    pub fn value(&self) -> &Data<'q> {
+        &self.value
+    }
+
+    #[inline]
+    pub fn getter(&self) -> &Data<'q> {
+        &self.getter
+    }
+
+    #[inline]
+    pub fn setter(&self) -> &Data<'q> {
+        &self.setter
     }
 }

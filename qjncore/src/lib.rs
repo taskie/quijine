@@ -31,4 +31,4 @@ pub use flags::{EvalFlags, GPNFlags, PropFlags};
 pub use function::{convert_function_arguments, convert_function_result, CFunctionListEntry};
 pub use runtime::Runtime;
 pub use string::CString;
-pub use value::Value;
+pub use value::{PropertyDescriptor, Value};
