@@ -7,6 +7,7 @@ pub enum Error {
 }
 
 impl Display for Error {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::HasException => f.write_str("HasException"),

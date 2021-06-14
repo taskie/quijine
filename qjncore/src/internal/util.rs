@@ -3,10 +3,12 @@ use std::{
     ptr, slice,
 };
 
+#[inline]
 pub fn ref_sized_to_vec<T>(v: &T) -> Vec<u8> {
     ref_sized_to_slice(v).to_vec()
 }
 
+#[inline]
 pub fn ref_sized_to_slice<T>(v: &T) -> &[u8] {
     let len = mem::size_of::<T>();
     let p = v as *const T as *const u8;
@@ -15,6 +17,7 @@ pub fn ref_sized_to_slice<T>(v: &T) -> &[u8] {
 
 /// # Safety
 /// `v` must represent `T`, and that is memcpy-safe.
+#[inline]
 #[deny(unsafe_op_in_unsafe_fn)]
 pub unsafe fn sized_from_bytes<T>(v: &[u8]) -> T {
     assert_eq!(mem::size_of::<T>(), v.len());
@@ -28,6 +31,7 @@ pub unsafe fn sized_from_bytes<T>(v: &[u8]) -> T {
 
 /// # Safety
 /// `v` must represent `T`.
+#[inline]
 #[deny(unsafe_op_in_unsafe_fn)]
 pub unsafe fn ref_sized_from_bytes<T>(v: &[u8]) -> &T {
     assert_eq!(mem::size_of::<T>(), v.len());

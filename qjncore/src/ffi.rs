@@ -16,10 +16,12 @@ pub type c_size_t = size_t;
 // from C preprocessor macro
 
 #[cold]
+#[inline]
 fn cold<T>(x: T) -> T {
     x
 }
 
+#[inline]
 fn builtin_expect<T>(x: T, y: T) -> T
 where
     T: PartialEq,

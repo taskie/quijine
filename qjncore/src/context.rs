@@ -407,6 +407,7 @@ impl<'q> Context<'q> {
         self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), length)
     }
 
+    #[inline]
     fn new_callback(self, mut func: Box<Callback<'q, 'q>>, length: i32) -> Value<'q> {
         unsafe extern "C" fn call(
             ctx: *mut ffi::JSContext,

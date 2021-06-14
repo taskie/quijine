@@ -84,6 +84,7 @@ impl<'q> Value<'q> {
         Value(value, PhantomData)
     }
 
+    #[inline]
     pub fn has_ref_count(self) -> bool {
         unsafe { ffi::JS_VALUE_HAS_REF_COUNT(self.0) }
     }
@@ -302,6 +303,7 @@ impl<'q> Value<'q> {
         }
     }
 
+    #[inline]
     pub fn own_property_names(self, ctx: Context<'q>, flags: GPNFlags) -> Result<Vec<PropertyEnum<'q>>, Error> {
         let mut ptab: *mut ffi::JSPropertyEnum = null_mut();
         let mut plen: u32 = 0;
@@ -329,6 +331,7 @@ impl<'q> Value<'q> {
         Ok(ret)
     }
 
+    #[inline]
     pub fn own_property(self, ctx: Context<'q>, prop: Atom<'q>) -> Result<Option<PropertyDescriptor<'q>>, Error> {
         let mut desc = MaybeUninit::<ffi::JSPropertyDescriptor>::zeroed();
         let ret = unsafe { ffi::JS_GetOwnProperty(ctx.as_ptr(), desc.as_mut_ptr(), self.0, prop.as_js_atom()) };
@@ -341,6 +344,7 @@ impl<'q> Value<'q> {
         }
     }
 
+    #[inline]
     pub fn define_property(
         self,
         ctx: Context<'q>,
@@ -368,6 +372,7 @@ impl<'q> Value<'q> {
         }
     }
 
+    #[inline]
     pub fn define_property_value(
         self,
         ctx: Context<'q>,
@@ -385,6 +390,7 @@ impl<'q> Value<'q> {
         }
     }
 
+    #[inline]
     pub fn define_property_get_set(
         self,
         ctx: Context<'q>,
@@ -410,6 +416,7 @@ impl<'q> Value<'q> {
         }
     }
 
+    #[inline]
     pub fn set_prototype<V>(self, ctx: Context<'q>, proto_val: V) -> Result<bool, Error>
     where
         V: AsJsValue<'q>,
@@ -422,6 +429,7 @@ impl<'q> Value<'q> {
         }
     }
 
+    #[inline]
     pub fn prototype(self, ctx: Context<'q>) -> Value<'q> {
         unsafe {
             let val = ffi::JS_GetPrototype(ctx.as_ptr(), self.0);
@@ -445,6 +453,7 @@ impl<'q> Value<'q> {
 
     // array buffer
 
+    #[inline]
     pub fn array_buffer(self, ctx: Context<'q>) -> Option<&[u8]> {
         let mut len = 0;
         let bs: *const u8 = unsafe { ffi::JS_GetArrayBuffer(ctx.as_ptr(), &mut len, self.0) };
@@ -456,6 +465,7 @@ impl<'q> Value<'q> {
 
     /// # Safety
     /// The content of ArrayBuffer must be created from `T`.
+    #[inline]
     pub unsafe fn array_buffer_as_ref<T>(self, ctx: Context<'q>) -> Option<&T> {
         self.array_buffer(ctx).map(|v| ref_sized_from_bytes(v))
     }
@@ -495,6 +505,7 @@ pub struct PropertyDescriptor<'q> {
 }
 
 impl<'q> PropertyDescriptor<'q> {
+    #[inline]
     pub(crate) fn from_raw(desc: ffi::JSPropertyDescriptor, ctx: Context<'q>) -> PropertyDescriptor<'q> {
         PropertyDescriptor {
             flags: PropFlags::from_bits(desc.flags as u32).unwrap(),
@@ -504,18 +515,22 @@ impl<'q> PropertyDescriptor<'q> {
         }
     }
 
+    #[inline]
     pub fn flags(&self) -> PropFlags {
         self.flags
     }
 
+    #[inline]
     pub fn value(&self) -> Value<'q> {
         self.value
     }
 
+    #[inline]
     pub fn getter(&self) -> Value<'q> {
         self.getter
     }
 
+    #[inline]
     pub fn setter(&self) -> Value<'q> {
         self.setter
     }

@@ -62,6 +62,7 @@ pub trait AsJsCFunctionListEntry<'q> {
 }
 
 impl AsJsCFunctionListEntry<'_> for ffi::JSCFunctionListEntry {
+    #[inline]
     fn as_js_c_function_list_entry(&self) -> ffi::JSCFunctionListEntry {
         *self
     }

@@ -36,12 +36,14 @@ pub struct CFunctionListEntry<'q>(ffi::JSCFunctionListEntry, CString, Invariant<
 impl<'q> CFunctionListEntry<'q> {
     /// # Safety
     /// The content of JSCFunctionListEntry must have a valid lifetime.
+    #[inline]
     pub unsafe fn from_raw(raw: ffi::JSCFunctionListEntry) -> CFunctionListEntry<'q> {
         CFunctionListEntry(raw, CString::from_raw(raw.name as *mut i8), PhantomData)
     }
 
     /// # Safety
     /// The content of JSCFunctionListEntry must have a valid lifetime.
+    #[inline]
     pub unsafe fn from_raw_with_name(raw: ffi::JSCFunctionListEntry, name: CString) -> CFunctionListEntry<'q> {
         CFunctionListEntry(raw, name, PhantomData)
     }

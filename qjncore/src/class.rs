@@ -12,14 +12,17 @@ impl ClassId {
         ClassId(id)
     }
 
+    #[inline]
     pub fn none() -> ClassId {
         ClassId::from_raw(0)
     }
 
+    #[inline]
     pub fn generate() -> ClassId {
         ClassId::none().new_class_id()
     }
 
+    #[inline]
     pub(crate) fn new_class_id(&mut self) -> ClassId {
         let res = {
             // JS_NewClassID is not thread-safe...
@@ -66,6 +69,7 @@ impl ClassDef {
 }
 
 impl Default for ClassDef {
+    #[inline]
     fn default() -> Self {
         ClassDef {
             class_name: CString::default(),

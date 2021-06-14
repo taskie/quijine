@@ -9,10 +9,12 @@ pub struct Atom<'q>(ffi::JSAtom, Invariant<'q>);
 impl<'q> Atom<'q> {
     /// # Safety
     /// An atom must have the same lifetime as a context.
+    #[inline]
     pub unsafe fn from_raw(v: ffi::JSAtom, _ctx: Context<'q>) -> Self {
         Atom(v, PhantomData)
     }
 
+    #[inline]
     pub fn is_null(self) -> bool {
         self.0 == ffi::JS_ATOM_NULL
     }
@@ -31,14 +33,17 @@ pub struct PropertyEnum<'q>(ffi::JSPropertyEnum, Invariant<'q>);
 impl<'q> PropertyEnum<'q> {
     /// # Safety
     /// An atom must have the same lifetime as a context.
+    #[inline]
     pub unsafe fn from_raw(v: ffi::JSPropertyEnum, _ctx: Context<'q>) -> Self {
         PropertyEnum(v, PhantomData)
     }
 
+    #[inline]
     pub fn is_enumerable(&self) -> bool {
         self.0.is_enumerable != 0
     }
 
+    #[inline]
     pub fn atom(&self) -> Atom<'q> {
         Atom(self.0.atom, self.1)
     }
