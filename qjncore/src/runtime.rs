@@ -1,4 +1,5 @@
 use crate::{
+    alloc::GLOBAL_ALLOCATOR_MALLOC_FUNCTIONS,
     class::{ClassDef, ClassId},
     convert::{AsJsClassId, AsJsRuntimePointer, AsJsValue},
     ffi::{self, c_size_t},
@@ -9,7 +10,7 @@ use std::{
     ffi::{c_void, CStr},
     fmt,
     marker::PhantomData,
-    ptr::NonNull,
+    ptr::{null_mut, NonNull},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -29,7 +30,18 @@ impl<'q> Runtime<'q> {
     #[allow(clippy::new_without_default)]
     #[inline]
     pub fn new() -> Runtime<'q> {
-        unsafe { Self::from_raw(ffi::JS_NewRuntime()) }
+        // faster than `unsafe { Self::from_raw(ffi::JS_NewRuntime()) }`
+        Self::with_global_allocator()
+    }
+
+    #[inline]
+    pub(crate) fn with_global_allocator() -> Runtime<'q> {
+        Self::with_malloc_functions(&GLOBAL_ALLOCATOR_MALLOC_FUNCTIONS)
+    }
+
+    #[inline]
+    pub(crate) fn with_malloc_functions(mf: &'static ffi::JSMallocFunctions) -> Runtime<'q> {
+        unsafe { Self::from_raw(ffi::JS_NewRuntime2(mf, null_mut())) }
     }
 
     /// # Safety

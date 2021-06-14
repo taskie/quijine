@@ -1,3 +1,4 @@
+mod alloc;
 mod atom;
 mod class;
 mod context;
