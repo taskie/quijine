@@ -26,7 +26,7 @@ pub use convert::{
     AsValue,
 };
 pub use enums::ValueTag;
-pub use flags::{EvalFlags, GPNFlags};
+pub use flags::{EvalFlags, GPNFlags, PropFlags};
 pub use function::{convert_function_arguments, convert_function_result, CFunctionListEntry};
 pub use runtime::Runtime;
 pub use string::CString;

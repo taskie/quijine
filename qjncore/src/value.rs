@@ -5,7 +5,7 @@ use crate::{
     convert::{AsJsAtom, AsJsClassId, AsJsContextPointer, AsJsValue},
     enums::ValueTag,
     ffi,
-    flags::GPNFlags,
+    flags::{GPNFlags, PropFlags},
     internal::{ref_sized_from_bytes, ref_sized_to_vec},
     marker::Covariant,
     runtime::Runtime,
@@ -16,7 +16,7 @@ use std::{
     ffi::{c_void, CString},
     fmt,
     marker::PhantomData,
-    mem::transmute,
+    mem::{transmute, MaybeUninit},
     os::raw::c_int,
     ptr::null_mut,
     slice,
@@ -279,6 +279,28 @@ impl<'q> Value<'q> {
         }
     }
 
+    /// return `None` if exception (Proxy object only)
+    #[inline]
+    pub fn is_extensible(self, ctx: Context<'q>) -> Option<bool> {
+        let ret = unsafe { ffi::JS_IsExtensible(ctx.as_ptr(), self.0) };
+        if ret == -1 {
+            None
+        } else {
+            Some(ret != 0)
+        }
+    }
+
+    /// return `None` if exception (Proxy object only)
+    #[inline]
+    pub fn prevent_extensions(self, ctx: Context<'q>) -> Option<bool> {
+        let ret = unsafe { ffi::JS_PreventExtensions(ctx.as_ptr(), self.0) };
+        if ret == -1 {
+            None
+        } else {
+            Some(ret != 0)
+        }
+    }
+
     pub fn own_property_names(self, ctx: Context<'q>, flags: GPNFlags) -> Option<Vec<PropertyEnum<'q>>> {
         let mut ptab: *mut ffi::JSPropertyEnum = null_mut();
         let mut plen: u32 = 0;
@@ -304,6 +326,87 @@ impl<'q> Value<'q> {
             ffi::js_free(ctx.as_ptr(), ptab as *mut c_void);
         }
         Some(ret)
+    }
+
+    pub fn own_property(self, ctx: Context<'q>, prop: Atom<'q>) -> Option<Option<PropertyDescriptor<'q>>> {
+        let mut desc = MaybeUninit::<ffi::JSPropertyDescriptor>::zeroed();
+        let ret = unsafe { ffi::JS_GetOwnProperty(ctx.as_ptr(), desc.as_mut_ptr(), self.0, prop.as_js_atom()) };
+        if ret == -1 {
+            None
+        } else if ret == 0 {
+            Some(None)
+        } else {
+            Some(Some(PropertyDescriptor::from_raw(unsafe { desc.assume_init() }, ctx)))
+        }
+    }
+
+    pub fn define_property(
+        self,
+        ctx: Context<'q>,
+        prop: Atom<'q>,
+        val: Value<'q>,
+        getter: Value<'q>,
+        setter: Value<'q>,
+        flags: PropFlags,
+    ) -> Option<bool> {
+        let ret = unsafe {
+            ffi::JS_DefineProperty(
+                ctx.as_ptr(),
+                self.0,
+                prop.as_js_atom(),
+                val.0,
+                getter.0,
+                setter.0,
+                flags.bits() as c_int,
+            )
+        };
+        if ret == -1 {
+            None
+        } else {
+            Some(ret != 0)
+        }
+    }
+
+    pub fn define_property_value(
+        self,
+        ctx: Context<'q>,
+        prop: Atom<'q>,
+        val: Value<'q>,
+        flags: PropFlags,
+    ) -> Option<bool> {
+        let ret = unsafe {
+            ffi::JS_DefinePropertyValue(ctx.as_ptr(), self.0, prop.as_js_atom(), val.0, flags.bits() as c_int)
+        };
+        if ret == -1 {
+            None
+        } else {
+            Some(ret != 0)
+        }
+    }
+
+    pub fn define_property_get_set(
+        self,
+        ctx: Context<'q>,
+        prop: Atom<'q>,
+        getter: Value<'q>,
+        setter: Value<'q>,
+        flags: PropFlags,
+    ) -> Option<bool> {
+        let ret = unsafe {
+            ffi::JS_DefinePropertyGetSet(
+                ctx.as_ptr(),
+                self.0,
+                prop.as_js_atom(),
+                getter.0,
+                setter.0,
+                flags.bits() as c_int,
+            )
+        };
+        if ret == -1 {
+            None
+        } else {
+            Some(ret != 0)
+        }
     }
 
     pub fn set_prototype<V>(self, ctx: Context<'q>, proto_val: V) -> Option<bool>
@@ -380,5 +483,39 @@ impl<'q> AsJsValue<'q> for Value<'q> {
     #[inline]
     fn as_js_value(&self) -> ffi::JSValue {
         self.0
+    }
+}
+
+pub struct PropertyDescriptor<'q> {
+    flags: PropFlags,
+    value: Value<'q>,
+    getter: Value<'q>,
+    setter: Value<'q>,
+}
+
+impl<'q> PropertyDescriptor<'q> {
+    pub(crate) fn from_raw(desc: ffi::JSPropertyDescriptor, ctx: Context<'q>) -> PropertyDescriptor<'q> {
+        PropertyDescriptor {
+            flags: PropFlags::from_bits(desc.flags as u32).unwrap(),
+            value: unsafe { Value::from_raw(desc.value, ctx) },
+            getter: unsafe { Value::from_raw(desc.getter, ctx) },
+            setter: unsafe { Value::from_raw(desc.setter, ctx) },
+        }
+    }
+
+    pub fn flags(&self) -> PropFlags {
+        self.flags
+    }
+
+    pub fn value(&self) -> Value<'q> {
+        self.value
+    }
+
+    pub fn getter(&self) -> Value<'q> {
+        self.getter
+    }
+
+    pub fn setter(&self) -> Value<'q> {
+        self.setter
     }
 }
