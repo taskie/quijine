@@ -84,7 +84,7 @@ fn example_use_rust_struct_from_js() -> Result<()> {
         }
 
         fn add_methods<'q, M: quijine::ClassMethods<'q, Self>>(methods: &mut M) -> Result<()> {
-            methods.add_method_mut("genU16", |_ctx, t, _this: Data, _args: ()| Ok(t.gen_u16() as i32))?;
+            methods.add_method("genU16", |_ctx, t, _this: Data, _args: ()| Ok(t.gen_u16() as i32))?;
             Ok(())
         }
     }

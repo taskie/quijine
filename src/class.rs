@@ -2,24 +2,37 @@ use crate::{
     convert::{FromQj, FromQjMulti, IntoQj},
     data::Data,
     types::Object,
-    Context, Result, Runtime,
+    Context, PropFlags, Result, Runtime,
 };
 use log::trace;
 use qjncore as qc;
 use std::ffi::CString;
 
 pub trait ClassMethods<'q, C: Class> {
-    fn add_method<F, T, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+    fn add_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
     where
-        F: Fn(Context<'q>, &C, T, A) -> Result<R> + Send + 'static,
         T: FromQj<'q>,
+        F: Fn(Context<'q>, &mut C, T, A) -> Result<R> + Send + 'static,
         A: FromQjMulti<'q, 'q>,
         R: IntoQj<'q> + 'q;
-    fn add_method_mut<F, T, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+    fn add_get_set<T, G, R1, S, A, R2>(&mut self, name: &str, getter: G, setter: S) -> Result<(Object<'q>, Object<'q>)>
     where
-        F: Fn(Context<'q>, &mut C, T, A) -> Result<R> + Send + 'static,
         T: FromQj<'q>,
-        A: FromQjMulti<'q, 'q>,
+        G: Fn(Context<'q>, &mut C, T) -> Result<R1> + Send + 'static,
+        R1: IntoQj<'q> + 'q,
+        S: Fn(Context<'q>, &mut C, T, A) -> Result<R2> + Send + 'static,
+        A: FromQj<'q>,
+        R2: IntoQj<'q> + 'q;
+    fn add_get<T, G, R>(&mut self, name: &str, getter: G) -> Result<Object<'q>>
+    where
+        T: FromQj<'q>,
+        G: Fn(Context<'q>, &mut C, T) -> Result<R> + Send + 'static,
+        R: IntoQj<'q> + 'q;
+    fn add_set<T, S, A, R>(&mut self, name: &str, setter: S) -> Result<Object<'q>>
+    where
+        T: FromQj<'q>,
+        S: Fn(Context<'q>, &mut C, T, A) -> Result<R> + Send + 'static,
+        A: FromQj<'q>,
         R: IntoQj<'q> + 'q;
 }
 
@@ -54,20 +67,10 @@ struct Methods<'q> {
 }
 
 impl<'q, C: Class + 'static> ClassMethods<'q, C> for Methods<'q> {
-    fn add_method<F, T, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+    fn add_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
     where
-        F: Fn(Context<'q>, &C, T, A) -> Result<R> + Send + 'static,
         T: FromQj<'q>,
-        A: FromQjMulti<'q, 'q>,
-        R: IntoQj<'q> + 'q,
-    {
-        self.add_method_mut(name, move |ctx, t, this, args| method(ctx, t, this, args))
-    }
-
-    fn add_method_mut<F, T, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
-    where
         F: Fn(Context<'q>, &mut C, T, A) -> Result<R> + Send + 'static,
-        T: FromQj<'q>,
         A: FromQjMulti<'q, 'q>,
         R: IntoQj<'q> + 'q,
     {
@@ -82,9 +85,107 @@ impl<'q, C: Class + 'static> ClassMethods<'q, C> for Methods<'q> {
             0,
         )?;
         trace!("registering method: {}::{} ({:?})", C::name(), name, f);
-        self.proto.set(name, f.clone())?;
+        self.proto
+            .define_property_value_with(name, f.clone(), PropFlags::CONFIGURABLE | PropFlags::WRITABLE)?;
         Ok(f)
     }
+
+    fn add_get_set<T, G, R1, S, A, R2>(&mut self, name: &str, getter: G, setter: S) -> Result<(Object<'q>, Object<'q>)>
+    where
+        T: FromQj<'q>,
+        G: Fn(Context<'q>, &mut C, T) -> Result<R1> + Send + 'static,
+        R1: IntoQj<'q> + 'q,
+        S: Fn(Context<'q>, &mut C, T, A) -> Result<R2> + Send + 'static,
+        A: FromQj<'q>,
+        R2: IntoQj<'q> + 'q,
+    {
+        let ctx = self.context;
+        let g = make_getter(ctx, getter)?;
+        let s = make_setter(ctx, setter)?;
+        trace!("registering get/set: {}::{} ({:?}, {:?})", C::name(), name, g, s);
+        self.proto.define_property_get_set_with(
+            name,
+            g.clone(),
+            s.clone(),
+            PropFlags::CONFIGURABLE | PropFlags::ENUMERABLE,
+        )?;
+        Ok((g, s))
+    }
+
+    fn add_get<T, G, R>(&mut self, name: &str, getter: G) -> Result<Object<'q>>
+    where
+        T: FromQj<'q>,
+        G: Fn(Context<'q>, &mut C, T) -> Result<R> + Send + 'static,
+        R: IntoQj<'q> + 'q,
+    {
+        let ctx = self.context;
+        let g = make_getter(ctx, getter)?;
+        trace!("registering get: {}::{} ({:?})", C::name(), name, g);
+        self.proto.define_property_get_set_with(
+            name,
+            g.clone(),
+            ctx.undefined(),
+            PropFlags::CONFIGURABLE | PropFlags::ENUMERABLE,
+        )?;
+        Ok(g)
+    }
+
+    fn add_set<T, S, A, R>(&mut self, name: &str, setter: S) -> Result<Object<'q>>
+    where
+        T: FromQj<'q>,
+        S: Fn(Context<'q>, &mut C, T, A) -> Result<R> + Send + 'static,
+        A: FromQj<'q>,
+        R: IntoQj<'q> + 'q,
+    {
+        let ctx = self.context;
+        let s = make_setter(ctx, setter)?;
+        trace!("registering set: {}::{} ({:?})", C::name(), name, s);
+        self.proto.define_property_get_set_with(
+            name,
+            ctx.undefined(),
+            s.clone(),
+            PropFlags::CONFIGURABLE | PropFlags::ENUMERABLE,
+        )?;
+        Ok(s)
+    }
+}
+
+fn make_getter<'q, C, T, G, R>(ctx: Context<'q>, getter: G) -> Result<Object<'q>>
+where
+    C: Class + 'static,
+    T: FromQj<'q>,
+    G: Fn(Context<'q>, &mut C, T) -> Result<R> + Send + 'static,
+    R: IntoQj<'q> + 'q,
+{
+    ctx.new_function_with(
+        move |ctx, this: Data<'q>, _args: &[Data]| {
+            let mut cloned = this.clone();
+            let t = cloned.opaque_mut::<C>().unwrap();
+            (getter)(ctx, t, T::from_qj(this)?)
+        },
+        "get",
+        0,
+    )
+}
+
+fn make_setter<'q, C, T, S, A, R>(ctx: Context<'q>, setter: S) -> Result<Object<'q>>
+where
+    C: Class + 'static,
+    T: FromQj<'q>,
+    S: Fn(Context<'q>, &mut C, T, A) -> Result<R> + Send + 'static,
+    A: FromQj<'q>,
+    R: IntoQj<'q> + 'q,
+{
+    ctx.new_function_with(
+        move |ctx, this: Data<'q>, args: &[Data]| {
+            let arg = args.get(0).cloned().unwrap_or_else(|| ctx.undefined().into());
+            let mut cloned = this.clone();
+            let t = cloned.opaque_mut::<C>().unwrap();
+            (setter)(ctx, t, T::from_qj(this)?, A::from_qj(arg)?)
+        },
+        "set",
+        1,
+    )
 }
 
 pub(crate) fn register_class<C: Class + 'static>(rctx: qc::Context, clz: qc::ClassId) -> Result<Object> {

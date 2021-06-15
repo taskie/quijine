@@ -21,18 +21,21 @@ impl Class for S1 {
     }
 
     fn add_methods<'q, T: ClassMethods<'q, Self>>(methods: &mut T) -> Result<()> {
-        methods.add_method("name", |_ctx, t, _this: Data, _args: ()| Ok(t.name.clone()))?;
-        methods.add_method_mut("setName", |ctx, t, _this: Data, (name,): (String,)| {
-            t.name = name;
-            Ok(ctx.undefined())
-        })?;
-        methods.add_method("pos", |ctx, t, _this: Data, _args: ()| {
+        methods.add_get_set(
+            "name",
+            |_ctx, t, _this: Data| Ok(t.name.clone()),
+            |_ctx, t, _this: Data, name: Data| {
+                t.name = name.to_string()?;
+                Ok(name)
+            },
+        )?;
+        methods.add_get("pos", |ctx, t, _this: Data| {
             let obj = ctx.new_object()?;
             obj.set("x", t.pos.0)?;
             obj.set("y", t.pos.1)?;
             Ok(obj)
         })?;
-        methods.add_method_mut("move", |ctx, t, _this: Data, (x, y): (i32, i32)| {
+        methods.add_method("move", |ctx, t, _this: Data, (x, y): (i32, i32)| {
             t.move_(x, y);
             Ok(ctx.undefined())
         })?;
@@ -56,29 +59,29 @@ fn new_object_class() -> Result<()> {
             )?,
         )?;
         let mut s1 = ctx.eval("const s1 = S1('foo'); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
-        let name: String = ctx.eval_into("s1.name()", "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let name: String = ctx.eval_into("s1.name", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("foo", name);
-        let name: String = ctx.eval_into("s1.setName('bar'); s1.name()", "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let name: String = ctx.eval_into("s1.name = 'bar'; s1.name", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("bar", name);
-        let x: i32 = ctx.eval_into("s1.pos().x", "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let x: i32 = ctx.eval_into("s1.pos.x", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!(0, x);
-        let y: i32 = ctx.eval_into("s1.pos().y", "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let y: i32 = ctx.eval_into("s1.pos.y", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!(0, y);
         ctx.eval("s1.move(2, 3)", "<input>", EvalFlags::TYPE_GLOBAL)?;
-        let x: i32 = ctx.eval_into("s1.pos().x", "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let x: i32 = ctx.eval_into("s1.pos.x", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!(2, x);
-        let y: i32 = ctx.eval_into("s1.pos().y", "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let y: i32 = ctx.eval_into("s1.pos.y", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!(3, y);
         let s1 = s1.opaque_mut::<S1>().unwrap();
         assert_eq!("bar", s1.name);
         assert_eq!((2, 3), s1.pos);
         s1.name = "baz".to_owned();
         s1.pos = (4, 5);
-        let name: String = ctx.eval_into("s1.name()", "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let name: String = ctx.eval_into("s1.name", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("baz", name);
-        let x: i32 = ctx.eval_into("s1.pos().x", "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let x: i32 = ctx.eval_into("s1.pos.x", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!(4, x);
-        let y: i32 = ctx.eval_into("s1.pos().y", "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let y: i32 = ctx.eval_into("s1.pos.y", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!(5, y);
         Ok(())
     })
@@ -108,7 +111,7 @@ fn multiple_context() -> Result<()> {
             register(ctx)?;
             let result = ctx.eval("const s1 = S1('foo'); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert!(!result.prototype()?.is_null());
-            let name: String = ctx.eval_into("s1.name()", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let name: String = ctx.eval_into("s1.name", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_eq!("foo", name);
         }
         {
@@ -117,7 +120,7 @@ fn multiple_context() -> Result<()> {
             register(ctx)?;
             let result = ctx.eval("const s1 = S1('foo'); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert!(!result.prototype()?.is_null());
-            let name: String = ctx.eval_into("s1.name()", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let name: String = ctx.eval_into("s1.name", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_eq!("foo", name);
         }
         Ok(())
@@ -133,20 +136,26 @@ impl Class for S2 {
     }
 
     fn add_methods<'q, T: ClassMethods<'q, Self>>(methods: &mut T) -> Result<()> {
-        methods.add_method("name", |_ctx, t, _this: Data, _args: ()| Ok(t.0.borrow().name.clone()))?;
-        methods.add_method("setName", |ctx, t, _this: Data, (name,): (String,)| {
-            let mut t = t.0.borrow_mut();
-            t.name = name;
-            Ok(ctx.undefined())
-        })?;
-        methods.add_method("pos", |ctx, t, _this: Data, _args: ()| {
+        methods.add_get_set(
+            "name",
+            |_ctx, t, _this: Data| {
+                let t = t.0.borrow();
+                Ok(t.name.clone())
+            },
+            |_ctx, t, _this: Data, name: Data| {
+                let mut t = t.0.borrow_mut();
+                t.name = name.to_string()?;
+                Ok(name)
+            },
+        )?;
+        methods.add_get("pos", |ctx, t, _this: Data| {
             let t = t.0.borrow();
             let obj = ctx.new_object()?;
             obj.set("x", t.pos.0)?;
             obj.set("y", t.pos.1)?;
             Ok(obj)
         })?;
-        methods.add_method_mut("move", |ctx, t, _this: Data, (x, y): (i32, i32)| {
+        methods.add_method("move", |ctx, t, _this: Data, (x, y): (i32, i32)| {
             let mut t = t.0.borrow_mut();
             t.move_(x, y);
             Ok(ctx.undefined())
@@ -168,9 +177,9 @@ fn new_object_class_arc() -> Result<()> {
             let global = ctx.global_object()?;
             let s2 = ctx.new_object_with_opaque(s2.clone())?;
             global.set("s2", s2.clone())?;
-            let b: bool = ctx.eval_into("s2.name() === 'foo'", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let b: bool = ctx.eval_into("s2.name === 'foo'", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert!(b);
-            ctx.eval("s2.setName('bar')", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            ctx.eval("s2.name = 'bar'", "<input>", EvalFlags::TYPE_GLOBAL)?;
         }
         {
             let ctxs = rt.new_context_scope();
@@ -178,7 +187,7 @@ fn new_object_class_arc() -> Result<()> {
             let global = ctx.global_object()?;
             let s2 = ctx.new_object_with_opaque(s2.clone())?;
             global.set("s2", s2.clone())?;
-            let b: bool = ctx.eval_into("s2.name() === 'bar'", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            let b: bool = ctx.eval_into("s2.name === 'bar'", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert!(b);
             ctx.eval("s2.move(1, -1)", "<input>", EvalFlags::TYPE_GLOBAL)?;
         }
