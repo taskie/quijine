@@ -2,7 +2,7 @@ use std::{cell::RefCell, sync::Arc};
 
 use quijine::{Class, ClassMethods, Context, Data, EvalFlags, Result};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 struct S1 {
     name: String,
     pos: (i32, i32),
@@ -18,6 +18,15 @@ impl S1 {
 impl Class for S1 {
     fn name() -> &'static str {
         "S1"
+    }
+
+    fn constructor<'q>(&mut self, _ctx: Context<'q>, _this: Data, args: &[Data]) -> Result<()> {
+        self.name = args[0].to_string()?;
+        Ok(())
+    }
+
+    fn constructor_length<'q>() -> i32 {
+        1
     }
 
     fn add_methods<'q, T: ClassMethods<'q, Self>>(methods: &mut T) -> Result<()> {
@@ -46,19 +55,8 @@ impl Class for S1 {
 #[test]
 fn new_object_class() -> Result<()> {
     quijine::context(|ctx| {
-        let global = ctx.global_object()?;
-        global.set(
-            "S1",
-            ctx.new_function_with(
-                |ctx, _this: Data, (name,): (String,)| {
-                    let obj = ctx.new_object_with_opaque(S1 { name, pos: (0, 0) })?;
-                    Ok(obj)
-                },
-                "S1",
-                0,
-            )?,
-        )?;
-        let mut s1 = ctx.eval("const s1 = S1('foo'); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
+        ctx.new_global_constructor::<S1>()?;
+        let mut s1 = ctx.eval("const s1 = new S1('foo'); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
         let name: String = ctx.eval_into("s1.name", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("foo", name);
         let name: String = ctx.eval_into("s1.name = 'bar'; s1.name", "<input>", EvalFlags::TYPE_GLOBAL)?;
@@ -89,27 +87,12 @@ fn new_object_class() -> Result<()> {
 
 #[test]
 fn multiple_context() -> Result<()> {
-    fn register(ctx: Context) -> Result<()> {
-        let global = ctx.global_object()?;
-        global.set(
-            "S1",
-            ctx.new_function_with(
-                |ctx, _this: Data, (name,): (String,)| {
-                    let obj = ctx.new_object_with_opaque(S1 { name, pos: (0, 0) })?;
-                    Ok(obj)
-                },
-                "S1",
-                0,
-            )?,
-        )?;
-        Ok(())
-    }
     quijine::run(|rt| {
         {
             let ctxs = rt.new_context_scope();
             let ctx = ctxs.get();
-            register(ctx)?;
-            let result = ctx.eval("const s1 = S1('foo'); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            ctx.new_global_constructor::<S1>()?;
+            let result = ctx.eval("const s1 = new S1('foo'); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert!(!result.prototype()?.is_null());
             let name: String = ctx.eval_into("s1.name", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_eq!("foo", name);
@@ -117,8 +100,8 @@ fn multiple_context() -> Result<()> {
         {
             let ctxs = rt.new_context_scope();
             let ctx = ctxs.get();
-            register(ctx)?;
-            let result = ctx.eval("const s1 = S1('foo'); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
+            ctx.new_global_constructor::<S1>()?;
+            let result = ctx.eval("const s1 = new S1('foo'); s1", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert!(!result.prototype()?.is_null());
             let name: String = ctx.eval_into("s1.name", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_eq!("foo", name);

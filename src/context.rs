@@ -5,7 +5,7 @@ use crate::{
     error::{ErrorValue, Result},
     runtime::Runtime,
     types::{Bool, Float64, Int, Null, Object, String as QjString, Undefined},
-    Data, Error, ErrorKind, EvalFlags, RuntimeScope,
+    Data, Error, ErrorKind, EvalFlags, PropFlags, RuntimeScope,
 };
 use qjncore::{self as qc, raw, AsJsValue};
 use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int, result::Result as StdResult};
@@ -41,6 +41,12 @@ impl<'q> Context<'q> {
     #[inline]
     pub(crate) fn opaque_mut(&mut self) -> &mut ContextOpaque {
         unsafe { &mut *(self.0.opaque() as *mut ContextOpaque) }
+    }
+
+    #[inline]
+    pub(crate) fn class_proto<C: Class + 'static>(self) -> Result<Data<'q>> {
+        let class_id = self.runtime().get_or_register_class_id::<C>();
+        Ok(Data::from_raw_parts(self.0.class_proto(class_id), self.0))
     }
 
     #[inline]
@@ -138,6 +144,58 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_object(self) -> Result<Object<'q>> {
         unsafe { self.wrap_result(self.0.new_object()) }
+    }
+
+    #[inline]
+    pub fn new_global_constructor<C: Class + Default + 'static>(self) -> Result<Object<'q>> {
+        let ctor = self.new_class_constructor::<C>()?;
+        self.global_object()?.define_property_value_with(
+            C::name(),
+            ctor.clone(),
+            PropFlags::WRITABLE | PropFlags::CONFIGURABLE,
+        )?;
+        Ok(ctor)
+    }
+
+    #[inline]
+    pub fn new_global_constructor_with<C, F>(self, f: F) -> Result<Object<'q>>
+    where
+        C: Class + 'static,
+        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> C + Send + 'q,
+    {
+        let ctor = self.new_class_constructor_with::<C, F>(f)?;
+        self.global_object()?.define_property_value_with(
+            C::name(),
+            ctor.clone(),
+            PropFlags::WRITABLE | PropFlags::CONFIGURABLE,
+        )?;
+        Ok(ctor)
+    }
+
+    #[inline]
+    pub fn new_class_constructor<C: Class + Default + 'static>(self) -> Result<Object<'q>> {
+        self.new_class_constructor_with(|_, _, _| C::default())
+    }
+
+    #[inline]
+    pub fn new_class_constructor_with<C, F>(mut self, f: F) -> Result<Object<'q>>
+    where
+        C: Class + 'static,
+        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> C + Send + 'q,
+    {
+        self.register_class::<C>()?;
+        let f = self.new_function(
+            move |ctx, this, args| {
+                let mut obj = ctx.new_object_with_opaque(f(ctx, this.clone(), args))?;
+                C::constructor(&mut obj.opaque_mut().unwrap(), ctx, this, args)?;
+                Ok(obj.into())
+            },
+            C::name(),
+            C::constructor_length(),
+        )?;
+        f.set_constructor_bit(true)?;
+        f.set_constructor(self.class_proto::<C>()?)?;
+        Ok(f)
     }
 
     #[inline]

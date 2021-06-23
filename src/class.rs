@@ -36,12 +36,19 @@ pub trait ClassMethods<'q, C: Class> {
         R: IntoQj<'q> + 'q;
 }
 
+#[allow(unused_variables)]
 pub trait Class: Sized {
     fn name() -> &'static str;
-    fn add_methods<'q, M: ClassMethods<'q, Self>>(_methods: &mut M) -> Result<()> {
+    fn constructor<'q>(&mut self, ctx: Context<'q>, this: Data, args: &[Data]) -> Result<()> {
         Ok(())
     }
-    fn setup_proto(_ctx: Context, _proto: &Object) -> Result<()> {
+    fn constructor_length() -> i32 {
+        0
+    }
+    fn add_methods<'q, M: ClassMethods<'q, Self>>(methods: &mut M) -> Result<()> {
+        Ok(())
+    }
+    fn setup_proto<'q>(ctx: Context<'q>, proto: &Object<'q>) -> Result<()> {
         Ok(())
     }
 }

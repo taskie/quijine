@@ -390,6 +390,12 @@ impl<'q> Data<'q> {
         Ok(self.value.set_constructor_bit(self.context, val))
     }
 
+    #[inline]
+    pub fn set_constructor(&self, proto: Data) -> Result<()> {
+        self.value.set_constructor(self.context, *proto.as_raw());
+        Ok(())
+    }
+
     // class
 
     #[inline]

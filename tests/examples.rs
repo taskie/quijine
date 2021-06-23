@@ -90,13 +90,7 @@ fn example_use_rust_struct_from_js() -> Result<()> {
     }
 
     let sum = quijine::context(|ctx| {
-        let random = ctx.new_function_with(
-            |ctx, _this: Data, _args: ()| Ok(ctx.new_object_with_opaque(Random::default())?),
-            "Random",
-            0,
-        )?;
-        random.set_constructor_bit(true)?;
-        ctx.global_object()?.set("Random", random)?;
+        ctx.new_global_constructor::<Random>()?;
         let sum: i32 = ctx.eval_into(
             r#"
                 const rand = new Random();
