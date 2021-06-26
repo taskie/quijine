@@ -1,6 +1,6 @@
 # quijine
 
-QuickJS-Rust binder (experimental)
+High-level bindings between Rust and QuickJS. (experimental)
 
 ## Usage
 

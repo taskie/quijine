@@ -3,6 +3,11 @@ name = "quijine"
 version = "0.1.0"
 authors = ["taskie <t@skie.jp>"]
 license = "MIT/Apache-2.0"
+keywords = ["javascript", "quickjs"]
+readme = "README.md"
+repository = "https://github.com/taskie/quijine"
+categories = ["api-bindings"]
+description = "High-level bindings between Rust and QuickJS."
 edition = "2018"
 
 [dependencies]
@@ -22,6 +27,6 @@ debug_leak = []
 [workspace]
 members = [
     "quijine_core",
-    "serde_quijine",
     "quijine_jj",
+    "serde_quijine",
 ]

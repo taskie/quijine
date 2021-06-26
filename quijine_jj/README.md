@@ -1,6 +1,6 @@
 # jj
 
-Genuine JavaScript Object Notation processor
+Genuine JavaScript Object Notation processor.
 
 ## License
 

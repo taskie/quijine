@@ -3,8 +3,12 @@ name = "quijine_jj"
 version = "0.1.0"
 authors = ["taskie <t@skie.jp>"]
 license = "MIT/Apache-2.0"
+keywords = ["json", "javascript", "quickjs"]
+readme = "README.md"
+repository = "https://github.com/taskie/quijine/tree/main/quijine_jj"
+categories = ["command-line-utilities"]
+description = "Genuine JavaScript Object Notation processor."
 edition = "2018"
-publish = false
 
 [[bin]]
 name = "jj"

@@ -1,6 +1,6 @@
 # qjncore
 
-Low-level QuickJS-Rust binder (experimental)
+Low-level bindings between Rust and QuickJS. (experimental)
 
 ## License
 
