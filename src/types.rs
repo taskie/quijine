@@ -1,4 +1,5 @@
 use crate::{
+    class::Class,
     context::Context,
     convert::IntoQj,
     error::{Error, ErrorKind, Result},
@@ -10,6 +11,7 @@ use std::{
     any::type_name,
     convert::TryFrom,
     fmt::{self, Formatter},
+    marker::PhantomData,
     ops::{Deref, DerefMut},
     result::Result as StdResult,
     string::String as StdString,
@@ -294,6 +296,62 @@ impl<'q> fmt::Debug for Variant<'q> {
             #[allow(unreachable_patterns)]
             _ => f.write_str("Unknown"),
         }
+    }
+}
+
+// class object
+
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct ClassObject<'q, C: Class + 'static>(Object<'q>, PhantomData<C>);
+
+impl<'q, C: Class + 'static> Clone for ClassObject<'q, C> {
+    fn clone(&self) -> Self {
+        ClassObject(self.0.clone(), PhantomData)
+    }
+}
+
+impl<'q, C: Class + 'static> From<ClassObject<'q, C>> for Value<'q> {
+    fn from(v: ClassObject<'q, C>) -> Self {
+        unsafe { v.as_any::<Self>().clone() }
+    }
+}
+
+impl<'q, C: Class + 'static> AsRef<Value<'q>> for ClassObject<'q, C> {
+    fn as_ref(&self) -> &Value<'q> {
+        self.as_data_raw()
+    }
+}
+
+impl<'q, C: Class + 'static> TryFrom<Value<'q>> for ClassObject<'q, C> {
+    type Error = Error;
+
+    fn try_from(v: Value<'q>) -> StdResult<Self, Self::Error> {
+        match &v {
+            v if v.tag() == Tag::Object && v.opaque::<C>().is_some() => Ok(unsafe { v.as_any::<Self>().clone() }),
+            _ => Err(Error::with_str(
+                ErrorKind::TypeError,
+                &format!(
+                    "can't convert {} to {}",
+                    type_name::<Value>(),
+                    type_name::<ClassObject<C>>()
+                ),
+            )),
+        }
+    }
+}
+
+impl<'q, C: Class + 'static> Deref for ClassObject<'q, C> {
+    type Target = Object<'q>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'q, C: Class + 'static> DerefMut for ClassObject<'q, C> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 

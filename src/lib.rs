@@ -23,8 +23,8 @@ pub use convert::{FromQj, FromQjMulti, IntoQj, IntoQjAtom, IntoQjMulti};
 pub use error::{Error, ErrorKind, ErrorValue, ExternalError, ExternalResult, Result};
 pub use runtime::{Runtime, RuntimeScope};
 pub use types::{
-    BigDecimal, BigFloat, BigInt, Bool, CatchOffset, Exception, Float64, FunctionBytecode, Int, Module, Null, Object,
-    String, Symbol, Undefined, Uninitialized, Variant,
+    BigDecimal, BigFloat, BigInt, Bool, CatchOffset, ClassObject, Exception, Float64, FunctionBytecode, Int, Module,
+    Null, Object, String, Symbol, Undefined, Uninitialized, Variant,
 };
 pub use value::Value;
 

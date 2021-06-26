@@ -78,10 +78,15 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub(crate) unsafe fn into_unchecked<T: AsRef<Value<'q>>>(self) -> T {
-        let ret = transmute_copy(&self);
-        forget(self);
+    pub(crate) unsafe fn copy_unchecked<T: AsRef<Value<'q>>, U: AsRef<Value<'q>>>(this: T) -> U {
+        let ret = transmute_copy(&this);
+        forget(this);
         ret
+    }
+
+    #[inline]
+    pub(crate) unsafe fn into_unchecked<T: AsRef<Value<'q>>>(self) -> T {
+        Self::copy_unchecked(self)
     }
 
     // memory

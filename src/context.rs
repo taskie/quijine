@@ -4,7 +4,7 @@ use crate::{
     convert::{FromQj, FromQjMulti, IntoQj, IntoQjMulti},
     error::{ErrorValue, Result},
     runtime::Runtime,
-    types::{Bool, Float64, Int, Null, Object, String as QjString, Undefined},
+    types::{Bool, ClassObject, Float64, Int, Null, Object, String as QjString, Undefined},
     Error, ErrorKind, EvalFlags, PropFlags, RuntimeScope, Value,
 };
 use quijine_core::{self as qc, raw, AsJsValue};
@@ -205,10 +205,10 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn new_object_with_opaque<C: Class + 'static>(self, v: C) -> Result<Object<'q>> {
+    pub fn new_object_with_opaque<C: Class + 'static>(self, v: C) -> Result<ClassObject<'q, C>> {
         let mut obj = self.new_object_class::<C>()?;
         obj.set_opaque(v);
-        Ok(obj)
+        Ok(unsafe { Value::copy_unchecked(obj) })
     }
 
     #[inline]
