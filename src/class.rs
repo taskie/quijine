@@ -12,26 +12,26 @@ pub trait ClassMethods<'q, C: Class> {
     fn add_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
-        F: Fn(Context<'q>, &mut C, T, A) -> Result<R> + 'static,
+        F: Fn(&mut C, Context<'q>, T, A) -> Result<R> + 'static,
         A: FromQjMulti<'q, 'q>,
         R: IntoQj<'q> + 'q;
     fn add_get_set<T, G, R1, S, A, R2>(&mut self, name: &str, getter: G, setter: S) -> Result<(Object<'q>, Object<'q>)>
     where
         T: FromQj<'q>,
-        G: Fn(Context<'q>, &mut C, T) -> Result<R1> + 'static,
+        G: Fn(&mut C, Context<'q>, T) -> Result<R1> + 'static,
         R1: IntoQj<'q> + 'q,
-        S: Fn(Context<'q>, &mut C, T, A) -> Result<R2> + 'static,
+        S: Fn(&mut C, Context<'q>, T, A) -> Result<R2> + 'static,
         A: FromQj<'q>,
         R2: IntoQj<'q> + 'q;
     fn add_get<T, G, R>(&mut self, name: &str, getter: G) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
-        G: Fn(Context<'q>, &mut C, T) -> Result<R> + 'static,
+        G: Fn(&mut C, Context<'q>, T) -> Result<R> + 'static,
         R: IntoQj<'q> + 'q;
     fn add_set<T, S, A, R>(&mut self, name: &str, setter: S) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
-        S: Fn(Context<'q>, &mut C, T, A) -> Result<R> + 'static,
+        S: Fn(&mut C, Context<'q>, T, A) -> Result<R> + 'static,
         A: FromQj<'q>,
         R: IntoQj<'q> + 'q;
 }
@@ -77,7 +77,7 @@ impl<'q, C: Class + 'static> ClassMethods<'q, C> for Methods<'q> {
     fn add_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
-        F: Fn(Context<'q>, &mut C, T, A) -> Result<R> + 'static,
+        F: Fn(&mut C, Context<'q>, T, A) -> Result<R> + 'static,
         A: FromQjMulti<'q, 'q>,
         R: IntoQj<'q> + 'q,
     {
@@ -85,8 +85,8 @@ impl<'q, C: Class + 'static> ClassMethods<'q, C> for Methods<'q> {
         let f = ctx.new_function_with(
             move |ctx, this: Data<'q>, args| {
                 let mut cloned = this.clone();
-                let t = cloned.opaque_mut::<C>().unwrap();
-                (method)(ctx, t, T::from_qj(this)?, args)
+                let v = cloned.opaque_mut::<C>().unwrap();
+                (method)(v, ctx, T::from_qj(this)?, args)
             },
             name,
             0,
@@ -100,9 +100,9 @@ impl<'q, C: Class + 'static> ClassMethods<'q, C> for Methods<'q> {
     fn add_get_set<T, G, R1, S, A, R2>(&mut self, name: &str, getter: G, setter: S) -> Result<(Object<'q>, Object<'q>)>
     where
         T: FromQj<'q>,
-        G: Fn(Context<'q>, &mut C, T) -> Result<R1> + 'static,
+        G: Fn(&mut C, Context<'q>, T) -> Result<R1> + 'static,
         R1: IntoQj<'q> + 'q,
-        S: Fn(Context<'q>, &mut C, T, A) -> Result<R2> + 'static,
+        S: Fn(&mut C, Context<'q>, T, A) -> Result<R2> + 'static,
         A: FromQj<'q>,
         R2: IntoQj<'q> + 'q,
     {
@@ -122,7 +122,7 @@ impl<'q, C: Class + 'static> ClassMethods<'q, C> for Methods<'q> {
     fn add_get<T, G, R>(&mut self, name: &str, getter: G) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
-        G: Fn(Context<'q>, &mut C, T) -> Result<R> + 'static,
+        G: Fn(&mut C, Context<'q>, T) -> Result<R> + 'static,
         R: IntoQj<'q> + 'q,
     {
         let ctx = self.context;
@@ -140,7 +140,7 @@ impl<'q, C: Class + 'static> ClassMethods<'q, C> for Methods<'q> {
     fn add_set<T, S, A, R>(&mut self, name: &str, setter: S) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
-        S: Fn(Context<'q>, &mut C, T, A) -> Result<R> + 'static,
+        S: Fn(&mut C, Context<'q>, T, A) -> Result<R> + 'static,
         A: FromQj<'q>,
         R: IntoQj<'q> + 'q,
     {
@@ -161,14 +161,14 @@ fn make_getter<'q, C, T, G, R>(ctx: Context<'q>, getter: G) -> Result<Object<'q>
 where
     C: Class + 'static,
     T: FromQj<'q>,
-    G: Fn(Context<'q>, &mut C, T) -> Result<R> + 'static,
+    G: Fn(&mut C, Context<'q>, T) -> Result<R> + 'static,
     R: IntoQj<'q> + 'q,
 {
     ctx.new_function_with(
         move |ctx, this: Data<'q>, _args: &[Data]| {
             let mut cloned = this.clone();
-            let t = cloned.opaque_mut::<C>().unwrap();
-            (getter)(ctx, t, T::from_qj(this)?)
+            let v = cloned.opaque_mut::<C>().unwrap();
+            (getter)(v, ctx, T::from_qj(this)?)
         },
         "get",
         0,
@@ -179,7 +179,7 @@ fn make_setter<'q, C, T, S, A, R>(ctx: Context<'q>, setter: S) -> Result<Object<
 where
     C: Class + 'static,
     T: FromQj<'q>,
-    S: Fn(Context<'q>, &mut C, T, A) -> Result<R> + 'static,
+    S: Fn(&mut C, Context<'q>, T, A) -> Result<R> + 'static,
     A: FromQj<'q>,
     R: IntoQj<'q> + 'q,
 {
@@ -187,8 +187,8 @@ where
         move |ctx, this: Data<'q>, args: &[Data]| {
             let arg = args.get(0).cloned().unwrap_or_else(|| ctx.undefined().into());
             let mut cloned = this.clone();
-            let t = cloned.opaque_mut::<C>().unwrap();
-            (setter)(ctx, t, T::from_qj(this)?, A::from_qj(arg)?)
+            let v = cloned.opaque_mut::<C>().unwrap();
+            (setter)(v, ctx, T::from_qj(this)?, A::from_qj(arg)?)
         },
         "set",
         1,

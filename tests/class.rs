@@ -32,20 +32,20 @@ impl Class for S1 {
     fn add_methods<'q, T: ClassMethods<'q, Self>>(methods: &mut T) -> Result<()> {
         methods.add_get_set(
             "name",
-            |_ctx, t, _this: Data| Ok(t.name.clone()),
-            |_ctx, t, _this: Data, name: Data| {
-                t.name = name.to_string()?;
+            |v, _ctx, _this: Data| Ok(v.name.clone()),
+            |v, _ctx, _this: Data, name: Data| {
+                v.name = name.to_string()?;
                 Ok(name)
             },
         )?;
-        methods.add_get("pos", |ctx, t, _this: Data| {
+        methods.add_get("pos", |v, ctx, _this: Data| {
             let obj = ctx.new_object()?;
-            obj.set("x", t.pos.0)?;
-            obj.set("y", t.pos.1)?;
+            obj.set("x", v.pos.0)?;
+            obj.set("y", v.pos.1)?;
             Ok(obj)
         })?;
-        methods.add_method("move", |ctx, t, _this: Data, (x, y): (i32, i32)| {
-            t.move_(x, y);
+        methods.add_method("move", |v, ctx, _this: Data, (x, y): (i32, i32)| {
+            v.move_(x, y);
             Ok(ctx.undefined())
         })?;
         Ok(())
@@ -121,26 +121,26 @@ impl Class for S2 {
     fn add_methods<'q, T: ClassMethods<'q, Self>>(methods: &mut T) -> Result<()> {
         methods.add_get_set(
             "name",
-            |_ctx, t, _this: Data| {
-                let t = t.0.borrow();
-                Ok(t.name.clone())
+            |v, _ctx, _this: Data| {
+                let v = v.0.borrow();
+                Ok(v.name.clone())
             },
-            |_ctx, t, _this: Data, name: Data| {
-                let mut t = t.0.borrow_mut();
-                t.name = name.to_string()?;
+            |v, _ctx, _this: Data, name: Data| {
+                let mut v = v.0.borrow_mut();
+                v.name = name.to_string()?;
                 Ok(name)
             },
         )?;
-        methods.add_get("pos", |ctx, t, _this: Data| {
-            let t = t.0.borrow();
+        methods.add_get("pos", |v, ctx, _this: Data| {
+            let v = v.0.borrow();
             let obj = ctx.new_object()?;
-            obj.set("x", t.pos.0)?;
-            obj.set("y", t.pos.1)?;
+            obj.set("x", v.pos.0)?;
+            obj.set("y", v.pos.1)?;
             Ok(obj)
         })?;
-        methods.add_method("move", |ctx, t, _this: Data, (x, y): (i32, i32)| {
-            let mut t = t.0.borrow_mut();
-            t.move_(x, y);
+        methods.add_method("move", |v, ctx, _this: Data, (x, y): (i32, i32)| {
+            let mut v = v.0.borrow_mut();
+            v.move_(x, y);
             Ok(ctx.undefined())
         })?;
         Ok(())
