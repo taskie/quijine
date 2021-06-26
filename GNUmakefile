@@ -8,7 +8,7 @@ PREFIX := $(HOME)/.local
 .PHONY: install
 
 install:
-	$(MAKE) -C jj install
+	$(MAKE) -C quijine_jj install
 
 .PHONY: dev
 

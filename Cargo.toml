@@ -22,5 +22,5 @@ debug_leak = []
 members = [
     "quijine_core",
     "serde_quijine",
-    "jj",
+    "quijine_jj",
 ]

@@ -1,9 +1,13 @@
 [package]
-name = "jj"
+name = "quijine_jj"
 version = "0.1.0"
 authors = ["taskie <t@skie.jp>"]
 edition = "2018"
 publish = false
+
+[[bin]]
+name = "jj"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"
