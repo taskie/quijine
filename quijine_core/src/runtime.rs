@@ -1,5 +1,4 @@
 use crate::{
-    alloc::GLOBAL_ALLOCATOR_MALLOC_FUNCTIONS,
     class::{ClassDef, ClassId},
     convert::{AsJsClassId, AsJsValue, AsMutPtr, AsPtr},
     ffi::{self, c_size_t},
@@ -10,7 +9,7 @@ use std::{
     ffi::{c_void, CStr},
     fmt,
     marker::PhantomData,
-    ptr::{null_mut, NonNull},
+    ptr::NonNull,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -30,18 +29,14 @@ impl<'q> Runtime<'q> {
     #[allow(clippy::new_without_default)]
     #[inline]
     pub fn new() -> Runtime<'q> {
-        // faster than `unsafe { Self::from_raw(ffi::JS_NewRuntime()) }`
-        Self::with_global_allocator()
+        unsafe { Self::from_raw(ffi::JS_NewRuntime()) }
     }
 
+    // QuickJS C library doesn't dereference an opaque.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     #[inline]
-    pub(crate) fn with_global_allocator() -> Runtime<'q> {
-        Self::with_malloc_functions(&GLOBAL_ALLOCATOR_MALLOC_FUNCTIONS)
-    }
-
-    #[inline]
-    pub(crate) fn with_malloc_functions(mf: &'static ffi::JSMallocFunctions) -> Runtime<'q> {
-        unsafe { Self::from_raw(ffi::JS_NewRuntime2(mf, null_mut())) }
+    pub fn new_2(mf: &'static ffi::JSMallocFunctions, opaque: *mut c_void) -> Runtime<'q> {
+        unsafe { Self::from_raw(ffi::JS_NewRuntime2(mf, opaque)) }
     }
 
     /// # Safety

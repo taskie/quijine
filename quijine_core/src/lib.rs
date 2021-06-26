@@ -1,4 +1,3 @@
-mod alloc;
 mod atom;
 mod class;
 mod context;
@@ -13,6 +12,7 @@ mod runtime;
 mod string;
 mod value;
 
+pub mod alloc;
 #[macro_use]
 pub mod macros;
 #[doc(hidden)]

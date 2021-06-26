@@ -70,7 +70,7 @@ unsafe extern "C" fn js_malloc_usable_size(ptr: *const c_void) -> c_size_t {
     size_of_val(&*(ptr.cast::<u8>())) as c_size_t
 }
 
-pub(crate) const GLOBAL_ALLOCATOR_MALLOC_FUNCTIONS: ffi::JSMallocFunctions = ffi::JSMallocFunctions {
+pub const GLOBAL_ALLOCATOR_MALLOC_FUNCTIONS: ffi::JSMallocFunctions = ffi::JSMallocFunctions {
     js_malloc: Some(js_malloc),
     js_free: Some(js_free),
     js_realloc: Some(js_realloc),

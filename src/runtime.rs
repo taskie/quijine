@@ -4,7 +4,7 @@ use crate::{
     error::Result,
 };
 use quijine_core as qc;
-use std::{any::TypeId, collections::HashMap, ffi::c_void, fmt, result::Result as StdResult};
+use std::{any::TypeId, collections::HashMap, ffi::c_void, fmt, ptr::null_mut, result::Result as StdResult};
 
 pub struct RuntimeOpaque {
     registered_classes: HashMap<TypeId, qc::ClassId>,
@@ -93,7 +93,7 @@ pub struct RuntimeScope(Runtime<'static>);
 impl RuntimeScope {
     #[inline]
     pub fn new() -> Self {
-        let rt = qc::Runtime::new();
+        let rt = qc::Runtime::new_2(&qc::alloc::GLOBAL_ALLOCATOR_MALLOC_FUNCTIONS, null_mut());
         let opaque = Box::new(RuntimeOpaque {
             registered_classes: HashMap::new(),
             class_defs: HashMap::new(),
