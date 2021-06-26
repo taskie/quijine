@@ -60,7 +60,7 @@ impl Opt {
     }
 }
 
-type Handler<'q> = Box<dyn Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> QjResult<Data<'q>> + Send + 'static>;
+type Handler<'q> = Box<dyn Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> QjResult<Data<'q>> + 'static>;
 
 fn print<'q, 'a, 'b>(opt: &'a Opt, ctx: Context<'q>, _this: Data<'q>, args: &'b [Data<'q>]) -> QjResult<Data<'q>> {
     let ret = Ok(ctx.undefined().into());

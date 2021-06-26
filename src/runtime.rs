@@ -130,8 +130,6 @@ impl RuntimeScope {
     }
 }
 
-unsafe impl Send for RuntimeScope {}
-
 impl Drop for RuntimeScope {
     fn drop(&mut self) {
         unsafe {

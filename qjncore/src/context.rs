@@ -402,7 +402,7 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_function<F>(self, func: F, length: i32) -> Value<'q>
     where
-        F: Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q> + Send + 'q,
+        F: Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q> + 'q,
     {
         self.new_callback(Box::new(move |ctx, this, args| func(ctx, this, args)), length)
     }
@@ -606,4 +606,4 @@ impl<'q> AsJsContextPointer<'q> for Context<'q> {
     }
 }
 
-pub(crate) type Callback<'q, 'a> = dyn Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q> + Send + 'a;
+pub(crate) type Callback<'q, 'a> = dyn Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> Value<'q> + 'a;

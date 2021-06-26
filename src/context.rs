@@ -161,7 +161,7 @@ impl<'q> Context<'q> {
     pub fn new_global_constructor_with<C, F>(self, f: F) -> Result<Object<'q>>
     where
         C: Class + 'static,
-        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> C + Send + 'q,
+        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> C + 'q,
     {
         let ctor = self.new_class_constructor_with::<C, F>(f)?;
         self.global_object()?.define_property_value_with(
@@ -181,7 +181,7 @@ impl<'q> Context<'q> {
     pub fn new_class_constructor_with<C, F>(mut self, f: F) -> Result<Object<'q>>
     where
         C: Class + 'static,
-        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> C + Send + 'q,
+        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> C + 'q,
     {
         self.register_class::<C>()?;
         let f = self.new_function(
@@ -272,7 +272,7 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_function<F>(self, func: F, name: &str, length: i32) -> Result<Object<'q>>
     where
-        F: Fn(Context<'q>, Data<'q>, &'q [Data<'q>]) -> Result<Data<'q>> + Send + 'q,
+        F: Fn(Context<'q>, Data<'q>, &'q [Data<'q>]) -> Result<Data<'q>> + 'q,
     {
         self.new_callback(Box::new(func), name, length)
     }
@@ -280,7 +280,7 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_function_with<F, T, A, R>(self, func: F, name: &str, length: i32) -> Result<Object<'q>>
     where
-        F: Fn(Context<'q>, T, A) -> Result<R> + Send + 'q,
+        F: Fn(Context<'q>, T, A) -> Result<R> + 'q,
         T: FromQj<'q>,
         A: FromQjMulti<'q, 'q>,
         R: IntoQj<'q> + 'q,
