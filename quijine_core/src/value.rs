@@ -2,7 +2,7 @@ use crate::{
     atom::{Atom, PropertyEnum},
     class::ClassId,
     context::Context,
-    convert::{AsJsAtom, AsJsClassId, AsJsContextPointer, AsJsValue},
+    convert::{AsJsAtom, AsJsClassId, AsJsValue, AsMutPtr},
     enums::ValueTag,
     error::Error,
     ffi,
@@ -136,8 +136,8 @@ impl<'q> Value<'q> {
     // conversion
 
     #[inline]
-    pub fn to_bool(self, ctx: Context<'q>) -> Option<bool> {
-        let v = unsafe { ffi::JS_ToBool(ctx.as_ptr(), self.0) };
+    pub fn to_bool(self, mut ctx: Context<'q>) -> Option<bool> {
+        let v = unsafe { ffi::JS_ToBool(ctx.as_mut_ptr(), self.0) };
         if v == -1 {
             None
         } else if v == 0 {
@@ -148,9 +148,9 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn to_i32(self, ctx: Context<'q>) -> Option<i32> {
+    pub fn to_i32(self, mut ctx: Context<'q>) -> Option<i32> {
         let mut v = 0;
-        let x = unsafe { ffi::JS_ToInt32(ctx.as_ptr(), &mut v as *mut i32, self.0) };
+        let x = unsafe { ffi::JS_ToInt32(ctx.as_mut_ptr(), &mut v as *mut i32, self.0) };
         if x == 0 {
             Some(v)
         } else {
@@ -159,9 +159,9 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn to_u32(self, ctx: Context<'q>) -> Option<u32> {
+    pub fn to_u32(self, mut ctx: Context<'q>) -> Option<u32> {
         let mut v = 0u32;
-        let x = unsafe { ffi::JS_ToUint32(ctx.as_ptr(), &mut v as *mut u32, self.0) };
+        let x = unsafe { ffi::JS_ToUint32(ctx.as_mut_ptr(), &mut v as *mut u32, self.0) };
         if x == 0 {
             Some(v)
         } else {
@@ -170,9 +170,9 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn to_i64(self, ctx: Context<'q>) -> Option<i64> {
+    pub fn to_i64(self, mut ctx: Context<'q>) -> Option<i64> {
         let mut v = 0;
-        let x = unsafe { ffi::JS_ToInt64(ctx.as_ptr(), &mut v as *mut i64, self.0) };
+        let x = unsafe { ffi::JS_ToInt64(ctx.as_mut_ptr(), &mut v as *mut i64, self.0) };
         if x == 0 {
             Some(v)
         } else {
@@ -181,9 +181,9 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn to_f64(self, ctx: Context<'q>) -> Option<f64> {
+    pub fn to_f64(self, mut ctx: Context<'q>) -> Option<f64> {
         let mut v = 0.0;
-        let x = unsafe { ffi::JS_ToFloat64(ctx.as_ptr(), &mut v as *mut f64, self.0) };
+        let x = unsafe { ffi::JS_ToFloat64(ctx.as_mut_ptr(), &mut v as *mut f64, self.0) };
         if x == 0 {
             Some(v)
         } else {
@@ -192,64 +192,64 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn to_c_string(self, ctx: Context<'q>) -> Option<QcCString<'q>> {
-        QcCString::new(unsafe { ffi::JS_ToCString(ctx.as_ptr(), self.0) })
+    pub fn to_c_string(self, mut ctx: Context<'q>) -> Option<QcCString<'q>> {
+        QcCString::new(unsafe { ffi::JS_ToCString(ctx.as_mut_ptr(), self.0) })
     }
 
     // function
 
     #[inline]
-    pub fn is_function(self, ctx: Context<'q>) -> bool {
-        unsafe { ffi::JS_IsFunction(ctx.as_ptr(), self.0) != 0 }
+    pub fn is_function(self, mut ctx: Context<'q>) -> bool {
+        unsafe { ffi::JS_IsFunction(ctx.as_mut_ptr(), self.0) != 0 }
     }
 
     #[inline]
-    pub fn is_constructor(self, ctx: Context<'q>) -> bool {
-        unsafe { ffi::JS_IsConstructor(ctx.as_ptr(), self.0) != 0 }
+    pub fn is_constructor(self, mut ctx: Context<'q>) -> bool {
+        unsafe { ffi::JS_IsConstructor(ctx.as_mut_ptr(), self.0) != 0 }
     }
 
     #[inline]
-    pub fn set_constructor(self, ctx: Context<'q>, proto: Value) {
-        unsafe { ffi::JS_SetConstructor(ctx.as_ptr(), self.0, proto.0) }
+    pub fn set_constructor(self, mut ctx: Context<'q>, proto: Value) {
+        unsafe { ffi::JS_SetConstructor(ctx.as_mut_ptr(), self.0, proto.0) }
     }
 
     #[inline]
-    pub fn set_constructor_bit(self, ctx: Context<'q>, val: bool) -> bool {
-        unsafe { ffi::JS_SetConstructorBit(ctx.as_ptr(), self.0, val as c_int) != 0 }
+    pub fn set_constructor_bit(self, mut ctx: Context<'q>, val: bool) -> bool {
+        unsafe { ffi::JS_SetConstructorBit(ctx.as_mut_ptr(), self.0, val as c_int) != 0 }
     }
 
     // array
 
     #[inline]
-    pub fn is_array(self, ctx: Context<'q>) -> bool {
-        unsafe { ffi::JS_IsArray(ctx.as_ptr(), self.0) != 0 }
+    pub fn is_array(self, mut ctx: Context<'q>) -> bool {
+        unsafe { ffi::JS_IsArray(ctx.as_mut_ptr(), self.0) != 0 }
     }
 
     // property
 
     #[inline]
-    pub fn property(self, ctx: Context<'q>, prop: Atom<'q>) -> Value<'q> {
+    pub fn property(self, mut ctx: Context<'q>, prop: Atom<'q>) -> Value<'q> {
         unsafe {
-            let value = ffi::JS_GetProperty(ctx.as_ptr(), self.0, prop.as_js_atom());
+            let value = ffi::JS_GetProperty(ctx.as_mut_ptr(), self.0, prop.as_js_atom());
             Value::from_raw(value, ctx)
         }
     }
 
     #[inline]
-    pub fn property_str(self, ctx: Context<'q>, key: &str) -> Value<'q> {
+    pub fn property_str(self, mut ctx: Context<'q>, key: &str) -> Value<'q> {
         let c_key = CString::new(key).unwrap();
         unsafe {
-            let value = ffi::JS_GetPropertyStr(ctx.as_ptr(), self.0, c_key.as_ptr());
+            let value = ffi::JS_GetPropertyStr(ctx.as_mut_ptr(), self.0, c_key.as_ptr());
             Value::from_raw(value, ctx)
         }
     }
 
     #[inline]
-    pub fn set_property<V>(self, ctx: Context<'q>, prop: Atom<'q>, val: V) -> Result<bool, Error>
+    pub fn set_property<V>(self, mut ctx: Context<'q>, prop: Atom<'q>, val: V) -> Result<bool, Error>
     where
         V: AsJsValue<'q>,
     {
-        let ret = unsafe { ffi::JS_SetProperty(ctx.as_ptr(), self.0, prop.as_js_atom(), val.as_js_value()) };
+        let ret = unsafe { ffi::JS_SetProperty(ctx.as_mut_ptr(), self.0, prop.as_js_atom(), val.as_js_value()) };
         if ret == -1 {
             Err(Error::HasException)
         } else {
@@ -258,8 +258,8 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn has_property(self, ctx: Context<'q>, prop: Atom<'q>) -> Result<bool, Error> {
-        let ret = unsafe { ffi::JS_HasProperty(ctx.as_ptr(), self.0, prop.as_js_atom()) };
+    pub fn has_property(self, mut ctx: Context<'q>, prop: Atom<'q>) -> Result<bool, Error> {
+        let ret = unsafe { ffi::JS_HasProperty(ctx.as_mut_ptr(), self.0, prop.as_js_atom()) };
         if ret == -1 {
             Err(Error::HasException)
         } else {
@@ -268,12 +268,12 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn set_property_str<V>(self, ctx: Context<'q>, key: &str, val: V) -> Result<bool, Error>
+    pub fn set_property_str<V>(self, mut ctx: Context<'q>, key: &str, val: V) -> Result<bool, Error>
     where
         V: AsJsValue<'q>,
     {
         let c_key = CString::new(key).unwrap();
-        let ret = unsafe { ffi::JS_SetPropertyStr(ctx.as_ptr(), self.0, c_key.as_ptr(), val.as_js_value()) };
+        let ret = unsafe { ffi::JS_SetPropertyStr(ctx.as_mut_ptr(), self.0, c_key.as_ptr(), val.as_js_value()) };
         if ret == -1 {
             Err(Error::HasException)
         } else {
@@ -283,8 +283,8 @@ impl<'q> Value<'q> {
 
     /// return `None` if exception (Proxy object only)
     #[inline]
-    pub fn is_extensible(self, ctx: Context<'q>) -> Result<bool, Error> {
-        let ret = unsafe { ffi::JS_IsExtensible(ctx.as_ptr(), self.0) };
+    pub fn is_extensible(self, mut ctx: Context<'q>) -> Result<bool, Error> {
+        let ret = unsafe { ffi::JS_IsExtensible(ctx.as_mut_ptr(), self.0) };
         if ret == -1 {
             Err(Error::HasException)
         } else {
@@ -294,8 +294,8 @@ impl<'q> Value<'q> {
 
     /// return `None` if exception (Proxy object only)
     #[inline]
-    pub fn prevent_extensions(self, ctx: Context<'q>) -> Result<bool, Error> {
-        let ret = unsafe { ffi::JS_PreventExtensions(ctx.as_ptr(), self.0) };
+    pub fn prevent_extensions(self, mut ctx: Context<'q>) -> Result<bool, Error> {
+        let ret = unsafe { ffi::JS_PreventExtensions(ctx.as_mut_ptr(), self.0) };
         if ret == -1 {
             Err(Error::HasException)
         } else {
@@ -304,12 +304,12 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn own_property_names(self, ctx: Context<'q>, flags: GPNFlags) -> Result<Vec<PropertyEnum<'q>>, Error> {
+    pub fn own_property_names(self, mut ctx: Context<'q>, flags: GPNFlags) -> Result<Vec<PropertyEnum<'q>>, Error> {
         let mut ptab: *mut ffi::JSPropertyEnum = null_mut();
         let mut plen: u32 = 0;
         let ret = unsafe {
             ffi::JS_GetOwnPropertyNames(
-                ctx.as_ptr(),
+                ctx.as_mut_ptr(),
                 &mut ptab,
                 &mut plen,
                 self.as_js_value(),
@@ -326,15 +326,15 @@ impl<'q> Value<'q> {
             .collect();
         // see js_free_prop_enum
         unsafe {
-            ffi::js_free(ctx.as_ptr(), ptab as *mut c_void);
+            ffi::js_free(ctx.as_mut_ptr(), ptab as *mut c_void);
         }
         Ok(ret)
     }
 
     #[inline]
-    pub fn own_property(self, ctx: Context<'q>, prop: Atom<'q>) -> Result<Option<PropertyDescriptor<'q>>, Error> {
+    pub fn own_property(self, mut ctx: Context<'q>, prop: Atom<'q>) -> Result<Option<PropertyDescriptor<'q>>, Error> {
         let mut desc = MaybeUninit::<ffi::JSPropertyDescriptor>::zeroed();
-        let ret = unsafe { ffi::JS_GetOwnProperty(ctx.as_ptr(), desc.as_mut_ptr(), self.0, prop.as_js_atom()) };
+        let ret = unsafe { ffi::JS_GetOwnProperty(ctx.as_mut_ptr(), desc.as_mut_ptr(), self.0, prop.as_js_atom()) };
         if ret == -1 {
             Err(Error::HasException)
         } else if ret == 0 {
@@ -347,7 +347,7 @@ impl<'q> Value<'q> {
     #[inline]
     pub fn define_property(
         self,
-        ctx: Context<'q>,
+        mut ctx: Context<'q>,
         prop: Atom<'q>,
         val: Value<'q>,
         getter: Value<'q>,
@@ -356,7 +356,7 @@ impl<'q> Value<'q> {
     ) -> Result<bool, Error> {
         let ret = unsafe {
             ffi::JS_DefineProperty(
-                ctx.as_ptr(),
+                ctx.as_mut_ptr(),
                 self.0,
                 prop.as_js_atom(),
                 val.0,
@@ -376,13 +376,19 @@ impl<'q> Value<'q> {
     #[inline]
     pub fn define_property_value(
         self,
-        ctx: Context<'q>,
+        mut ctx: Context<'q>,
         prop: Atom<'q>,
         val: Value<'q>,
         flags: PropFlags,
     ) -> Result<bool, Error> {
         let ret = unsafe {
-            ffi::JS_DefinePropertyValue(ctx.as_ptr(), self.0, prop.as_js_atom(), val.0, flags.bits() as c_int)
+            ffi::JS_DefinePropertyValue(
+                ctx.as_mut_ptr(),
+                self.0,
+                prop.as_js_atom(),
+                val.0,
+                flags.bits() as c_int,
+            )
         };
         if ret == -1 {
             Err(Error::HasException)
@@ -395,7 +401,7 @@ impl<'q> Value<'q> {
     #[inline]
     pub fn define_property_get_set(
         self,
-        ctx: Context<'q>,
+        mut ctx: Context<'q>,
         prop: Atom<'q>,
         getter: Value<'q>,
         setter: Value<'q>,
@@ -403,7 +409,7 @@ impl<'q> Value<'q> {
     ) -> Result<bool, Error> {
         let ret = unsafe {
             ffi::JS_DefinePropertyGetSet(
-                ctx.as_ptr(),
+                ctx.as_mut_ptr(),
                 self.0,
                 prop.as_js_atom(),
                 getter.0,
@@ -419,11 +425,11 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn set_prototype<V>(self, ctx: Context<'q>, proto_val: V) -> Result<bool, Error>
+    pub fn set_prototype<V>(self, mut ctx: Context<'q>, proto_val: V) -> Result<bool, Error>
     where
         V: AsJsValue<'q>,
     {
-        let ret = unsafe { ffi::JS_SetPrototype(ctx.as_ptr(), self.0, proto_val.as_js_value()) };
+        let ret = unsafe { ffi::JS_SetPrototype(ctx.as_mut_ptr(), self.0, proto_val.as_js_value()) };
         if ret == -1 {
             Err(Error::HasException)
         } else {
@@ -432,9 +438,9 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn prototype(self, ctx: Context<'q>) -> Value<'q> {
+    pub fn prototype(self, mut ctx: Context<'q>) -> Value<'q> {
         unsafe {
-            let val = ffi::JS_GetPrototype(ctx.as_ptr(), self.0);
+            let val = ffi::JS_GetPrototype(ctx.as_mut_ptr(), self.0);
             Value::from_raw(val, ctx)
         }
     }
@@ -456,9 +462,9 @@ impl<'q> Value<'q> {
     // array buffer
 
     #[inline]
-    pub fn array_buffer(self, ctx: Context<'q>) -> Option<&[u8]> {
+    pub fn array_buffer(self, mut ctx: Context<'q>) -> Option<&[u8]> {
         let mut len = 0;
-        let bs: *const u8 = unsafe { ffi::JS_GetArrayBuffer(ctx.as_ptr(), &mut len, self.0) };
+        let bs: *const u8 = unsafe { ffi::JS_GetArrayBuffer(ctx.as_mut_ptr(), &mut len, self.0) };
         if bs.is_null() {
             return None;
         }
@@ -475,9 +481,9 @@ impl<'q> Value<'q> {
     // C property
 
     #[inline]
-    pub fn set_property_function_list(self, ctx: Context, tab: &[ffi::JSCFunctionListEntry]) {
+    pub fn set_property_function_list(self, mut ctx: Context, tab: &[ffi::JSCFunctionListEntry]) {
         trace!("length: {}", tab.len());
-        unsafe { ffi::JS_SetPropertyFunctionList(ctx.as_ptr(), self.0, tab.as_ptr(), tab.len() as c_int) }
+        unsafe { ffi::JS_SetPropertyFunctionList(ctx.as_mut_ptr(), self.0, tab.as_ptr(), tab.len() as c_int) }
     }
 }
 

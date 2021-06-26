@@ -1,4 +1,4 @@
-use crate::{convert::AsJsCString, marker::Invariant};
+use crate::{convert::AsPtr, marker::Invariant};
 use std::{ffi::CStr, marker::PhantomData, os::raw::c_char, ptr::NonNull};
 
 #[derive(Clone, Copy, Debug)]
@@ -33,9 +33,9 @@ impl<'q> CString<'q> {
     }
 }
 
-impl<'q> AsJsCString<'q> for CString<'q> {
+impl<'q> AsPtr<c_char> for CString<'q> {
     #[inline]
-    fn as_js_c_string(&self) -> *const c_char {
+    fn as_ptr(&self) -> *const c_char {
         self.0.as_ptr()
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     alloc::GLOBAL_ALLOCATOR_MALLOC_FUNCTIONS,
     class::{ClassDef, ClassId},
-    convert::{AsJsClassId, AsJsRuntimePointer, AsJsValue},
+    convert::{AsJsClassId, AsJsValue, AsMutPtr, AsPtr},
     ffi::{self, c_size_t},
     marker::Covariant,
     value::Value,
@@ -134,9 +134,16 @@ impl fmt::Debug for Runtime<'_> {
     }
 }
 
-impl AsJsRuntimePointer for Runtime<'_> {
+impl<'q> AsPtr<ffi::JSRuntime> for Runtime<'q> {
     #[inline]
-    fn as_ptr(&self) -> *mut ffi::JSRuntime {
+    fn as_ptr(&self) -> *const ffi::JSRuntime {
+        self.0.as_ptr()
+    }
+}
+
+impl<'q> AsMutPtr<ffi::JSRuntime> for Runtime<'q> {
+    #[inline]
+    fn as_mut_ptr(&mut self) -> *mut ffi::JSRuntime {
         self.0.as_ptr()
     }
 }

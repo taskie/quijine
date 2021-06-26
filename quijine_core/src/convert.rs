@@ -1,25 +1,30 @@
-use std::os::raw::c_char;
+use crate::ffi;
 
-use crate::{ffi, Value};
-
-pub trait AsJsRuntimePointer {
-    fn as_ptr(&self) -> *mut ffi::JSRuntime;
+pub trait AsPtr<T> {
+    fn as_ptr(&self) -> *const T;
 }
 
-impl AsJsRuntimePointer for *mut ffi::JSRuntime {
+impl<T> AsPtr<T> for *const T {
     #[inline]
-    fn as_ptr(&self) -> *mut ffi::JSRuntime {
+    fn as_ptr(&self) -> *const T {
         *self
     }
 }
 
-pub trait AsJsContextPointer<'q> {
-    fn as_ptr(&self) -> *mut ffi::JSContext;
+impl<T> AsPtr<T> for *mut T {
+    #[inline]
+    fn as_ptr(&self) -> *const T {
+        *self
+    }
 }
 
-impl AsJsContextPointer<'_> for *mut ffi::JSContext {
+pub trait AsMutPtr<T>: AsPtr<T> {
+    fn as_mut_ptr(&mut self) -> *mut T;
+}
+
+impl<T> AsMutPtr<T> for *mut T {
     #[inline]
-    fn as_ptr(&self) -> *mut ffi::JSContext {
+    fn as_mut_ptr(&mut self) -> *mut T {
         *self
     }
 }
@@ -64,28 +69,6 @@ pub trait AsJsCFunctionListEntry<'q> {
 impl AsJsCFunctionListEntry<'_> for ffi::JSCFunctionListEntry {
     #[inline]
     fn as_js_c_function_list_entry(&self) -> ffi::JSCFunctionListEntry {
-        *self
-    }
-}
-
-pub trait AsValue<'q> {
-    fn as_ref(&self) -> Value<'q>;
-}
-
-impl<'q> AsValue<'q> for Value<'q> {
-    #[inline]
-    fn as_ref(&self) -> Value<'q> {
-        *self
-    }
-}
-
-pub trait AsJsCString<'q> {
-    fn as_js_c_string(&self) -> *const c_char;
-}
-
-impl AsJsCString<'_> for *const c_char {
-    #[inline]
-    fn as_js_c_string(&self) -> *const c_char {
         *self
     }
 }
