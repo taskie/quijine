@@ -1,4 +1,4 @@
-use qjncore::{
+use quijine_core::{
     js_c_function, js_class_finalizer, AsJsCFunctionListEntry, CFunctionListEntry, ClassDef, ClassId, Context,
     EvalFlags, Runtime, Value,
 };

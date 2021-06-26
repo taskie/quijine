@@ -1,5 +1,5 @@
 use crate::error::{Error, Result};
-use qjncore as qc;
+use quijine_core as qc;
 
 #[derive(Debug)]
 pub struct CString<'q> {

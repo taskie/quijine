@@ -5,7 +5,7 @@ use crate::{
     error::{Error, ErrorKind, Result},
     util::Opaque,
 };
-pub use qjncore::ValueTag as Tag;
+pub use quijine_core::ValueTag as Tag;
 use std::{
     any::type_name,
     convert::TryFrom,

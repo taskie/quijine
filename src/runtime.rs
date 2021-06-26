@@ -3,7 +3,7 @@ use crate::{
     context::{Context, ContextScope},
     error::Result,
 };
-use qjncore as qc;
+use quijine_core as qc;
 use std::{any::TypeId, collections::HashMap, ffi::c_void, fmt, result::Result as StdResult};
 
 pub struct RuntimeOpaque {

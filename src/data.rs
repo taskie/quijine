@@ -9,7 +9,7 @@ use crate::{
     types::{Tag, Variant},
 };
 use qc::{GPNFlags, PropFlags};
-use qjncore as qc;
+use quijine_core as qc;
 #[cfg(feature = "debug_leak")]
 use std::sync::atomic;
 use std::{

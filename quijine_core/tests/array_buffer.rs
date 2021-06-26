@@ -1,4 +1,4 @@
-use qjncore::{raw, Context, Runtime};
+use quijine_core::{raw, Context, Runtime};
 use std::{ffi::c_void, mem::size_of, ptr::null_mut};
 
 #[derive(Debug, PartialEq, Eq)]

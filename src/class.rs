@@ -5,7 +5,7 @@ use crate::{
     Context, PropFlags, Result, Runtime,
 };
 use log::trace;
-use qjncore as qc;
+use quijine_core as qc;
 use std::ffi::CString;
 
 pub trait ClassMethods<'q, C: Class> {
@@ -199,7 +199,10 @@ pub(crate) fn register_class<C: Class + 'static>(rctx: qc::Context, clz: qc::Cla
     trace!("registering class: {} ({:?})", C::name(), clz);
     let ctx = Context::from_raw(rctx);
     let mut rt = ctx.runtime();
-    unsafe extern "C" fn finalizer<C: Class + 'static>(rt: *mut qjncore::raw::JSRuntime, val: qjncore::raw::JSValue) {
+    unsafe extern "C" fn finalizer<C: Class + 'static>(
+        rt: *mut quijine_core::raw::JSRuntime,
+        val: quijine_core::raw::JSValue,
+    ) {
         let rt = qc::Runtime::from_raw(rt);
         let val = qc::Value::from_raw_with_runtime(val, rt);
         finalize::<C>(rt, val)

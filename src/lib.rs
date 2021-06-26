@@ -13,7 +13,7 @@ mod util;
 #[macro_use]
 pub mod macros;
 
-pub use qjncore::{EvalFlags, GPNFlags, PropFlags};
+pub use quijine_core::{EvalFlags, GPNFlags, PropFlags};
 
 pub use atom::{Atom, PropertyEnum};
 pub use class::{Class, ClassMethods};

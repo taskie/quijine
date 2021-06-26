@@ -6,7 +6,7 @@ use crate::{
     types::String as QjString,
 };
 use qc::AsJsAtom;
-use qjncore as qc;
+use quijine_core as qc;
 use std::{fmt, result::Result as StdResult};
 
 /// `Atom` is a atom holder with a context.
@@ -171,7 +171,7 @@ impl fmt::Debug for PropertyEnum<'_> {
 #[cfg(test)]
 mod tests {
     use crate::{context, Result};
-    use qjncore::{EvalFlags, GPNFlags};
+    use quijine_core::{EvalFlags, GPNFlags};
     #[test]
     fn test() -> Result<()> {
         context(|ctx| {

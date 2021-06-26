@@ -351,19 +351,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "qjncore"
-version = "0.1.0"
-dependencies = [
- "bitflags",
- "env_logger",
- "lazy_static",
- "libquickjs-sys",
- "log",
- "rand",
- "rand_xorshift",
-]
-
-[[package]]
 name = "quijine"
 version = "0.1.0"
 dependencies = [
@@ -371,7 +358,20 @@ dependencies = [
  "env_logger",
  "lazy_static",
  "log",
- "qjncore",
+ "quijine_core",
+ "rand",
+ "rand_xorshift",
+]
+
+[[package]]
+name = "quijine_core"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "env_logger",
+ "lazy_static",
+ "libquickjs-sys",
+ "log",
  "rand",
  "rand_xorshift",
 ]

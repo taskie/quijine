@@ -66,7 +66,7 @@ impl ContextAddIntrinsicExt for Context<'_> {
 
 #[cfg(test)]
 mod tests {
-    use qjncore::EvalFlags;
+    use quijine_core::EvalFlags;
 
     use crate::{ContextScope, Result, RuntimeScope};
     #[test]

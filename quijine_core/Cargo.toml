@@ -1,5 +1,5 @@
 [package]
-name = "qjncore"
+name = "quijine_core"
 version = "0.1.0"
 authors = ["taskie <t@skie.jp>"]
 edition = "2018"

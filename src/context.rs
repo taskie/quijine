@@ -7,7 +7,7 @@ use crate::{
     types::{Bool, Float64, Int, Null, Object, String as QjString, Undefined},
     Data, Error, ErrorKind, EvalFlags, PropFlags, RuntimeScope,
 };
-use qjncore::{self as qc, raw, AsJsValue};
+use quijine_core::{self as qc, raw, AsJsValue};
 use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int, result::Result as StdResult};
 
 pub struct ContextOpaque {
