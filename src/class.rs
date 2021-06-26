@@ -9,13 +9,13 @@ use quijine_core as qc;
 use std::ffi::CString;
 
 pub trait ClassProperties<'q, C: Class> {
-    fn define_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+    fn define_method<T, F, A, R>(&mut self, name: &str, method: F, length: i32) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
         F: Fn(&C, Context<'q>, T, A) -> Result<R> + 'static,
         A: FromQjMulti<'q, 'q>,
         R: IntoQj<'q> + 'q;
-    fn define_method_mut<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+    fn define_method_mut<T, F, A, R>(&mut self, name: &str, method: F, length: i32) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
         F: Fn(&mut C, Context<'q>, T, A) -> Result<R> + 'static,
@@ -104,17 +104,17 @@ struct Properties<'q> {
 
 impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
     #[inline]
-    fn define_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+    fn define_method<T, F, A, R>(&mut self, name: &str, method: F, length: i32) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
         F: Fn(&C, Context<'q>, T, A) -> Result<R> + 'static,
         A: FromQjMulti<'q, 'q>,
         R: IntoQj<'q> + 'q,
     {
-        self.define_method_mut(name, move |v, ctx, this, args| method(v, ctx, this, args))
+        self.define_method_mut(name, move |v, ctx, this, args| method(v, ctx, this, args), length)
     }
 
-    fn define_method_mut<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+    fn define_method_mut<T, F, A, R>(&mut self, name: &str, method: F, length: i32) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
         F: Fn(&mut C, Context<'q>, T, A) -> Result<R> + 'static,
@@ -129,7 +129,7 @@ impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
                 (method)(v, ctx, T::from_qj(this)?, args)
             },
             name,
-            0,
+            length,
         )?;
         trace!("registering method: {}::{} ({:?})", C::name(), name, f);
         self.proto

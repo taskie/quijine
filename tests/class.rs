@@ -44,10 +44,14 @@ impl Class for S1 {
             obj.set("y", v.pos.1)?;
             Ok(obj)
         })?;
-        properties.define_method_mut("move", |v, _ctx, _this: Value, (x, y): (i32, i32)| {
-            v.move_(x, y);
-            Ok(())
-        })?;
+        properties.define_method_mut(
+            "move",
+            |v, _ctx, _this: Value, (x, y): (i32, i32)| {
+                v.move_(x, y);
+                Ok(())
+            },
+            2,
+        )?;
         Ok(())
     }
 }
@@ -138,11 +142,15 @@ impl Class for S2 {
             obj.set("y", v.pos.1)?;
             Ok(obj)
         })?;
-        properties.define_method_mut("move", |v, _ctx, _this: Value, (x, y): (i32, i32)| {
-            let mut v = v.0.borrow_mut();
-            v.move_(x, y);
-            Ok(())
-        })?;
+        properties.define_method_mut(
+            "move",
+            |v, _ctx, _this: Value, (x, y): (i32, i32)| {
+                let mut v = v.0.borrow_mut();
+                v.move_(x, y);
+                Ok(())
+            },
+            2,
+        )?;
         Ok(())
     }
 }

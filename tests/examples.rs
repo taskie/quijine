@@ -84,7 +84,7 @@ fn example_use_rust_struct_from_js() -> Result<()> {
         }
 
         fn define_properties<'q, P: ClassProperties<'q, Self>>(properties: &mut P) -> Result<()> {
-            properties.define_method_mut("genU16", |v, _ctx, _this: Value, _args: ()| Ok(v.gen_u16() as i32))?;
+            properties.define_method_mut("genU16", |v, _ctx, _this: Value, _args: ()| Ok(v.gen_u16() as i32), 0)?;
             Ok(())
         }
     }
