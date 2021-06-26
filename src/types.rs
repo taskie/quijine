@@ -206,10 +206,10 @@ impl_as_data! { for Undefined }
 impl_try_from_data! { Data for Undefined if v => v.tag() == Tag::Undefined }
 impl_deref! { Value for Undefined }
 
-// impl_from! { Undefined for (): |_v| () }
-// XXX: this cause unexpected type conversion: v.set("bar", v.get("foo")?)?;
-// impl_try_from! { Data for (): |v| { ... } }
-// impl_into_qj! { for (): |_v, ctx| Ok(ctx.undefined().into()) }
+impl_from! { Undefined for (): |_v| () }
+// this cause unexpected type conversion: v.set("bar", v.get("foo")?)?;
+// impl_try_from! { Data for (): |v| Ok(v.context().undefined().into()) }
+impl_into_qj! { for (): |_v, ctx| Ok(ctx.undefined().into()) }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]

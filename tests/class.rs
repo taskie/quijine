@@ -44,9 +44,9 @@ impl Class for S1 {
             obj.set("y", v.pos.1)?;
             Ok(obj)
         })?;
-        methods.add_method("move", |v, ctx, _this: Data, (x, y): (i32, i32)| {
+        methods.add_method("move", |v, _ctx, _this: Data, (x, y): (i32, i32)| {
             v.move_(x, y);
-            Ok(ctx.undefined())
+            Ok(())
         })?;
         Ok(())
     }
@@ -138,10 +138,10 @@ impl Class for S2 {
             obj.set("y", v.pos.1)?;
             Ok(obj)
         })?;
-        methods.add_method("move", |v, ctx, _this: Data, (x, y): (i32, i32)| {
+        methods.add_method("move", |v, _ctx, _this: Data, (x, y): (i32, i32)| {
             let mut v = v.0.borrow_mut();
             v.move_(x, y);
-            Ok(ctx.undefined())
+            Ok(())
         })?;
         Ok(())
     }

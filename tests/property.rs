@@ -1,4 +1,4 @@
-use quijine::{EvalFlags, IntoQjAtom, PropFlags, Result};
+use quijine::{Data, EvalFlags, IntoQjAtom, PropFlags, Result};
 
 #[test]
 fn prevent_extensions() -> Result<()> {
@@ -74,18 +74,18 @@ fn define_property_get_set() -> Result<()> {
         let obj = ctx.new_object()?;
         obj.set("_x", "hello")?;
         ctx.global_object()?.set("obj", obj.clone())?;
-        let getter = ctx.new_function(
-            |ctx, this, _args| {
+        let getter = ctx.new_function_with(
+            |_ctx, this: Data, _args: ()| {
                 let x: String = this.get("_x")?;
-                Ok(ctx.new_string(&x.to_ascii_uppercase())?.into())
+                Ok(x.to_ascii_uppercase())
             },
             "x",
             0,
         )?;
-        let setter = ctx.new_function(
-            |ctx, this, args| {
-                this.set("_x", args[0].to_string()?.to_ascii_lowercase())?;
-                Ok(ctx.undefined().into())
+        let setter = ctx.new_function_with(
+            |_ctx, this: Data, args: (String,)| {
+                this.set("_x", args.0.to_ascii_lowercase())?;
+                Ok(())
             },
             "x",
             1,

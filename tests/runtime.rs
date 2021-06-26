@@ -27,10 +27,10 @@ fn multiple_runtimes() -> Result<()> {
     });
     quijine::context(move |ctx| {
         let send = ctx.new_function_with(
-            move |ctx, _this: Data, (message,): (String,)| {
+            move |_ctx, _this: Data, (message,): (String,)| {
                 tx.send(message)
                     .map_err(|e| Error::with_external(ErrorKind::InternalError, Box::new(e.clone())))?;
-                Ok(ctx.undefined())
+                Ok(())
             },
             "send",
             1,
