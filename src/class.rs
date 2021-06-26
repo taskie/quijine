@@ -9,13 +9,37 @@ use quijine_core as qc;
 use std::ffi::CString;
 
 pub trait ClassProperties<'q, C: Class> {
-    fn add_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+    fn define_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+    where
+        T: FromQj<'q>,
+        F: Fn(&C, Context<'q>, T, A) -> Result<R> + 'static,
+        A: FromQjMulti<'q, 'q>,
+        R: IntoQj<'q> + 'q;
+    fn define_method_mut<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
         F: Fn(&mut C, Context<'q>, T, A) -> Result<R> + 'static,
         A: FromQjMulti<'q, 'q>,
         R: IntoQj<'q> + 'q;
-    fn add_get_set<T, G, R1, S, A, R2>(&mut self, name: &str, getter: G, setter: S) -> Result<(Object<'q>, Object<'q>)>
+    fn define_get_set_mut<T, G, R1, S, A, R2>(
+        &mut self,
+        name: &str,
+        getter: G,
+        setter: S,
+    ) -> Result<(Object<'q>, Object<'q>)>
+    where
+        T: FromQj<'q>,
+        G: Fn(&C, Context<'q>, T) -> Result<R1> + 'static,
+        R1: IntoQj<'q> + 'q,
+        S: Fn(&mut C, Context<'q>, T, A) -> Result<R2> + 'static,
+        A: FromQj<'q>,
+        R2: IntoQj<'q> + 'q;
+    fn define_get_mut_set_mut<T, G, R1, S, A, R2>(
+        &mut self,
+        name: &str,
+        getter: G,
+        setter: S,
+    ) -> Result<(Object<'q>, Object<'q>)>
     where
         T: FromQj<'q>,
         G: Fn(&mut C, Context<'q>, T) -> Result<R1> + 'static,
@@ -23,12 +47,17 @@ pub trait ClassProperties<'q, C: Class> {
         S: Fn(&mut C, Context<'q>, T, A) -> Result<R2> + 'static,
         A: FromQj<'q>,
         R2: IntoQj<'q> + 'q;
-    fn add_get<T, G, R>(&mut self, name: &str, getter: G) -> Result<Object<'q>>
+    fn define_get<T, G, R>(&mut self, name: &str, getter: G) -> Result<Object<'q>>
+    where
+        T: FromQj<'q>,
+        G: Fn(&C, Context<'q>, T) -> Result<R> + 'static,
+        R: IntoQj<'q> + 'q;
+    fn define_get_mut<T, G, R>(&mut self, name: &str, getter: G) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
         G: Fn(&mut C, Context<'q>, T) -> Result<R> + 'static,
         R: IntoQj<'q> + 'q;
-    fn add_set<T, S, A, R>(&mut self, name: &str, setter: S) -> Result<Object<'q>>
+    fn define_set_mut<T, S, A, R>(&mut self, name: &str, setter: S) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
         S: Fn(&mut C, Context<'q>, T, A) -> Result<R> + 'static,
@@ -74,7 +103,18 @@ struct Properties<'q> {
 }
 
 impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
-    fn add_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+    #[inline]
+    fn define_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
+    where
+        T: FromQj<'q>,
+        F: Fn(&C, Context<'q>, T, A) -> Result<R> + 'static,
+        A: FromQjMulti<'q, 'q>,
+        R: IntoQj<'q> + 'q,
+    {
+        self.define_method_mut(name, move |v, ctx, this, args| method(v, ctx, this, args))
+    }
+
+    fn define_method_mut<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
         F: Fn(&mut C, Context<'q>, T, A) -> Result<R> + 'static,
@@ -97,7 +137,30 @@ impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
         Ok(f)
     }
 
-    fn add_get_set<T, G, R1, S, A, R2>(&mut self, name: &str, getter: G, setter: S) -> Result<(Object<'q>, Object<'q>)>
+    #[inline]
+    fn define_get_set_mut<T, G, R1, S, A, R2>(
+        &mut self,
+        name: &str,
+        getter: G,
+        setter: S,
+    ) -> Result<(Object<'q>, Object<'q>)>
+    where
+        T: FromQj<'q>,
+        G: Fn(&C, Context<'q>, T) -> Result<R1> + 'static,
+        R1: IntoQj<'q> + 'q,
+        S: Fn(&mut C, Context<'q>, T, A) -> Result<R2> + 'static,
+        A: FromQj<'q>,
+        R2: IntoQj<'q> + 'q,
+    {
+        self.define_get_mut_set_mut(name, move |v, ctx, this| getter(v, ctx, this), setter)
+    }
+
+    fn define_get_mut_set_mut<T, G, R1, S, A, R2>(
+        &mut self,
+        name: &str,
+        getter: G,
+        setter: S,
+    ) -> Result<(Object<'q>, Object<'q>)>
     where
         T: FromQj<'q>,
         G: Fn(&mut C, Context<'q>, T) -> Result<R1> + 'static,
@@ -119,7 +182,17 @@ impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
         Ok((g, s))
     }
 
-    fn add_get<T, G, R>(&mut self, name: &str, getter: G) -> Result<Object<'q>>
+    #[inline]
+    fn define_get<T, G, R>(&mut self, name: &str, getter: G) -> Result<Object<'q>>
+    where
+        T: FromQj<'q>,
+        G: Fn(&C, Context<'q>, T) -> Result<R> + 'static,
+        R: IntoQj<'q> + 'q,
+    {
+        self.define_get_mut(name, move |v, ctx, this| getter(v, ctx, this))
+    }
+
+    fn define_get_mut<T, G, R>(&mut self, name: &str, getter: G) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
         G: Fn(&mut C, Context<'q>, T) -> Result<R> + 'static,
@@ -137,7 +210,7 @@ impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
         Ok(g)
     }
 
-    fn add_set<T, S, A, R>(&mut self, name: &str, setter: S) -> Result<Object<'q>>
+    fn define_set_mut<T, S, A, R>(&mut self, name: &str, setter: S) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
         S: Fn(&mut C, Context<'q>, T, A) -> Result<R> + 'static,

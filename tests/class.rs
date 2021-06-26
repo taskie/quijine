@@ -30,7 +30,7 @@ impl Class for S1 {
     }
 
     fn define_properties<'q, P: ClassProperties<'q, Self>>(properties: &mut P) -> Result<()> {
-        properties.add_get_set(
+        properties.define_get_set_mut(
             "name",
             |v, _ctx, _this: Value| Ok(v.name.clone()),
             |v, _ctx, _this: Value, name: Value| {
@@ -38,13 +38,13 @@ impl Class for S1 {
                 Ok(name)
             },
         )?;
-        properties.add_get("pos", |v, ctx, _this: Value| {
+        properties.define_get("pos", |v, ctx, _this: Value| {
             let obj = ctx.new_object()?;
             obj.set("x", v.pos.0)?;
             obj.set("y", v.pos.1)?;
             Ok(obj)
         })?;
-        properties.add_method("move", |v, _ctx, _this: Value, (x, y): (i32, i32)| {
+        properties.define_method_mut("move", |v, _ctx, _this: Value, (x, y): (i32, i32)| {
             v.move_(x, y);
             Ok(())
         })?;
@@ -119,7 +119,7 @@ impl Class for S2 {
     }
 
     fn define_properties<'q, T: ClassProperties<'q, Self>>(properties: &mut T) -> Result<()> {
-        properties.add_get_set(
+        properties.define_get_set_mut(
             "name",
             |v, _ctx, _this: Value| {
                 let v = v.0.borrow();
@@ -131,14 +131,14 @@ impl Class for S2 {
                 Ok(name)
             },
         )?;
-        properties.add_get("pos", |v, ctx, _this: Value| {
+        properties.define_get("pos", |v, ctx, _this: Value| {
             let v = v.0.borrow();
             let obj = ctx.new_object()?;
             obj.set("x", v.pos.0)?;
             obj.set("y", v.pos.1)?;
             Ok(obj)
         })?;
-        properties.add_method("move", |v, _ctx, _this: Value, (x, y): (i32, i32)| {
+        properties.define_method_mut("move", |v, _ctx, _this: Value, (x, y): (i32, i32)| {
             let mut v = v.0.borrow_mut();
             v.move_(x, y);
             Ok(())
