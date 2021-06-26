@@ -1,4 +1,4 @@
-use crate::Data;
+use crate::Value;
 use std::{error::Error as StdError, fmt, result::Result as StdResult, sync::Arc};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -101,8 +101,8 @@ impl Error {
         Error::with_external(ErrorKind::ExternalError, external)
     }
 
-    pub fn from_data<'q, T: Into<Data<'q>>>(kind: ErrorKind, data: T) -> Error {
-        let data: Data<'q> = data.into();
+    pub fn from_data<'q, T: Into<Value<'q>>>(kind: ErrorKind, data: T) -> Error {
+        let data: Value<'q> = data.into();
         let ctx = data.context();
         let json = ctx.json_stringify_into(data, ctx.undefined(), ctx.undefined());
         Error {
@@ -114,8 +114,8 @@ impl Error {
         }
     }
 
-    pub fn from_js_error<'q, T: Into<Data<'q>>>(kind: ErrorKind, data: T) -> Error {
-        let data: Data<'q> = data.into();
+    pub fn from_js_error<'q, T: Into<Value<'q>>>(kind: ErrorKind, data: T) -> Error {
+        let data: Value<'q> = data.into();
         let data = JsErrorData {
             name: data.get("name").ok(),
             message: data.get("message").ok(),

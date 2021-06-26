@@ -1,9 +1,9 @@
 use crate::error::{Error, Result};
-use quijine::{Context, Data, Object};
+use quijine::{Context, Object, Value};
 use serde::{ser, Serialize};
 use std::convert::TryInto;
 
-pub fn to_qj<T>(context: Context, input: T) -> Result<Data>
+pub fn to_qj<T>(context: Context, input: T) -> Result<Value>
 where
     T: Serialize,
 {
@@ -23,7 +23,7 @@ impl<'q> Serializer<'q> {
 
 impl<'q, 'a> ser::Serializer for Serializer<'q> {
     type Error = Error;
-    type Ok = Data<'q>;
+    type Ok = Value<'q>;
     type SerializeMap = MapSerializer<'q>;
     type SerializeSeq = ArraySerializer<'q>;
     type SerializeStruct = ObjectSerializer<'q>;
@@ -195,7 +195,7 @@ impl<'q, 'a> ser::Serializer for Serializer<'q> {
 // Array
 
 pub struct ArraySerializer<'q> {
-    pending: Vec<Data<'q>>,
+    pending: Vec<Value<'q>>,
     context: Context<'q>,
 }
 
@@ -211,7 +211,7 @@ impl<'q> ArraySerializer<'q> {
 
 impl<'q> ser::SerializeSeq for ArraySerializer<'q> {
     type Error = Error;
-    type Ok = Data<'q>;
+    type Ok = Value<'q>;
 
     fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
         let x = value.serialize(Serializer::new(self.context))?;
@@ -231,7 +231,7 @@ impl<'q> ser::SerializeSeq for ArraySerializer<'q> {
 
 impl<'q> ser::SerializeTuple for ArraySerializer<'q> {
     type Error = Error;
-    type Ok = Data<'q>;
+    type Ok = Value<'q>;
 
     fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
         ser::SerializeSeq::serialize_element(self, value)
@@ -244,7 +244,7 @@ impl<'q> ser::SerializeTuple for ArraySerializer<'q> {
 
 impl<'q> ser::SerializeTupleStruct for ArraySerializer<'q> {
     type Error = Error;
-    type Ok = Data<'q>;
+    type Ok = Value<'q>;
 
     fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
         ser::SerializeTuple::serialize_element(self, value)
@@ -269,7 +269,7 @@ impl<'q> ObjectSerializer<'q> {
 
 impl<'q> ser::SerializeStruct for ObjectSerializer<'q> {
     type Error = Error;
-    type Ok = Data<'q>;
+    type Ok = Value<'q>;
 
     fn serialize_field<T: ?Sized + Serialize>(&mut self, key: &'static str, value: &T) -> Result<()> {
         let value = value.serialize(Serializer::new(self.object.context()))?;
@@ -284,7 +284,7 @@ impl<'q> ser::SerializeStruct for ObjectSerializer<'q> {
 
 pub struct MapSerializer<'q> {
     object: Object<'q>,
-    next_key: Option<Data<'q>>,
+    next_key: Option<Value<'q>>,
 }
 
 impl<'q> MapSerializer<'q> {
@@ -295,7 +295,7 @@ impl<'q> MapSerializer<'q> {
 
 impl<'q> ser::SerializeMap for MapSerializer<'q> {
     type Error = Error;
-    type Ok = Data<'q>;
+    type Ok = Value<'q>;
 
     fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<()> {
         debug_assert!(self.next_key.is_none());
@@ -332,7 +332,7 @@ impl<'q, S> VariantSerializer<'q, S> {
         }
     }
 
-    fn end(self, inner: impl FnOnce(S) -> Result<Data<'q>>) -> Result<Data<'q>> {
+    fn end(self, inner: impl FnOnce(S) -> Result<Value<'q>>) -> Result<Value<'q>> {
         let value = inner(self.inner)?;
         let obj = self.context.new_object()?;
         obj.set(self.variant, value)?;
@@ -342,10 +342,10 @@ impl<'q, S> VariantSerializer<'q, S> {
 
 impl<'q, S> ser::SerializeTupleVariant for VariantSerializer<'q, S>
 where
-    S: ser::SerializeTupleStruct<Ok = Data<'q>, Error = Error>,
+    S: ser::SerializeTupleStruct<Ok = Value<'q>, Error = Error>,
 {
     type Error = Error;
-    type Ok = Data<'q>;
+    type Ok = Value<'q>;
 
     fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
         self.inner.serialize_field(value)
@@ -358,10 +358,10 @@ where
 
 impl<'q, S> ser::SerializeStructVariant for VariantSerializer<'q, S>
 where
-    S: ser::SerializeStruct<Ok = Data<'q>, Error = Error>,
+    S: ser::SerializeStruct<Ok = Value<'q>, Error = Error>,
 {
     type Error = Error;
-    type Ok = Data<'q>;
+    type Ok = Value<'q>;
 
     fn serialize_field<T: ?Sized + Serialize>(&mut self, key: &'static str, value: &T) -> Result<()> {
         self.inner.serialize_field(key, value)

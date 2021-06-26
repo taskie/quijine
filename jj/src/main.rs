@@ -1,6 +1,6 @@
 use anyhow::Result;
 use colored_json::ColoredFormatter;
-use quijine::{self, Context, Data, EvalFlags, ExternalResult, FunctionBytecode, Result as QjResult};
+use quijine::{self, Context, EvalFlags, ExternalResult, FunctionBytecode, Result as QjResult, Value as QjValue};
 use serde::Serialize;
 use serde_json::{
     ser::{CompactFormatter, PrettyFormatter},
@@ -60,9 +60,14 @@ impl Opt {
     }
 }
 
-type Handler<'q> = Box<dyn Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> QjResult<Data<'q>> + 'static>;
+type Handler<'q> = Box<dyn Fn(Context<'q>, QjValue<'q>, &[QjValue<'q>]) -> QjResult<QjValue<'q>> + 'static>;
 
-fn print<'q, 'a, 'b>(opt: &'a Opt, ctx: Context<'q>, _this: Data<'q>, args: &'b [Data<'q>]) -> QjResult<Data<'q>> {
+fn print<'q, 'a, 'b>(
+    opt: &'a Opt,
+    ctx: Context<'q>,
+    _this: QjValue<'q>,
+    args: &'b [QjValue<'q>],
+) -> QjResult<QjValue<'q>> {
     let ret = Ok(ctx.undefined().into());
     let arg = args.get(0);
     let arg = match arg {
@@ -131,7 +136,7 @@ fn process<'q, R: Read>(
                 exit(4);
             }
         };
-        let result: Data = to_qj(ctx, value)?;
+        let result: QjValue = to_qj(ctx, value)?;
         global.set("_", result)?;
         global.set("_F", filename)?;
         global.set("_I", i as i32)?;

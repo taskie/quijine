@@ -1,11 +1,11 @@
 use crate::{
     atom::Atom,
     class::{register_class, Class},
-    convert::{AsData, FromQj, FromQjMulti, IntoQj, IntoQjMulti},
+    convert::{FromQj, FromQjMulti, IntoQj, IntoQjMulti},
     error::{ErrorValue, Result},
     runtime::Runtime,
     types::{Bool, Float64, Int, Null, Object, String as QjString, Undefined},
-    Data, Error, ErrorKind, EvalFlags, PropFlags, RuntimeScope,
+    Error, ErrorKind, EvalFlags, PropFlags, RuntimeScope, Value,
 };
 use quijine_core::{self as qc, raw, AsJsValue};
 use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int, result::Result as StdResult};
@@ -44,9 +44,9 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub(crate) fn class_proto<C: Class + 'static>(self) -> Result<Data<'q>> {
+    pub(crate) fn class_proto<C: Class + 'static>(self) -> Result<Value<'q>> {
         let class_id = self.runtime().get_or_register_class_id::<C>();
-        Ok(Data::from_raw_parts(self.0.class_proto(class_id), self.0))
+        Ok(Value::from_raw_parts(self.0.class_proto(class_id), self.0))
     }
 
     #[inline]
@@ -59,11 +59,11 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub(crate) unsafe fn wrap_result<T: AsData<'q>>(self, val: qc::Value<'q>) -> Result<T> {
+    pub(crate) unsafe fn wrap_result<T: AsRef<Value<'q>>>(self, val: qc::Value<'q>) -> Result<T> {
         if val.is_exception() {
             Err(self.internal_js_error())
         } else {
-            Ok(Data::from_raw_parts(val, self.0).into_unchecked())
+            Ok(Value::from_raw_parts(val, self.0).into_unchecked())
         }
     }
 
@@ -80,12 +80,12 @@ impl<'q> Context<'q> {
     pub(crate) fn internal_js_error(self) -> Error {
         Error::from_js_error(
             ErrorKind::InternalError,
-            Data::from_raw_parts(self.0.exception(), self.0),
+            Value::from_raw_parts(self.0.exception(), self.0),
         )
     }
 
     #[inline]
-    pub fn eval(self, code: &str, filename: &str, eval_flags: EvalFlags) -> Result<Data<'q>> {
+    pub fn eval(self, code: &str, filename: &str, eval_flags: EvalFlags) -> Result<Value<'q>> {
         unsafe { self.wrap_result(self.0.eval(code, filename, eval_flags)) }
     }
 
@@ -95,8 +95,8 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn eval_function(self, func_obj: Data<'q>) -> Result<Data<'q>> {
-        Data::dup(&func_obj);
+    pub fn eval_function(self, func_obj: Value<'q>) -> Result<Value<'q>> {
+        Value::dup(&func_obj);
         unsafe { self.wrap_result(self.0.eval_function(*func_obj.as_raw())) }
     }
 
@@ -106,7 +106,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn call(self, func_obj: Data<'q>, this_obj: Data<'q>, args: &[Data<'q>]) -> Result<Data<'q>> {
+    pub fn call(self, func_obj: Value<'q>, this_obj: Value<'q>, args: &[Value<'q>]) -> Result<Value<'q>> {
         let qc_args: Vec<_> = args.iter().map(|v| *v.as_raw()).collect();
         let val = self.0.call(*func_obj.as_raw(), *this_obj.as_raw(), &qc_args);
         unsafe { self.wrap_result(val) }
@@ -161,7 +161,7 @@ impl<'q> Context<'q> {
     pub fn new_global_constructor_with<C, F>(self, f: F) -> Result<Object<'q>>
     where
         C: Class + 'static,
-        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> C + 'q,
+        F: Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> C + 'q,
     {
         let ctor = self.new_class_constructor_with::<C, F>(f)?;
         self.global_object()?.define_property_value_with(
@@ -181,7 +181,7 @@ impl<'q> Context<'q> {
     pub fn new_class_constructor_with<C, F>(mut self, f: F) -> Result<Object<'q>>
     where
         C: Class + 'static,
-        F: Fn(Context<'q>, Data<'q>, &[Data<'q>]) -> C + 'q,
+        F: Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> C + 'q,
     {
         self.register_class::<C>()?;
         let f = self.new_function(
@@ -216,8 +216,8 @@ impl<'q> Context<'q> {
         unsafe { self.wrap_result(self.0.new_array()) }
     }
 
-    unsafe fn new_value<T: AsData<'q>>(self, v: qc::Value<'q>) -> T {
-        Data::from_raw_parts(v, self.0).into_unchecked()
+    unsafe fn new_value<T: AsRef<Value<'q>>>(self, v: qc::Value<'q>) -> T {
+        Value::from_raw_parts(v, self.0).into_unchecked()
     }
 
     #[inline]
@@ -231,7 +231,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn new_int64(self, v: i64) -> Data<'q> {
+    pub fn new_int64(self, v: i64) -> Value<'q> {
         unsafe { self.new_value(self.0.new_int64(v)) }
     }
 
@@ -253,7 +253,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub(crate) fn atom_to_data(self, atom: &Atom<'q>) -> Result<Data<'q>> {
+    pub(crate) fn atom_to_data(self, atom: &Atom<'q>) -> Result<Value<'q>> {
         unsafe { self.wrap_result(self.0.atom_to_value(*atom.as_raw())) }
     }
 
@@ -263,7 +263,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub(crate) fn data_to_atom(self, v: &Data<'q>) -> Result<Atom<'q>> {
+    pub(crate) fn data_to_atom(self, v: &Value<'q>) -> Result<Atom<'q>> {
         unsafe { self.wrap_result_atom(self.0.value_to_atom(*v.as_raw())) }
     }
 
@@ -272,7 +272,7 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_function<F>(self, func: F, name: &str, length: i32) -> Result<Object<'q>>
     where
-        F: Fn(Context<'q>, Data<'q>, &'q [Data<'q>]) -> Result<Data<'q>> + 'q,
+        F: Fn(Context<'q>, Value<'q>, &'q [Value<'q>]) -> Result<Value<'q>> + 'q,
     {
         self.new_callback(Box::new(func), name, length)
     }
@@ -295,9 +295,9 @@ impl<'q> Context<'q> {
     #[inline]
     pub(crate) fn new_callback<R>(self, func: Box<Callback<'q, 'q, R>>, _name: &str, length: i32) -> Result<Object<'q>>
     where
-        R: Into<Data<'q>> + 'q,
+        R: Into<Value<'q>> + 'q,
     {
-        unsafe extern "C" fn call<'q, R: Into<Data<'q>>>(
+        unsafe extern "C" fn call<'q, R: Into<Value<'q>>>(
             ctx: *mut raw::JSContext,
             js_this: raw::JSValue,
             argc: c_int,
@@ -318,11 +318,11 @@ impl<'q> Context<'q> {
             let func = cb.array_buffer_as_ref::<Box<Callback<R>>>(ctx).unwrap();
 
             log::debug!("this");
-            let this = Data::from_raw_parts(this, ctx);
-            Data::dup(&this);
+            let this = Value::from_raw_parts(this, ctx);
+            Value::dup(&this);
             log::debug!("args");
-            let args: Vec<_> = args.iter().map(|v| Data::from_raw_parts(*v, ctx)).collect();
-            args.iter().for_each(Data::dup);
+            let args: Vec<_> = args.iter().map(|v| Value::from_raw_parts(*v, ctx)).collect();
+            args.iter().for_each(Value::dup);
             let ctx = Context::from_raw(ctx);
 
             log::debug!("invoke start");
@@ -330,7 +330,7 @@ impl<'q> Context<'q> {
             let res = match r {
                 Ok(t) => {
                     let t = t.into();
-                    Data::dup(&t);
+                    Value::dup(&t);
                     t.as_raw().as_js_value()
                 }
                 Err(e) => {
@@ -362,16 +362,16 @@ impl<'q> Context<'q> {
     // special values
 
     pub fn undefined(self) -> Undefined<'q> {
-        unsafe { Data::from_raw_parts(qc::Value::undefined(), self.0).into_unchecked() }
+        unsafe { Value::from_raw_parts(qc::Value::undefined(), self.0).into_unchecked() }
     }
 
     pub fn null(self) -> Null<'q> {
-        unsafe { Data::from_raw_parts(qc::Value::null(), self.0).into_unchecked() }
+        unsafe { Value::from_raw_parts(qc::Value::null(), self.0).into_unchecked() }
     }
 
     // json
 
-    pub fn parse_json(self, buf: &str, filename: &str) -> Result<Data<'q>> {
+    pub fn parse_json(self, buf: &str, filename: &str) -> Result<Value<'q>> {
         unsafe { self.wrap_result(self.0.parse_json(buf, filename)) }
     }
 
@@ -379,7 +379,7 @@ impl<'q> Context<'q> {
         R::from_qj(self.parse_json(buf, filename)?)
     }
 
-    pub fn json_stringify(self, obj: Data<'q>, replacer: Data<'q>, space0: Data<'q>) -> Result<QjString<'q>> {
+    pub fn json_stringify(self, obj: Value<'q>, replacer: Value<'q>, space0: Value<'q>) -> Result<QjString<'q>> {
         unsafe {
             self.wrap_result::<QjString>(
                 self.0
@@ -473,4 +473,4 @@ impl fmt::Debug for ContextScope<'_> {
     }
 }
 
-pub(crate) type Callback<'q, 'a, R> = dyn Fn(Context<'q>, Data<'q>, &'a [Data<'q>]) -> Result<R> + 'a;
+pub(crate) type Callback<'q, 'a, R> = dyn Fn(Context<'q>, Value<'q>, &'a [Value<'q>]) -> Result<R> + 'a;

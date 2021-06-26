@@ -69,12 +69,12 @@ impl AsJsCFunctionListEntry<'_> for ffi::JSCFunctionListEntry {
 }
 
 pub trait AsValue<'q> {
-    fn as_value(&self) -> Value<'q>;
+    fn as_ref(&self) -> Value<'q>;
 }
 
 impl<'q> AsValue<'q> for Value<'q> {
     #[inline]
-    fn as_value(&self) -> Value<'q> {
+    fn as_ref(&self) -> Value<'q> {
         *self
     }
 }

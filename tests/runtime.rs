@@ -1,4 +1,4 @@
-use quijine::{Data, Error, ErrorKind, EvalFlags, Result};
+use quijine::{Error, ErrorKind, EvalFlags, Result, Value};
 
 #[test]
 fn multiple_runtimes() -> Result<()> {
@@ -7,7 +7,7 @@ fn multiple_runtimes() -> Result<()> {
     let th = std::thread::spawn(move || {
         quijine::context(move |ctx| {
             let recv = ctx.new_function_with(
-                move |_ctx, _this: Data, _args: ()| {
+                move |_ctx, _this: Value, _args: ()| {
                     let message = rx
                         .recv()
                         .map_err(|e| Error::with_external(ErrorKind::InternalError, Box::new(e.clone())))?;
@@ -27,7 +27,7 @@ fn multiple_runtimes() -> Result<()> {
     });
     quijine::context(move |ctx| {
         let send = ctx.new_function_with(
-            move |_ctx, _this: Data, (message,): (String,)| {
+            move |_ctx, _this: Value, (message,): (String,)| {
                 tx.send(message)
                     .map_err(|e| Error::with_external(ErrorKind::InternalError, Box::new(e.clone())))?;
                 Ok(())

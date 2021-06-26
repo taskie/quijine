@@ -1,64 +1,60 @@
 use std::convert::TryFrom;
 
-use crate::{atom::Atom, context::Context, data::Data, error::Result, Error, ErrorKind};
+use crate::{atom::Atom, context::Context, error::Result, value::Value, Error, ErrorKind};
 
-pub trait AsData<'q> {
-    fn as_data(&self) -> &Data<'q>;
-}
-
-impl<'q> AsData<'q> for Data<'q> {
-    fn as_data(&self) -> &Data<'q> {
+impl<'q> AsRef<Value<'q>> for Value<'q> {
+    fn as_ref(&self) -> &Value<'q> {
         self
     }
 }
 
 pub trait IntoQj<'q> {
-    fn into_qj(self, ctx: Context<'q>) -> Result<Data<'q>>;
+    fn into_qj(self, ctx: Context<'q>) -> Result<Value<'q>>;
 }
 
-impl<'q, T: Into<Data<'q>>> IntoQj<'q> for T {
-    fn into_qj(self, _ctx: Context<'q>) -> Result<Data<'q>> {
+impl<'q, T: Into<Value<'q>>> IntoQj<'q> for T {
+    fn into_qj(self, _ctx: Context<'q>) -> Result<Value<'q>> {
         Ok(self.into())
     }
 }
 
 pub trait FromQj<'q>: Sized {
-    fn from_qj(v: Data<'q>) -> Result<Self>;
+    fn from_qj(v: Value<'q>) -> Result<Self>;
 }
 
-impl<'q> FromQj<'q> for Data<'q> {
-    fn from_qj(v: Data<'q>) -> Result<Self> {
+impl<'q> FromQj<'q> for Value<'q> {
+    fn from_qj(v: Value<'q>) -> Result<Self> {
         Ok(v)
     }
 }
 
 impl<'q, T> FromQj<'q> for T
 where
-    T: TryFrom<Data<'q>, Error = Error>,
+    T: TryFrom<Value<'q>, Error = Error>,
 {
-    fn from_qj(v: Data<'q>) -> Result<Self> {
+    fn from_qj(v: Value<'q>) -> Result<Self> {
         T::try_from(v)
     }
 }
 
 pub trait FromQjMulti<'q, 'a>: Sized {
-    fn from_qj_multi(v: &'a [Data<'q>]) -> Result<Self>;
+    fn from_qj_multi(v: &'a [Value<'q>]) -> Result<Self>;
 }
 
-impl<'q, 'a> FromQjMulti<'q, 'a> for &'a [Data<'q>] {
-    fn from_qj_multi(v: &'a [Data<'q>]) -> Result<Self> {
+impl<'q, 'a> FromQjMulti<'q, 'a> for &'a [Value<'q>] {
+    fn from_qj_multi(v: &'a [Value<'q>]) -> Result<Self> {
         Ok(v)
     }
 }
 
-impl<'q, 'a> FromQjMulti<'q, 'a> for Vec<Data<'q>> {
-    fn from_qj_multi(v: &[Data<'q>]) -> Result<Self> {
+impl<'q, 'a> FromQjMulti<'q, 'a> for Vec<Value<'q>> {
+    fn from_qj_multi(v: &[Value<'q>]) -> Result<Self> {
         Ok(v.to_vec())
     }
 }
 
 impl<'q, 'a> FromQjMulti<'q, 'a> for () {
-    fn from_qj_multi(_v: &[Data<'q>]) -> Result<Self> {
+    fn from_qj_multi(_v: &[Value<'q>]) -> Result<Self> {
         Ok(())
     }
 }
@@ -69,7 +65,7 @@ macro_rules! impl_from_qj_multi_for_tuple {
         where
             $($t: FromQj<'q>),+
         {
-            fn from_qj_multi(v: &[Data<'q>]) -> Result<Self> {
+            fn from_qj_multi(v: &[Value<'q>]) -> Result<Self> {
                 let err = |i: usize| move || Error::with_str(ErrorKind::RangeError, &format!("index: {}", i));
                 Ok((
                     $($t::from_qj((v.get($k).ok_or_else(err($k))?.clone()))?,)+
@@ -85,11 +81,11 @@ impl_from_qj_multi_for_tuple! { for (0 => T0, 1 => T1, 2 => T2) }
 impl_from_qj_multi_for_tuple! { for (0 => T0, 1 => T1, 2 => T2, 3 => T3) }
 
 pub trait IntoQjMulti<'q> {
-    type Target: AsRef<[Data<'q>]>;
+    type Target: AsRef<[Value<'q>]>;
     fn into_qj_multi(self, ctx: Context<'q>) -> Result<Self::Target>;
 }
 
-impl<'q> IntoQjMulti<'q> for &[Data<'q>] {
+impl<'q> IntoQjMulti<'q> for &[Value<'q>] {
     type Target = Self;
 
     fn into_qj_multi(self, _ctx: Context<'q>) -> Result<Self::Target> {
@@ -97,7 +93,7 @@ impl<'q> IntoQjMulti<'q> for &[Data<'q>] {
     }
 }
 
-impl<'q, const N: usize> IntoQjMulti<'q> for &[Data<'q>; N] {
+impl<'q, const N: usize> IntoQjMulti<'q> for &[Value<'q>; N] {
     type Target = Self;
 
     fn into_qj_multi(self, _ctx: Context<'q>) -> Result<Self::Target> {
@@ -106,7 +102,7 @@ impl<'q, const N: usize> IntoQjMulti<'q> for &[Data<'q>; N] {
 }
 
 impl<'q, T: IntoQj<'q>> IntoQjMulti<'q> for Vec<T> {
-    type Target = Vec<Data<'q>>;
+    type Target = Vec<Value<'q>>;
 
     fn into_qj_multi(self, ctx: Context<'q>) -> Result<Self::Target> {
         let mut res = Vec::with_capacity(self.len());
@@ -120,7 +116,7 @@ impl<'q, T: IntoQj<'q>> IntoQjMulti<'q> for Vec<T> {
 macro_rules! impl_into_qj_multi_for_tuple {
     { for $size:expr => ($($k:tt => $t:ident),+) } => {
         impl<'q, $($t: IntoQj<'q>),+> IntoQjMulti<'q> for ($($t,)+) {
-            type Target = Vec<Data<'q>>;
+            type Target = Vec<Value<'q>>;
 
             fn into_qj_multi(self, ctx: Context<'q>) -> Result<Self::Target> {
                 Ok(vec![$(self.$k.into_qj(ctx)?),+])
@@ -130,7 +126,7 @@ macro_rules! impl_into_qj_multi_for_tuple {
 }
 
 impl<'q> IntoQjMulti<'q> for () {
-    type Target = [Data<'q>; 0];
+    type Target = [Value<'q>; 0];
 
     fn into_qj_multi(self, _ctx: Context<'q>) -> Result<Self::Target> {
         Ok([])

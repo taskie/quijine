@@ -1,13 +1,13 @@
 #[macro_export]
 macro_rules! qj_slice {
     [ $($v:expr),* ] => {
-        &[$(Into::<$crate::Data>::into($v)),*]
+        &[$(Into::<$crate::Value>::into($v)),*]
     };
 }
 
 #[macro_export]
 macro_rules! qj_vec {
     [ $($v:expr),* ] => {
-        vec![$(Into::<$crate::Data>::into($v)),*]
+        vec![$(Into::<$crate::Value>::into($v)),*]
     };
 }

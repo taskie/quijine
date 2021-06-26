@@ -1,7 +1,7 @@
 use crate::{
     convert::{FromQj, FromQjMulti, IntoQj},
-    data::Data,
     types::Object,
+    value::Value,
     Context, PropFlags, Result, Runtime,
 };
 use log::trace;
@@ -39,7 +39,7 @@ pub trait ClassMethods<'q, C: Class> {
 #[allow(unused_variables)]
 pub trait Class: Sized {
     fn name() -> &'static str;
-    fn constructor<'q>(&mut self, ctx: Context<'q>, this: Data, args: &[Data]) -> Result<()> {
+    fn constructor<'q>(&mut self, ctx: Context<'q>, this: Value, args: &[Value]) -> Result<()> {
         Ok(())
     }
     fn constructor_length() -> i32 {
@@ -64,12 +64,12 @@ unsafe fn finalize<C: Class + 'static>(rrt: qc::Runtime, val: qc::Value) {
     if p.is_null() {
         return;
     }
-    // this Box was created by Data::set_opaque
+    // this Box was created by Value::set_opaque
     let _b = Box::from_raw(p);
 }
 
 struct Methods<'q> {
-    proto: &'q Data<'q>,
+    proto: &'q Value<'q>,
     context: Context<'q>,
 }
 
@@ -83,7 +83,7 @@ impl<'q, C: Class + 'static> ClassMethods<'q, C> for Methods<'q> {
     {
         let ctx = self.context;
         let f = ctx.new_function_with(
-            move |ctx, this: Data<'q>, args| {
+            move |ctx, this: Value<'q>, args| {
                 let mut cloned = this.clone();
                 let v = cloned.opaque_mut::<C>().unwrap();
                 (method)(v, ctx, T::from_qj(this)?, args)
@@ -165,7 +165,7 @@ where
     R: IntoQj<'q> + 'q,
 {
     ctx.new_function_with(
-        move |ctx, this: Data<'q>, _args: &[Data]| {
+        move |ctx, this: Value<'q>, _args: &[Value]| {
             let mut cloned = this.clone();
             let v = cloned.opaque_mut::<C>().unwrap();
             (getter)(v, ctx, T::from_qj(this)?)
@@ -184,7 +184,7 @@ where
     R: IntoQj<'q> + 'q,
 {
     ctx.new_function_with(
-        move |ctx, this: Data<'q>, args: &[Data]| {
+        move |ctx, this: Value<'q>, args: &[Value]| {
             let arg = args.get(0).cloned().unwrap_or_else(|| ctx.undefined().into());
             let mut cloned = this.clone();
             let v = cloned.opaque_mut::<C>().unwrap();
@@ -222,7 +222,7 @@ pub(crate) fn register_class<C: Class + 'static>(rctx: qc::Context, clz: qc::Cla
     };
     // per Context
     let proto = ctx.new_object()?;
-    Data::dup(&proto);
+    Value::dup(&proto);
     rctx.set_class_proto(clz, *proto.as_raw());
     let mut methods = Methods {
         context: ctx,

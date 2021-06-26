@@ -1,9 +1,9 @@
 use crate::{
     context::Context,
-    convert::{AsData, FromQj, IntoQjAtom},
-    data::Data,
+    convert::{FromQj, IntoQjAtom},
     error::Result,
     types::String as QjString,
+    value::Value,
 };
 use qc::AsJsAtom;
 use quijine_core as qc;
@@ -46,7 +46,7 @@ impl<'q> Atom<'q> {
 
     // data
 
-    pub fn to_data(&self) -> Result<Data<'q>> {
+    pub fn to_data(&self) -> Result<Value<'q>> {
         self.context().atom_to_data(self)
     }
 
@@ -84,9 +84,9 @@ impl fmt::Debug for Atom<'_> {
     }
 }
 
-impl<'q, T: AsData<'q>> IntoQjAtom<'q> for T {
+impl<'q, T: AsRef<Value<'q>>> IntoQjAtom<'q> for T {
     fn into_qj_atom(self, _ctx: Context<'q>) -> Result<Atom<'q>> {
-        self.as_data().to_atom()
+        self.as_ref().to_atom()
     }
 }
 

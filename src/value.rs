@@ -2,7 +2,7 @@ use crate::{
     atom::{Atom, PropertyEnum},
     class::Class,
     context::Context,
-    convert::{AsData, FromQj, IntoQj, IntoQjAtom},
+    convert::{FromQj, IntoQj, IntoQjAtom},
     error::{Error, ErrorKind, Result},
     runtime::Runtime,
     string::CString as QjCString,
@@ -29,19 +29,19 @@ macro_rules! call_with_context {
     };
 }
 
-/// `Data` is a value holder with a context.
-pub struct Data<'q> {
+/// `Value` is a value holder with a context.
+pub struct Value<'q> {
     value: qc::Value<'q>,
     context: qc::Context<'q>,
     #[cfg(feature = "debug_leak")]
     _debug_count: u16,
 }
 
-impl<'q> Data<'q> {
-    pub(crate) fn from_raw_parts(value: qc::Value<'q>, context: qc::Context<'q>) -> Data<'q> {
+impl<'q> Value<'q> {
+    pub(crate) fn from_raw_parts(value: qc::Value<'q>, context: qc::Context<'q>) -> Value<'q> {
         #[cfg(feature = "debug_leak")]
         let count = DEBUG_GLOBAL_COUNT.fetch_add(1, atomic::Ordering::SeqCst);
-        let qj = Data {
+        let qj = Value {
             value,
             context,
             #[cfg(feature = "debug_leak")]
@@ -66,19 +66,19 @@ impl<'q> Data<'q> {
     // force conversion
 
     #[inline]
-    pub(crate) fn as_data_raw(&self) -> &Data<'q> {
+    pub(crate) fn as_data_raw(&self) -> &Value<'q> {
         self
     }
 
     /// # Safety
     /// Must be type-safe in JavaScript.
     #[inline]
-    pub(crate) unsafe fn as_any<T: Into<Data<'q>>>(&self) -> &T {
-        &*(self as *const Data as *const T)
+    pub(crate) unsafe fn as_any<T: Into<Value<'q>>>(&self) -> &T {
+        &*(self as *const Value as *const T)
     }
 
     #[inline]
-    pub(crate) unsafe fn into_unchecked<T: AsData<'q>>(self) -> T {
+    pub(crate) unsafe fn into_unchecked<T: AsRef<Value<'q>>>(self) -> T {
         let ret = transmute_copy(&self);
         forget(self);
         ret
@@ -218,7 +218,7 @@ impl<'q> Data<'q> {
     // object
 
     #[inline]
-    pub fn property(&self, key: Atom<'q>) -> Result<Data<'q>> {
+    pub fn property(&self, key: Atom<'q>) -> Result<Value<'q>> {
         unsafe {
             self.context()
                 .wrap_result(self.value.property(self.context, *key.as_raw()))
@@ -235,8 +235,8 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub fn set_property(&self, key: Atom<'q>, val: Data<'q>) -> Result<bool> {
-        Data::dup(&val);
+    pub fn set_property(&self, key: Atom<'q>, val: Value<'q>) -> Result<bool> {
+        Value::dup(&val);
         let ret = self.value.set_property(self.context, *key.as_raw(), *val.as_raw());
         self.context().map_err_to_exception(ret)
     }
@@ -306,9 +306,9 @@ impl<'q> Data<'q> {
     pub fn define_property(
         &self,
         prop: Atom<'q>,
-        val: Data<'q>,
-        getter: Data<'q>,
-        setter: Data<'q>,
+        val: Value<'q>,
+        getter: Value<'q>,
+        setter: Value<'q>,
         flags: PropFlags,
     ) -> Result<bool> {
         let ret = self.value.define_property(
@@ -323,8 +323,8 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub fn define_property_value(&self, prop: Atom<'q>, val: Data<'q>, flags: PropFlags) -> Result<bool> {
-        Data::dup(&val);
+    pub fn define_property_value(&self, prop: Atom<'q>, val: Value<'q>, flags: PropFlags) -> Result<bool> {
+        Value::dup(&val);
         let ret = self
             .value
             .define_property_value(self.context, *prop.as_raw(), *val.as_raw(), flags);
@@ -345,12 +345,12 @@ impl<'q> Data<'q> {
     pub fn define_property_get_set(
         &self,
         prop: Atom<'q>,
-        getter: Data<'q>,
-        setter: Data<'q>,
+        getter: Value<'q>,
+        setter: Value<'q>,
         flags: PropFlags,
     ) -> Result<bool> {
-        Data::dup(&getter);
-        Data::dup(&setter);
+        Value::dup(&getter);
+        Value::dup(&setter);
         let ret =
             self.value
                 .define_property_get_set(self.context, *prop.as_raw(), *getter.as_raw(), *setter.as_raw(), flags);
@@ -391,7 +391,7 @@ impl<'q> Data<'q> {
     }
 
     #[inline]
-    pub fn set_constructor(&self, proto: Data) -> Result<()> {
+    pub fn set_constructor(&self, proto: Value) -> Result<()> {
         self.value.set_constructor(self.context, *proto.as_raw());
         Ok(())
     }
@@ -399,7 +399,7 @@ impl<'q> Data<'q> {
     // class
 
     #[inline]
-    pub fn prototype(&self) -> Result<Data> {
+    pub fn prototype(&self) -> Result<Value> {
         unsafe { self.context().wrap_result(self.value.prototype(self.context)) }
     }
 
@@ -435,26 +435,26 @@ impl<'q> Data<'q> {
     }
 }
 
-impl Drop for Data<'_> {
+impl Drop for Value<'_> {
     fn drop(&mut self) {
         unsafe { Self::free(self) }
     }
 }
 
-impl Clone for Data<'_> {
+impl Clone for Value<'_> {
     fn clone(&self) -> Self {
-        let qj = Data {
+        let qj = Value {
             value: self.value,
             context: self.context,
             #[cfg(feature = "debug_leak")]
             _debug_count: self._debug_count,
         };
-        Data::dup(&qj);
+        Value::dup(&qj);
         qj
     }
 }
 
-impl fmt::Debug for Data<'_> {
+impl fmt::Debug for Value<'_> {
     #[cfg(not(feature = "debug_leak"))]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> StdResult<(), fmt::Error> {
         f.write_str(format!("Qj({:?})", self.value).as_str())
@@ -467,9 +467,9 @@ impl fmt::Debug for Data<'_> {
 }
 pub struct PropertyDescriptor<'q> {
     flags: PropFlags,
-    value: Data<'q>,
-    getter: Data<'q>,
-    setter: Data<'q>,
+    value: Value<'q>,
+    getter: Value<'q>,
+    setter: Value<'q>,
 }
 
 impl<'q> PropertyDescriptor<'q> {
@@ -477,9 +477,9 @@ impl<'q> PropertyDescriptor<'q> {
     pub(crate) fn from_raw_parts(desc: qc::PropertyDescriptor<'q>, ctx: qc::Context<'q>) -> PropertyDescriptor<'q> {
         PropertyDescriptor {
             flags: desc.flags(),
-            value: Data::from_raw_parts(desc.value(), ctx),
-            getter: Data::from_raw_parts(desc.getter(), ctx),
-            setter: Data::from_raw_parts(desc.setter(), ctx),
+            value: Value::from_raw_parts(desc.value(), ctx),
+            getter: Value::from_raw_parts(desc.getter(), ctx),
+            setter: Value::from_raw_parts(desc.setter(), ctx),
         }
     }
 
@@ -489,17 +489,17 @@ impl<'q> PropertyDescriptor<'q> {
     }
 
     #[inline]
-    pub fn value(&self) -> &Data<'q> {
+    pub fn value(&self) -> &Value<'q> {
         &self.value
     }
 
     #[inline]
-    pub fn getter(&self) -> &Data<'q> {
+    pub fn getter(&self) -> &Value<'q> {
         &self.getter
     }
 
     #[inline]
-    pub fn setter(&self) -> &Data<'q> {
+    pub fn setter(&self) -> &Value<'q> {
         &self.setter
     }
 }

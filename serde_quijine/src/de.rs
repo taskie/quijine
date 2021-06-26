@@ -1,12 +1,12 @@
 use crate::error::{Error, Result};
-use quijine::{Atom, Context, Data, GPNFlags};
+use quijine::{Atom, Context, GPNFlags, Value};
 use serde::{
     de::{self, Error as _},
     Deserialize,
 };
 use std::convert::TryInto;
 
-pub fn from_qj<'q, 'de, T>(input: Data<'q>) -> Result<T>
+pub fn from_qj<'q, 'de, T>(input: Value<'q>) -> Result<T>
 where
     T: Deserialize<'de>,
 {
@@ -16,11 +16,11 @@ where
 }
 
 pub struct Deserializer<'q> {
-    input: Data<'q>,
+    input: Value<'q>,
 }
 
 impl<'q> Deserializer<'q> {
-    pub fn new(input: Data<'q>) -> Self {
+    pub fn new(input: Value<'q>) -> Self {
         Deserializer { input }
     }
 
@@ -331,7 +331,7 @@ impl<'q, 'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'q> {
 // Map
 
 struct MapAccess<'q> {
-    object: Data<'q>,
+    object: Value<'q>,
     keys: Vec<Atom<'q>>,
     pos: usize,
 }
@@ -365,7 +365,7 @@ impl<'de> de::MapAccess<'de> for MapAccess<'_> {
 }
 
 struct ObjectAccess<'q> {
-    object: Data<'q>,
+    object: Value<'q>,
     fields: &'static [&'static str],
     pos: usize,
 }
@@ -402,7 +402,7 @@ impl<'de> de::MapAccess<'de> for ObjectAccess<'_> {
 // Seq
 
 struct SeqAccess<'q> {
-    object: Data<'q>,
+    object: Value<'q>,
     len: i32,
     pos: i32,
 }
@@ -431,7 +431,7 @@ impl<'de> de::SeqAccess<'de> for SeqAccess<'_> {
 // Variant
 
 struct VariantAccess<'q> {
-    value: Data<'q>,
+    value: Value<'q>,
 }
 
 impl<'de, 'q> de::VariantAccess<'de> for VariantAccess<'q> {
@@ -459,8 +459,8 @@ impl<'de, 'q> de::VariantAccess<'de> for VariantAccess<'q> {
 }
 
 struct EnumAccess<'q> {
-    tag: Data<'q>,
-    payload: Data<'q>,
+    tag: Value<'q>,
+    payload: Value<'q>,
 }
 
 impl<'de, 'q> de::EnumAccess<'de> for EnumAccess<'q> {
