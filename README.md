@@ -8,4 +8,4 @@ QuickJS-Rust binder (experimental)
 
 ## License
 
-Apache License 2.0
+MIT or Apache-2.0
