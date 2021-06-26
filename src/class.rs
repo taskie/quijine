@@ -8,7 +8,7 @@ use log::trace;
 use quijine_core as qc;
 use std::ffi::CString;
 
-pub trait ClassMethods<'q, C: Class> {
+pub trait ClassProperties<'q, C: Class> {
     fn add_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
@@ -45,7 +45,7 @@ pub trait Class: Sized {
     fn constructor_length() -> i32 {
         0
     }
-    fn add_methods<'q, M: ClassMethods<'q, Self>>(methods: &mut M) -> Result<()> {
+    fn define_properties<'q, P: ClassProperties<'q, Self>>(properties: &mut P) -> Result<()> {
         Ok(())
     }
     fn setup_proto<'q>(ctx: Context<'q>, proto: &Object<'q>) -> Result<()> {
@@ -68,12 +68,12 @@ unsafe fn finalize<C: Class + 'static>(rrt: qc::Runtime, val: qc::Value) {
     let _b = Box::from_raw(p);
 }
 
-struct Methods<'q> {
+struct Properties<'q> {
     proto: &'q Value<'q>,
     context: Context<'q>,
 }
 
-impl<'q, C: Class + 'static> ClassMethods<'q, C> for Methods<'q> {
+impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
     fn add_method<T, F, A, R>(&mut self, name: &str, method: F) -> Result<Object<'q>>
     where
         T: FromQj<'q>,
@@ -224,11 +224,11 @@ pub(crate) fn register_class<C: Class + 'static>(rctx: qc::Context, clz: qc::Cla
     let proto = ctx.new_object()?;
     Value::dup(&proto);
     rctx.set_class_proto(clz, *proto.as_raw());
-    let mut methods = Methods {
+    let mut properties = Properties {
         context: ctx,
         proto: &proto,
     };
-    C::add_methods(&mut methods)?;
+    C::define_properties(&mut properties)?;
     C::setup_proto(ctx, &proto)?;
     Ok(proto)
 }

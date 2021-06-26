@@ -1,6 +1,6 @@
 use std::{cell::RefCell, sync::Arc};
 
-use quijine::{Class, ClassMethods, Context, EvalFlags, Result, Value};
+use quijine::{Class, ClassProperties, Context, EvalFlags, Result, Value};
 
 #[derive(Clone, Debug, Default)]
 struct S1 {
@@ -29,8 +29,8 @@ impl Class for S1 {
         1
     }
 
-    fn add_methods<'q, T: ClassMethods<'q, Self>>(methods: &mut T) -> Result<()> {
-        methods.add_get_set(
+    fn define_properties<'q, P: ClassProperties<'q, Self>>(properties: &mut P) -> Result<()> {
+        properties.add_get_set(
             "name",
             |v, _ctx, _this: Value| Ok(v.name.clone()),
             |v, _ctx, _this: Value, name: Value| {
@@ -38,13 +38,13 @@ impl Class for S1 {
                 Ok(name)
             },
         )?;
-        methods.add_get("pos", |v, ctx, _this: Value| {
+        properties.add_get("pos", |v, ctx, _this: Value| {
             let obj = ctx.new_object()?;
             obj.set("x", v.pos.0)?;
             obj.set("y", v.pos.1)?;
             Ok(obj)
         })?;
-        methods.add_method("move", |v, _ctx, _this: Value, (x, y): (i32, i32)| {
+        properties.add_method("move", |v, _ctx, _this: Value, (x, y): (i32, i32)| {
             v.move_(x, y);
             Ok(())
         })?;
@@ -118,8 +118,8 @@ impl Class for S2 {
         "S2"
     }
 
-    fn add_methods<'q, T: ClassMethods<'q, Self>>(methods: &mut T) -> Result<()> {
-        methods.add_get_set(
+    fn define_properties<'q, T: ClassProperties<'q, Self>>(properties: &mut T) -> Result<()> {
+        properties.add_get_set(
             "name",
             |v, _ctx, _this: Value| {
                 let v = v.0.borrow();
@@ -131,14 +131,14 @@ impl Class for S2 {
                 Ok(name)
             },
         )?;
-        methods.add_get("pos", |v, ctx, _this: Value| {
+        properties.add_get("pos", |v, ctx, _this: Value| {
             let v = v.0.borrow();
             let obj = ctx.new_object()?;
             obj.set("x", v.pos.0)?;
             obj.set("y", v.pos.1)?;
             Ok(obj)
         })?;
-        methods.add_method("move", |v, _ctx, _this: Value, (x, y): (i32, i32)| {
+        properties.add_method("move", |v, _ctx, _this: Value, (x, y): (i32, i32)| {
             let mut v = v.0.borrow_mut();
             v.move_(x, y);
             Ok(())

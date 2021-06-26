@@ -1,4 +1,4 @@
-use quijine::{Class, EvalFlags, Object, Result, Value};
+use quijine::{Class, ClassProperties, EvalFlags, Object, Result, Value};
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use std::cell::RefCell;
@@ -83,8 +83,8 @@ fn example_use_rust_struct_from_js() -> Result<()> {
             "Random"
         }
 
-        fn add_methods<'q, M: quijine::ClassMethods<'q, Self>>(methods: &mut M) -> Result<()> {
-            methods.add_method("genU16", |v, _ctx, _this: Value, _args: ()| Ok(v.gen_u16() as i32))?;
+        fn define_properties<'q, P: ClassProperties<'q, Self>>(properties: &mut P) -> Result<()> {
+            properties.add_method("genU16", |v, _ctx, _this: Value, _args: ()| Ok(v.gen_u16() as i32))?;
             Ok(())
         }
     }

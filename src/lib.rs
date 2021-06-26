@@ -16,7 +16,7 @@ pub mod macros;
 pub use quijine_core::{EvalFlags, GPNFlags, PropFlags};
 
 pub use atom::{Atom, PropertyEnum};
-pub use class::{Class, ClassMethods};
+pub use class::{Class, ClassProperties};
 pub use context::{Context, ContextScope};
 pub use context_ext::ContextAddIntrinsicExt;
 pub use convert::{FromQj, FromQjMulti, IntoQj, IntoQjAtom, IntoQjMulti};
