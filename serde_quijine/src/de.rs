@@ -306,7 +306,7 @@ impl<'q, 'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'q> {
                 let tag = prop_names[0].atom();
                 let payload = self.input.property(tag.clone())?;
                 visitor.visit_enum(EnumAccess {
-                    tag: tag.to_data()?,
+                    tag: tag.to_value()?,
                     payload,
                 })
             }
@@ -345,7 +345,7 @@ impl<'de> de::MapAccess<'de> for MapAccess<'_> {
     {
         Ok(match self.keys.get(self.pos) {
             Some(key) => {
-                let mut deserializer = Deserializer::new(key.to_data()?);
+                let mut deserializer = Deserializer::new(key.to_value()?);
                 Some(seed.deserialize(&mut deserializer)?)
             }
             None => None,

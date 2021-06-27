@@ -67,7 +67,7 @@ impl<'q> Value<'q> {
     // force conversion
 
     #[inline]
-    pub(crate) fn as_data_raw(&self) -> &Value<'q> {
+    pub(crate) fn as_value_raw(&self) -> &Value<'q> {
         self
     }
 
@@ -178,7 +178,7 @@ impl<'q> Value<'q> {
 
     #[inline]
     fn ok_or_type_error<T>(&self, v: Option<T>) -> Result<T> {
-        v.ok_or_else(|| Error::from_data(ErrorKind::TypeError, self.clone()))
+        v.ok_or_else(|| Error::from_value(ErrorKind::TypeError, self.clone()))
     }
 
     #[inline]

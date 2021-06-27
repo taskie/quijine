@@ -45,10 +45,10 @@ impl<'q> Atom<'q> {
         this.context.dup_atom(this.atom);
     }
 
-    // data
+    // value
 
     #[inline]
-    pub fn to_data(&self) -> Result<Value<'q>> {
+    pub fn to_value(&self) -> Result<Value<'q>> {
         self.context().atom_to_value(self)
     }
 

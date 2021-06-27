@@ -101,10 +101,10 @@ impl Error {
         Error::with_external(ErrorKind::ExternalError, external)
     }
 
-    pub fn from_data<'q, T: Into<Value<'q>>>(kind: ErrorKind, data: T) -> Error {
-        let data: Value<'q> = data.into();
-        let ctx = data.context();
-        let json = ctx.json_stringify_into(data, ctx.undefined(), ctx.undefined());
+    pub fn from_value<'q, T: Into<Value<'q>>>(kind: ErrorKind, value: T) -> Error {
+        let value: Value<'q> = value.into();
+        let ctx = value.context();
+        let json = ctx.json_stringify_into(value, ctx.undefined(), ctx.undefined());
         Error {
             kind,
             value: ErrorValue::String(match json {
@@ -114,18 +114,18 @@ impl Error {
         }
     }
 
-    pub fn from_js_error<'q, T: Into<Value<'q>>>(kind: ErrorKind, data: T) -> Error {
-        let data: Value<'q> = data.into();
-        let data = JsErrorData {
-            name: data.get("name").ok(),
-            message: data.get("message").ok(),
-            file_name: data.get("fileName").ok(),
-            line_number: data.get("lineNumber").ok(),
-            stack: data.get("stack").ok(),
+    pub fn from_js_error<'q, T: Into<Value<'q>>>(kind: ErrorKind, value: T) -> Error {
+        let value: Value<'q> = value.into();
+        let value = JsErrorData {
+            name: value.get("name").ok(),
+            message: value.get("message").ok(),
+            file_name: value.get("fileName").ok(),
+            line_number: value.get("lineNumber").ok(),
+            stack: value.get("stack").ok(),
         };
         Error {
             kind,
-            value: ErrorValue::JsError(data),
+            value: ErrorValue::JsError(value),
         }
     }
 }

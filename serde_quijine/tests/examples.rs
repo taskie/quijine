@@ -45,8 +45,8 @@ fn example_de() -> QjResult<()> {
             };
             s1;
         "#;
-        let s1_data = ctx.eval(code, "<input>", EvalFlags::TYPE_GLOBAL)?;
-        let s1: S1 = from_qj(s1_data)?;
+        let s1_value = ctx.eval(code, "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let s1: S1 = from_qj(s1_value)?;
         assert_eq!("foo", s1.name);
         assert_eq!((3, 4), s1.pos);
         Ok(())

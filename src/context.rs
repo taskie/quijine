@@ -329,7 +329,7 @@ impl<'q> Context<'q> {
             argc: c_int,
             argv: *mut raw::JSValue,
             _magic: c_int,
-            func_data: *mut raw::JSValue,
+            func_value: *mut raw::JSValue,
         ) -> raw::JSValue {
             let ctx = qc::Context::from_raw(ctx);
             let this = qc::Value::from_raw(js_this, ctx);
@@ -339,7 +339,7 @@ impl<'q> Context<'q> {
                 let any = qc::Value::from_raw(*p, ctx);
                 args.push(any);
             }
-            let cb = qc::Value::from_raw(*func_data, ctx);
+            let cb = qc::Value::from_raw(*func_value, ctx);
             log::debug!("load pointer from ArrayBuffer");
             let func = cb.array_buffer_as_ref::<Box<Callback<R>>>(ctx).unwrap();
 

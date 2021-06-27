@@ -43,7 +43,7 @@ macro_rules! impl_as_ref_value {
         }
         impl<'q> AsRef<Value<'q>> for $source<'q> {
             fn as_ref(&self) -> &Value<'q> {
-                self.as_data_raw()
+                self.as_value_raw()
             }
         }
     };
@@ -81,7 +81,7 @@ macro_rules! impl_into_qj {
     };
 }
 
-macro_rules! impl_try_from_data {
+macro_rules! impl_try_from_value {
     { $source:ident for $target:ident if $value:pat => $check:expr } => {
         impl<'q> TryFrom<$source<'q>> for $target<'q> {
             type Error = Error;
@@ -109,35 +109,35 @@ impl_deref! { Value for HasPtr }
 #[repr(transparent)]
 pub struct BigDecimal<'q>(HasPtr<'q>);
 impl_as_ref_value! { for BigDecimal }
-impl_try_from_data! { Value for BigDecimal if v => v.tag() == Tag::BigDecimal }
+impl_try_from_value! { Value for BigDecimal if v => v.tag() == Tag::BigDecimal }
 impl_deref! { HasPtr for BigDecimal }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct BigInt<'q>(HasPtr<'q>);
 impl_as_ref_value! { for BigInt }
-impl_try_from_data! { Value for BigInt if v => v.tag() == Tag::BigInt }
+impl_try_from_value! { Value for BigInt if v => v.tag() == Tag::BigInt }
 impl_deref! { HasPtr for BigInt }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct BigFloat<'q>(HasPtr<'q>);
 impl_as_ref_value! { for BigFloat }
-impl_try_from_data! { Value for BigFloat if v => v.tag() == Tag::BigFloat }
+impl_try_from_value! { Value for BigFloat if v => v.tag() == Tag::BigFloat }
 impl_deref! { HasPtr for BigFloat }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Symbol<'q>(HasPtr<'q>);
 impl_as_ref_value! { for Symbol }
-impl_try_from_data! { Value for Symbol if v => v.tag() == Tag::Symbol }
+impl_try_from_value! { Value for Symbol if v => v.tag() == Tag::Symbol }
 impl_deref! { HasPtr for Symbol }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct String<'q>(HasPtr<'q>);
 impl_as_ref_value! { for String }
-impl_try_from_data! { Value for String if v => v.tag() == Tag::String }
+impl_try_from_value! { Value for String if v => v.tag() == Tag::String }
 impl_deref! { HasPtr for String }
 
 impl_from! { String for StdString: |v| v.to_string().unwrap() }
@@ -149,21 +149,21 @@ impl_into_qj! { for StdString: |v, ctx| ctx.new_string(&v).map(|v| v.into()) }
 #[repr(transparent)]
 pub struct Module<'q>(HasPtr<'q>);
 impl_as_ref_value! { for Module }
-impl_try_from_data! { Value for Module if v => v.tag() == Tag::Module }
+impl_try_from_value! { Value for Module if v => v.tag() == Tag::Module }
 impl_deref! { HasPtr for Module }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct FunctionBytecode<'q>(HasPtr<'q>);
 impl_as_ref_value! { for FunctionBytecode }
-impl_try_from_data! { Value for FunctionBytecode if v => v.tag() == Tag::FunctionBytecode }
+impl_try_from_value! { Value for FunctionBytecode if v => v.tag() == Tag::FunctionBytecode }
 impl_deref! { HasPtr for FunctionBytecode }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Object<'q>(HasPtr<'q>);
 impl_as_ref_value! { for Object }
-impl_try_from_data! { Value for Object if v => v.tag() == Tag::Object }
+impl_try_from_value! { Value for Object if v => v.tag() == Tag::Object }
 impl_deref! { HasPtr for Object }
 
 // values
@@ -177,7 +177,7 @@ impl_deref! { Value for HasVal }
 #[repr(transparent)]
 pub struct Int<'q>(HasVal<'q>);
 impl_as_ref_value! { for Int }
-impl_try_from_data! { Value for Int if v => v.tag() == Tag::Int }
+impl_try_from_value! { Value for Int if v => v.tag() == Tag::Int }
 impl_deref! { HasVal for Int }
 
 impl_from!(Int for i32: |v| v.to_i32().unwrap());
@@ -188,7 +188,7 @@ impl_into_qj! { for i32: |v, ctx| Ok(ctx.new_int32(v).into()) }
 #[repr(transparent)]
 pub struct Bool<'q>(HasVal<'q>);
 impl_as_ref_value! { for Bool }
-impl_try_from_data! { Value for Bool if v => v.tag() == Tag::Bool }
+impl_try_from_value! { Value for Bool if v => v.tag() == Tag::Bool }
 impl_deref! { HasVal for Bool }
 
 impl_from! { Bool for bool: |v| v.to_bool().unwrap() }
@@ -199,14 +199,14 @@ impl_into_qj! { for bool: |v, ctx| Ok(ctx.new_bool(v).into()) }
 #[repr(transparent)]
 pub struct Null<'q>(HasVal<'q>);
 impl_as_ref_value! { for Null }
-impl_try_from_data! { Value for Null if v => v.tag() == Tag::Null }
+impl_try_from_value! { Value for Null if v => v.tag() == Tag::Null }
 impl_deref! { HasVal for Null }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Undefined<'q>(HasVal<'q>);
 impl_as_ref_value! { for Undefined }
-impl_try_from_data! { Value for Undefined if v => v.tag() == Tag::Undefined }
+impl_try_from_value! { Value for Undefined if v => v.tag() == Tag::Undefined }
 impl_deref! { HasVal for Undefined }
 
 impl_from! { Undefined for (): |_v| () }
@@ -218,28 +218,28 @@ impl_into_qj! { for (): |_v, ctx| Ok(ctx.undefined().into()) }
 #[repr(transparent)]
 pub struct Uninitialized<'q>(HasVal<'q>);
 impl_as_ref_value! { for Uninitialized }
-impl_try_from_data! { Value for Uninitialized if v => v.tag() == Tag::Uninitialized }
+impl_try_from_value! { Value for Uninitialized if v => v.tag() == Tag::Uninitialized }
 impl_deref! { HasVal for Uninitialized }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct CatchOffset<'q>(HasVal<'q>);
 impl_as_ref_value! { for CatchOffset }
-impl_try_from_data! { Value for CatchOffset if v => v.tag() == Tag::CatchOffset }
+impl_try_from_value! { Value for CatchOffset if v => v.tag() == Tag::CatchOffset }
 impl_deref! { HasVal for CatchOffset }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Exception<'q>(HasVal<'q>);
 impl_as_ref_value! { for Exception }
-impl_try_from_data! { Value for Exception if v => v.tag() == Tag::Exception }
+impl_try_from_value! { Value for Exception if v => v.tag() == Tag::Exception }
 impl_deref! { HasVal for Exception }
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Float64<'q>(HasVal<'q>);
 impl_as_ref_value! { for Float64 }
-impl_try_from_data! { Value for Float64 if v => v.tag() == Tag::Float64 }
+impl_try_from_value! { Value for Float64 if v => v.tag() == Tag::Float64 }
 impl_deref! { HasVal for Float64 }
 
 impl_from! { Float64 for f64: |v| v.to_f64().unwrap() }
@@ -320,7 +320,7 @@ impl<'q, C: Class + 'static> From<ClassObject<'q, C>> for Value<'q> {
 
 impl<'q, C: Class + 'static> AsRef<Value<'q>> for ClassObject<'q, C> {
     fn as_ref(&self) -> &Value<'q> {
-        self.as_data_raw()
+        self.as_value_raw()
     }
 }
 
