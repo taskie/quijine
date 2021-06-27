@@ -1,7 +1,7 @@
 use crate::{
     class::Class,
     context::{Context, ContextScope},
-    error::Result,
+    result::Result,
 };
 use quijine_core as qc;
 use std::{any::TypeId, collections::HashMap, ffi::c_void, fmt, ptr::null_mut, result::Result as StdResult};

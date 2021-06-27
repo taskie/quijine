@@ -5,6 +5,7 @@ mod context_ext;
 mod convert;
 mod error;
 mod function;
+mod result;
 mod runtime;
 mod string;
 mod types;
@@ -21,8 +22,9 @@ pub use class::{Class, ClassProperties};
 pub use context::{Context, ContextScope};
 pub use context_ext::ContextAddIntrinsicExt;
 pub use convert::{FromQj, FromQjMulti, IntoQj, IntoQjAtom, IntoQjMulti};
-pub use error::{Error, ErrorKind, ErrorValue, ExternalError, ExternalResult, Result};
+pub use error::{Error, ErrorKind, ErrorValue, ExternalError};
 pub use function::{convert_function_arguments, convert_function_result};
+pub use result::{ExternalResult, Result};
 pub use runtime::{Runtime, RuntimeScope};
 pub use types::{
     BigDecimal, BigFloat, BigInt, Bool, CatchOffset, ClassObject, Exception, Float64, FunctionBytecode, Int, Module,

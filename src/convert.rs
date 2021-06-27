@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::{atom::Atom, context::Context, error::Result, value::Value, Error, ErrorKind};
+use crate::{atom::Atom, context::Context, result::Result, value::Value, Error, ErrorKind};
 
 impl<'q> AsRef<Value<'q>> for Value<'q> {
     fn as_ref(&self) -> &Value<'q> {

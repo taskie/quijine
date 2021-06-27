@@ -1,4 +1,4 @@
-use crate::error::{Error, Result};
+use crate::{error::Error, result::Result};
 use quijine_core as qc;
 
 #[derive(Debug)]

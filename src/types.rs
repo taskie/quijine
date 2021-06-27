@@ -2,7 +2,8 @@ use crate::{
     class::Class,
     context::Context,
     convert::IntoQj,
-    error::{Error, ErrorKind, Result},
+    error::{Error, ErrorKind},
+    result::Result,
     util::Opaque,
     value::Value,
 };

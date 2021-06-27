@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
     convert::{FromQj, IntoQjAtom},
-    error::Result,
+    result::Result,
     types::String as QjString,
     value::Value,
 };
