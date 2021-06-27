@@ -14,7 +14,7 @@ use crate::{
     AsJsAtom,
 };
 use std::{
-    ffi::{c_void, CString},
+    ffi::{c_void, CStr, CString},
     fmt,
     marker::PhantomData,
     mem::size_of,
@@ -22,11 +22,36 @@ use std::{
     ptr::{null_mut, NonNull},
 };
 
+macro_rules! def_throw_error {
+    ($name: ident, $f: expr) => {
+        #[inline]
+        pub fn $name(self, message: &str) -> Value<'q> {
+            unsafe {
+                let fmt = CStr::from_bytes_with_nul_unchecked(b"%s\0");
+                let message = message.to_owned() + "\0";
+                let message = CStr::from_bytes_with_nul_unchecked(message.as_bytes());
+                let value = $f(self.0.as_ptr(), fmt.as_ptr(), message.as_ptr());
+                Value::from_raw(value, self)
+            }
+        }
+    };
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct Context<'q>(NonNull<ffi::JSContext>, Covariant<'q>);
 
 impl<'q> Context<'q> {
+    def_throw_error!(throw_syntax_error, ffi::JS_ThrowSyntaxError);
+
+    def_throw_error!(throw_type_error, ffi::JS_ThrowTypeError);
+
+    def_throw_error!(throw_reference_error, ffi::JS_ThrowReferenceError);
+
+    def_throw_error!(throw_range_error, ffi::JS_ThrowRangeError);
+
+    def_throw_error!(throw_internal_error, ffi::JS_ThrowInternalError);
+
     // lifecycle
 
     /// # Safety
@@ -136,6 +161,27 @@ impl<'q> Context<'q> {
     pub fn exception(self) -> Value<'q> {
         unsafe {
             let value = ffi::JS_GetException(self.0.as_ptr());
+            Value::from_raw(value, self)
+        }
+    }
+
+    #[inline]
+    pub fn reset_uncacheable_error(self) {
+        unsafe { ffi::JS_ResetUncatchableError(self.0.as_ptr()) }
+    }
+
+    #[inline]
+    pub fn new_error(self) -> Value<'q> {
+        unsafe {
+            let value = ffi::JS_NewError(self.0.as_ptr());
+            Value::from_raw(value, self)
+        }
+    }
+
+    #[inline]
+    pub fn throw_out_of_memory(self) -> Value<'q> {
+        unsafe {
+            let value = ffi::JS_ThrowOutOfMemory(self.0.as_ptr());
             Value::from_raw(value, self)
         }
     }

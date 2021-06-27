@@ -225,6 +225,13 @@ impl<'q> Value<'q> {
         unsafe { ffi::JS_IsArray(ctx.as_mut_ptr(), self.0) != 0 }
     }
 
+    // error
+
+    #[inline]
+    pub fn is_error(self, mut ctx: Context<'q>) -> bool {
+        unsafe { ffi::JS_IsError(ctx.as_mut_ptr(), self.0) != 0 }
+    }
+
     // property
 
     #[inline]
