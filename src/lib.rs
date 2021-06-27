@@ -15,7 +15,7 @@ mod value;
 #[macro_use]
 pub mod macros;
 
-pub use quijine_core::{raw, EvalFlags, GPNFlags, PropFlags};
+pub use quijine_core::{raw, EvalFlags, GPNFlags, PropFlags, ReadObjFlags, WriteObjFlags};
 
 pub use atom::{Atom, PropertyEnum};
 pub use class::{Class, ClassProperties};

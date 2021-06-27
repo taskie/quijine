@@ -8,6 +8,7 @@ use crate::{
     types::{Bool, ClassObject, Float64, Int, Null, Object, String as QjString, Undefined},
     Error, ErrorKind, EvalFlags, Exception, PropFlags, RuntimeScope, Value,
 };
+use qc::{ReadObjFlags, WriteObjFlags};
 use quijine_core::{self as qc, raw, AsJsValue};
 use std::{
     any::TypeId, collections::HashSet, convert::TryInto, ffi::c_void, fmt, os::raw::c_int, result::Result as StdResult,
@@ -476,6 +477,20 @@ impl<'q> Context<'q> {
         register_class::<T>(self.0, class_id)?;
         self.opaque_mut().registered_classes.insert(type_id);
         Ok(class_id)
+    }
+
+    // object writer/reader
+
+    #[inline]
+    pub fn write_object(self, obj: Value, flags: WriteObjFlags) -> Result<Vec<u8>> {
+        self.0
+            .write_object(*obj.as_raw(), flags)
+            .ok_or_else(|| self.internal_js_error())
+    }
+
+    #[inline]
+    pub fn read_object(self, buf: &[u8], flags: ReadObjFlags) -> Result<Value<'q>> {
+        unsafe { self.wrap_result(self.0.read_object(buf, flags)) }
     }
 }
 

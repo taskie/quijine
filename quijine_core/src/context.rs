@@ -4,7 +4,7 @@ use crate::{
     convert::{AsJsClassId, AsJsValue, AsMutPtr, AsPtr},
     enums::CFunctionEnum,
     ffi::{self, c_size_t},
-    flags::{EvalFlags, ParseJSONFlags},
+    flags::{EvalFlags, ParseJSONFlags, ReadObjFlags, WriteObjFlags},
     function::{convert_function_arguments, convert_function_result},
     internal::ref_sized_to_slice,
     marker::Covariant,
@@ -20,6 +20,7 @@ use std::{
     mem::size_of,
     os::raw::{c_char, c_int},
     ptr::{null_mut, NonNull},
+    slice,
 };
 
 macro_rules! def_throw_error {
@@ -649,6 +650,30 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn add_enable_bigint_ext(self, enable: bool) {
         unsafe { ffi::JS_EnableBignumExt(self.0.as_ptr(), enable as c_int) }
+    }
+
+    // Object Writer/Reader
+
+    #[inline]
+    pub fn write_object(self, obj: Value, flags: WriteObjFlags) -> Option<Vec<u8>> {
+        let mut size: c_size_t = 0;
+        unsafe {
+            let buf = ffi::JS_WriteObject(self.0.as_ptr(), &mut size, obj.as_js_value(), flags.bits() as i32);
+            if buf.is_null() {
+                return None;
+            }
+            let vec = slice::from_raw_parts(buf, size as usize).to_vec();
+            ffi::js_free(self.0.as_ptr(), buf as *mut _);
+            Some(vec)
+        }
+    }
+
+    #[inline]
+    pub fn read_object(self, buf: &[u8], flags: ReadObjFlags) -> Value<'q> {
+        unsafe {
+            let value = ffi::JS_ReadObject(self.0.as_ptr(), buf.as_ptr(), buf.len() as u64, flags.bits() as i32);
+            Value::from_raw(value, self)
+        }
     }
 }
 

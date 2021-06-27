@@ -83,3 +83,29 @@ bitflags! {
         const SET_ENUM = ffi::JS_GPN_SET_ENUM;
     }
 }
+
+bitflags! {
+    pub struct WriteObjFlags: u32 {
+        /// allow function/module
+        const BYTECODE = ffi::JS_WRITE_OBJ_BYTECODE;
+        ///  byte swapped output
+        const BSWAP = ffi::JS_WRITE_OBJ_BSWAP;
+        /// allow SharedArrayBuffer
+        const SAB = ffi::JS_WRITE_OBJ_SAB;
+        /// allow object references to encode arbitrary object graph
+        const REFERENCE = ffi::JS_WRITE_OBJ_REFERENCE;
+    }
+}
+
+bitflags! {
+    pub struct ReadObjFlags: u32 {
+        /// allow function/module
+        const BYTECODE = ffi::JS_READ_OBJ_BYTECODE;
+        /// avoid duplicating 'buf' data
+        const ROM_DATA = ffi::JS_READ_OBJ_ROM_DATA;
+        /// allow SharedArrayBuffer
+        const SAB = ffi::JS_READ_OBJ_SAB;
+        /// allow object references
+        const REFERENCE = ffi::JS_READ_OBJ_REFERENCE;
+    }
+}
