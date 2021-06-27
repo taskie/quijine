@@ -429,7 +429,7 @@ impl<'q> Context<'q> {
             log::trace!("load pointer from ArrayBuffer");
             let func = cb.array_buffer_as_ref::<*mut Callback>(ctx).unwrap();
             let any = (**func)(ctx, this, args.as_slice());
-            convert_function_result(&any)
+            convert_function_result(any)
         }
         log::trace!("save pointer to ArrayBuffer");
         let cb = self.new_array_buffer_copy_from_ref(&func.as_mut());

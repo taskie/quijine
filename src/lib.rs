@@ -4,6 +4,7 @@ mod context;
 mod context_ext;
 mod convert;
 mod error;
+mod function;
 mod runtime;
 mod string;
 mod types;
@@ -13,7 +14,7 @@ mod value;
 #[macro_use]
 pub mod macros;
 
-pub use quijine_core::{EvalFlags, GPNFlags, PropFlags};
+pub use quijine_core::{raw, EvalFlags, GPNFlags, PropFlags};
 
 pub use atom::{Atom, PropertyEnum};
 pub use class::{Class, ClassProperties};
@@ -21,6 +22,7 @@ pub use context::{Context, ContextScope};
 pub use context_ext::ContextAddIntrinsicExt;
 pub use convert::{FromQj, FromQjMulti, IntoQj, IntoQjAtom, IntoQjMulti};
 pub use error::{Error, ErrorKind, ErrorValue, ExternalError, ExternalResult, Result};
+pub use function::{convert_function_arguments, convert_function_result};
 pub use runtime::{Runtime, RuntimeScope};
 pub use types::{
     BigDecimal, BigFloat, BigInt, Bool, CatchOffset, ClassObject, Exception, Float64, FunctionBytecode, Int, Module,

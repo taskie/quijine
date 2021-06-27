@@ -26,7 +26,7 @@ pub unsafe fn convert_function_arguments<'q>(
 
 /// This function is used by js_c_function macro.
 #[inline]
-pub fn convert_function_result(res: &Value) -> ffi::JSValue {
+pub fn convert_function_result(res: Value) -> ffi::JSValue {
     res.as_js_value()
 }
 
