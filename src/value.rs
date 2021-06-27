@@ -143,6 +143,11 @@ impl<'q> Value<'q> {
         self.value.is_array(self.context)
     }
 
+    #[inline]
+    pub fn is_error(&self) -> bool {
+        self.value.is_error(self.context)
+    }
+
     // conversion
 
     #[inline]

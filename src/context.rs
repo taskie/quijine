@@ -6,10 +6,23 @@ use crate::{
     result::Result,
     runtime::Runtime,
     types::{Bool, ClassObject, Float64, Int, Null, Object, String as QjString, Undefined},
-    Error, ErrorKind, EvalFlags, PropFlags, RuntimeScope, Value,
+    Error, ErrorKind, EvalFlags, Exception, PropFlags, RuntimeScope, Value,
 };
 use quijine_core::{self as qc, raw, AsJsValue};
-use std::{any::TypeId, collections::HashSet, ffi::c_void, fmt, os::raw::c_int, result::Result as StdResult};
+use std::{
+    any::TypeId, collections::HashSet, convert::TryInto, ffi::c_void, fmt, os::raw::c_int, result::Result as StdResult,
+};
+
+macro_rules! def_throw_error {
+    ($name: ident) => {
+        #[inline]
+        pub fn $name(self, message: &str) -> Exception<'q> {
+            Value::from_raw_parts(self.0.$name(message), self.0)
+                .try_into()
+                .unwrap()
+        }
+    };
+}
 
 pub struct ContextOpaque {
     registered_classes: HashSet<TypeId>,
@@ -19,6 +32,16 @@ pub struct ContextOpaque {
 pub struct Context<'q>(qc::Context<'q>);
 
 impl<'q> Context<'q> {
+    def_throw_error!(throw_syntax_error);
+
+    def_throw_error!(throw_type_error);
+
+    def_throw_error!(throw_reference_error);
+
+    def_throw_error!(throw_range_error);
+
+    def_throw_error!(throw_internal_error);
+
     #[inline]
     pub(crate) fn from_raw(ctx: qc::Context<'q>) -> Self {
         Context(ctx)
@@ -79,10 +102,7 @@ impl<'q> Context<'q> {
 
     #[inline]
     pub(crate) fn internal_js_error(self) -> Error {
-        Error::from_js_error(
-            ErrorKind::InternalError,
-            Value::from_raw_parts(self.0.exception(), self.0),
-        )
+        Error::from_js_error(ErrorKind::InternalError, self.take_exception())
     }
 
     #[inline]
@@ -337,10 +357,16 @@ impl<'q> Context<'q> {
                 Err(e) => {
                     let v = e.value;
                     match v {
-                        ErrorValue::None => ctx.0.throw(ctx.0.new_string("some error occured")),
-                        ErrorValue::String(s) => ctx.0.throw(ctx.0.new_string(&s)),
-                        ErrorValue::JsError(_) => qc::Value::undefined(), // use original Error
-                        ErrorValue::External(e) => ctx.0.throw(ctx.0.new_string(&format!("{}", e))),
+                        ErrorValue::None => {
+                            ctx.throw_internal_error("some error occured");
+                        }
+                        ErrorValue::String(s) => {
+                            ctx.throw_internal_error(&s);
+                        }
+                        ErrorValue::JsError(_) => (), // use original Error
+                        ErrorValue::External(e) => {
+                            ctx.throw_internal_error(&format!("{}", e));
+                        }
                     };
                     qc::Value::exception().as_js_value()
                 }
@@ -368,6 +394,38 @@ impl<'q> Context<'q> {
 
     pub fn null(self) -> Null<'q> {
         unsafe { Value::from_raw_parts(qc::Value::null(), self.0).into_unchecked() }
+    }
+
+    // exception
+
+    /// Returns the pending exception (cannot be called twice).
+    #[inline]
+    pub fn take_exception(self) -> Value<'q> {
+        Value::from_raw_parts(self.0.exception(), self.0)
+    }
+
+    #[inline]
+    pub fn throw(self, obj: Value<'q>) -> Exception<'q> {
+        Value::dup(&obj);
+        let value = self.0.throw(*obj.as_raw());
+        Value::from_raw_parts(value, self.0).try_into().unwrap()
+    }
+
+    #[inline]
+    pub fn reset_uncacheable_error(self) {
+        self.0.reset_uncacheable_error()
+    }
+
+    #[inline]
+    pub fn new_error(self) -> Result<Object<'q>> {
+        unsafe { self.wrap_result(self.0.new_error()) }
+    }
+
+    #[inline]
+    pub fn throw_out_of_memory(self) -> Exception<'q> {
+        Value::from_raw_parts(self.0.throw_out_of_memory(), self.0)
+            .try_into()
+            .unwrap()
     }
 
     // json
