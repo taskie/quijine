@@ -1,4 +1,7 @@
 pub use crate::ffi::{
-    JSContext, JSFreeArrayBufferDataFunc, JSHostPromiseRejectionTracker, JSInterruptHandler, JSJobFunc, JSRuntime,
-    JSSharedArrayBufferFunctions, JSValue,
+    JSCFunction, JSCFunctionData, JSCFunctionListEntry, JSCFunctionMagic, JSClassCall, JSClassDef,
+    JSClassExoticMethods, JSClassFinalizer, JSClassGCMark, JSContext, JSFreeArrayBufferDataFunc,
+    JSHostPromiseRejectionTracker, JSInterruptHandler, JSJobFunc, JSMallocFunctions, JSMallocState, JSMemoryUsage,
+    JSModuleDef, JSModuleInitFunc, JSModuleLoaderFunc, JSModuleNormalizeFunc, JSPropertyDescriptor, JSPropertyEnum,
+    JSRuntime, JSSharedArrayBufferFunctions, JSValue,
 };

@@ -1,6 +1,7 @@
 use crate::{
+    atom::Atom,
     class::{ClassDef, ClassId},
-    convert::{AsJsClassId, AsJsValue, AsMutPtr, AsPtr},
+    convert::{AsJsAtom, AsJsClassId, AsJsValue, AsMutPtr, AsPtr},
     ffi::{self, c_size_t},
     marker::Covariant,
     raw,
@@ -11,6 +12,7 @@ use std::{
     ffi::{c_void, CStr},
     fmt,
     marker::PhantomData,
+    mem::MaybeUninit,
     ptr::{null_mut, NonNull},
 };
 
@@ -92,6 +94,23 @@ impl<'q> Runtime<'q> {
         unsafe { ffi::JS_IsLiveObject(self.0.as_ptr(), value.as_js_value()) != 0 }
     }
 
+    // memory usage
+
+    pub fn compute_memory_usage(self) -> raw::JSMemoryUsage {
+        let mut s = MaybeUninit::<raw::JSMemoryUsage>::uninit();
+        unsafe {
+            ffi::JS_ComputeMemoryUsage(self.0.as_ptr(), s.as_mut_ptr());
+            s.assume_init()
+        }
+    }
+
+    // atom
+
+    #[inline]
+    pub fn free_atom(self, atom: Atom<'q>) {
+        unsafe { ffi::JS_FreeAtomRT(self.0.as_ptr(), atom.as_js_atom()) };
+    }
+
     // class
 
     #[inline]
@@ -169,6 +188,22 @@ impl<'q> Runtime<'q> {
             Some(unsafe { Context::from_raw(pctx) })
         };
         (ret, ctx)
+    }
+
+    // Module
+
+    /// module_normalize = NULL is allowed and invokes the default module
+    /// filename normalizer
+    // QuickJS C library doesn't dereference an opaque.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[inline]
+    pub fn set_module_loader_func(
+        self,
+        module_normalize: raw::JSModuleNormalizeFunc,
+        module_loader: raw::JSModuleLoaderFunc,
+        opaque: *mut c_void,
+    ) {
+        unsafe { ffi::JS_SetModuleLoaderFunc(self.0.as_ptr(), module_normalize, module_loader, opaque) }
     }
 }
 

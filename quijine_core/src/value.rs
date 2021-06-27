@@ -339,6 +339,16 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
+    pub fn is_instance_of(self, mut ctx: Context<'q>, obj: Value<'q>) -> Option<bool> {
+        let ret = unsafe { ffi::JS_IsInstanceOf(ctx.as_mut_ptr(), self.as_js_value(), obj.as_js_value()) };
+        if ret < 0 {
+            None
+        } else {
+            Some(ret != 0)
+        }
+    }
+
+    #[inline]
     pub fn own_property(self, mut ctx: Context<'q>, prop: Atom<'q>) -> Result<Option<PropertyDescriptor<'q>>, Error> {
         let mut desc = MaybeUninit::<ffi::JSPropertyDescriptor>::zeroed();
         let ret = unsafe { ffi::JS_GetOwnProperty(ctx.as_mut_ptr(), desc.as_mut_ptr(), self.0, prop.as_js_atom()) };
@@ -513,6 +523,13 @@ impl<'q> Value<'q> {
     pub fn set_property_function_list(self, mut ctx: Context, tab: &[ffi::JSCFunctionListEntry]) {
         trace!("length: {}", tab.len());
         unsafe { ffi::JS_SetPropertyFunctionList(ctx.as_mut_ptr(), self.0, tab.as_ptr(), tab.len() as c_int) }
+    }
+
+    // Others
+
+    #[inline]
+    pub fn set_is_html_dda(self, mut ctx: Context) {
+        unsafe { ffi::JS_SetIsHTMLDDA(ctx.as_mut_ptr(), self.as_js_value()) };
     }
 }
 

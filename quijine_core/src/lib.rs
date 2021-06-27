@@ -8,6 +8,7 @@ mod ffi;
 mod flags;
 mod function;
 mod marker;
+mod module;
 mod runtime;
 mod string;
 mod value;
@@ -26,6 +27,7 @@ pub use convert::{AsJsAtom, AsJsCFunctionListEntry, AsJsClassId, AsJsValue, AsMu
 pub use enums::ValueTag;
 pub use flags::{EvalFlags, GpnFlags, PropFlags, ReadObjFlags, WriteObjFlags};
 pub use function::{convert_function_arguments, convert_function_result, CFunctionListEntry};
+pub use module::ModuleDef;
 pub use runtime::Runtime;
 pub use string::CString;
 pub use value::{PropertyDescriptor, Value};

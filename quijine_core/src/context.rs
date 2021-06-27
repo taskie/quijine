@@ -8,6 +8,7 @@ use crate::{
     function::{convert_function_arguments, convert_function_result},
     internal::ref_sized_to_slice,
     marker::Covariant,
+    module::ModuleDef,
     raw,
     runtime::Runtime,
     string::CString as QcCString,
@@ -353,6 +354,24 @@ impl<'q> Context<'q> {
         unsafe { Value::from_raw(value, self) }
     }
 
+    /// same as JS_Eval() but with an explicit 'this_obj' parameter
+    #[inline]
+    pub fn eval_this(self, this: Value, input: &str, filename: &str, eval_flags: EvalFlags) -> Value<'q> {
+        let c_input = CString::new(input).expect("input");
+        let c_filename = CString::new(filename).expect("filename");
+        let value = unsafe {
+            ffi::JS_EvalThis(
+                self.0.as_ptr(),
+                this.as_js_value(),
+                c_input.as_ptr(),
+                c_input.as_bytes().len() as c_size_t,
+                c_filename.as_ptr(),
+                eval_flags.bits() as i32,
+            )
+        };
+        unsafe { Value::from_raw(value, self) }
+    }
+
     #[inline]
     pub fn eval_function(self, func_obj: Value) -> Value<'q> {
         let value = unsafe { ffi::JS_EvalFunction(self.0.as_ptr(), func_obj.as_js_value()) };
@@ -675,6 +694,21 @@ impl<'q> Context<'q> {
     pub fn enqueue_job(self, job_func: raw::JSJobFunc, args: &[Value]) -> i32 {
         let mut js_args: Vec<_> = args.iter().map(|v| v.as_js_value()).collect();
         unsafe { ffi::JS_EnqueueJob(self.0.as_ptr(), job_func, args.len() as c_int, js_args.as_mut_ptr()) as i32 }
+    }
+
+    // Module
+
+    #[inline]
+    pub fn new_c_module(self, name_str: &str, func: raw::JSModuleInitFunc) -> ModuleDef<'q> {
+        let name_str = CString::new(name_str).unwrap();
+        unsafe { ModuleDef::from_raw(ffi::JS_NewCModule(self.0.as_ptr(), name_str.as_ptr(), func), self) }
+    }
+
+    /// load the dependencies of the module 'obj'. Useful when JS_ReadObject()
+    /// returns a module.
+    #[inline]
+    pub fn resolve_module(self, obj: Value<'q>) -> i32 {
+        unsafe { ffi::JS_ResolveModule(self.0.as_ptr(), obj.as_js_value()) as i32 }
     }
 
     // Object Writer/Reader
