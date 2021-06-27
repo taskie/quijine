@@ -170,7 +170,7 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_global_constructor<C: Class + Default + 'static>(self) -> Result<Object<'q>> {
         let ctor = self.new_class_constructor::<C>()?;
-        self.global_object()?.define_property_value_with(
+        self.global_object()?.define_property_value_from(
             C::name(),
             ctor.clone(),
             PropFlags::WRITABLE | PropFlags::CONFIGURABLE,
@@ -179,13 +179,13 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn new_global_constructor_with<C, F>(self, f: F) -> Result<Object<'q>>
+    pub fn new_global_constructor_with_new<C, F>(self, f: F) -> Result<Object<'q>>
     where
         C: Class + 'static,
         F: Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> C + 'q,
     {
-        let ctor = self.new_class_constructor_with::<C, F>(f)?;
-        self.global_object()?.define_property_value_with(
+        let ctor = self.new_class_constructor_with_new::<C, F>(f)?;
+        self.global_object()?.define_property_value_from(
             C::name(),
             ctor.clone(),
             PropFlags::WRITABLE | PropFlags::CONFIGURABLE,
@@ -195,11 +195,11 @@ impl<'q> Context<'q> {
 
     #[inline]
     pub fn new_class_constructor<C: Class + Default + 'static>(self) -> Result<Object<'q>> {
-        self.new_class_constructor_with(|_, _, _| C::default())
+        self.new_class_constructor_with_new(|_, _, _| C::default())
     }
 
     #[inline]
-    pub fn new_class_constructor_with<C, F>(mut self, f: F) -> Result<Object<'q>>
+    pub fn new_class_constructor_with_new<C, F>(mut self, f: F) -> Result<Object<'q>>
     where
         C: Class + 'static,
         F: Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> C + 'q,
@@ -299,7 +299,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn new_function_with<F, T, A, R>(self, func: F, name: &str, length: i32) -> Result<Object<'q>>
+    pub fn new_function_from<F, T, A, R>(self, func: F, name: &str, length: i32) -> Result<Object<'q>>
     where
         F: Fn(Context<'q>, T, A) -> Result<R> + 'q,
         T: FromQj<'q>,

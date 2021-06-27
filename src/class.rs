@@ -113,7 +113,7 @@ impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
         R: IntoQj<'q> + 'q,
     {
         let ctx = self.context;
-        let f = ctx.new_function_with(
+        let f = ctx.new_function_from(
             move |ctx, this: Value<'q>, args| {
                 let mut cloned = this.clone();
                 let v = cloned.opaque_mut::<C>().unwrap();
@@ -124,7 +124,7 @@ impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
         )?;
         trace!("registering method: {}::{} ({:?})", C::name(), name, f);
         self.proto
-            .define_property_value_with(name, f.clone(), PropFlags::CONFIGURABLE | PropFlags::WRITABLE)?;
+            .define_property_value_from(name, f.clone(), PropFlags::CONFIGURABLE | PropFlags::WRITABLE)?;
         Ok(f)
     }
 
@@ -162,7 +162,7 @@ impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
         let g = make_getter(ctx, getter)?;
         let s = make_setter(ctx, setter)?;
         trace!("registering get/set: {}::{} ({:?}, {:?})", C::name(), name, g, s);
-        self.proto.define_property_get_set_with(
+        self.proto.define_property_get_set_from(
             name,
             g.clone(),
             s.clone(),
@@ -188,7 +188,7 @@ impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
         let ctx = self.context;
         let g = make_getter(ctx, getter)?;
         trace!("registering get: {}::{} ({:?})", C::name(), name, g);
-        self.proto.define_property_get_set_with(
+        self.proto.define_property_get_set_from(
             name,
             g.clone(),
             ctx.undefined(),
@@ -206,7 +206,7 @@ impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
         let ctx = self.context;
         let s = make_setter(ctx, setter)?;
         trace!("registering set: {}::{} ({:?})", C::name(), name, s);
-        self.proto.define_property_get_set_with(
+        self.proto.define_property_get_set_from(
             name,
             ctx.undefined(),
             s.clone(),
@@ -222,7 +222,7 @@ where
     G: Fn(&mut C, Context<'q>, ClassObject<'q, C>) -> Result<R> + 'static,
     R: IntoQj<'q> + 'q,
 {
-    ctx.new_function_with(
+    ctx.new_function_from(
         move |ctx, this: Value<'q>, _args: &[Value]| {
             let mut cloned = this.clone();
             let v = cloned.opaque_mut::<C>().unwrap();
@@ -240,7 +240,7 @@ where
     A: FromQj<'q>,
     R: IntoQj<'q> + 'q,
 {
-    ctx.new_function_with(
+    ctx.new_function_from(
         move |ctx, this: Value<'q>, args: &[Value]| {
             let arg = args.get(0).cloned().unwrap_or_else(|| ctx.undefined().into());
             let mut cloned = this.clone();

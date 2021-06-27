@@ -343,7 +343,7 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn define_property_value_with<K: IntoQjAtom<'q>, V: IntoQj<'q>>(
+    pub fn define_property_value_from<K: IntoQjAtom<'q>, V: IntoQj<'q>>(
         &self,
         prop: K,
         val: V,
@@ -369,7 +369,7 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn define_property_get_set_with<K: IntoQjAtom<'q>, G: IntoQj<'q>, S: IntoQj<'q>>(
+    pub fn define_property_get_set_from<K: IntoQjAtom<'q>, G: IntoQj<'q>, S: IntoQj<'q>>(
         &self,
         prop: K,
         getter: G,

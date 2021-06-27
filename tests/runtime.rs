@@ -6,7 +6,7 @@ fn multiple_runtimes() -> Result<()> {
     let (tx, rx) = channel::<String>();
     let th = std::thread::spawn(move || {
         quijine::context(move |ctx| {
-            let recv = ctx.new_function_with(
+            let recv = ctx.new_function_from(
                 move |_ctx, _this: Value, _args: ()| {
                     let message = rx
                         .recv()
@@ -26,7 +26,7 @@ fn multiple_runtimes() -> Result<()> {
         .unwrap();
     });
     quijine::context(move |ctx| {
-        let send = ctx.new_function_with(
+        let send = ctx.new_function_from(
             move |_ctx, _this: Value, (message,): (String,)| {
                 tx.send(message)
                     .map_err(|e| Error::with_external(ErrorKind::InternalError, Box::new(e.clone())))?;

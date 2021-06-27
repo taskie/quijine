@@ -29,7 +29,7 @@ fn define_property_value() -> Result<()> {
     quijine::context(|ctx| {
         let obj = ctx.new_object()?;
         let val = ctx.new_string("hello")?;
-        obj.define_property_value_with("x", val, PropFlags::empty())?;
+        obj.define_property_value_from("x", val, PropFlags::empty())?;
         ctx.global_object()?.set("obj", obj.clone())?;
         let x = ctx.eval("obj.x", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("hello", x.to_string()?);
@@ -74,7 +74,7 @@ fn define_property_get_set() -> Result<()> {
         let obj = ctx.new_object()?;
         obj.set("_x", "hello")?;
         ctx.global_object()?.set("obj", obj.clone())?;
-        let getter = ctx.new_function_with(
+        let getter = ctx.new_function_from(
             |_ctx, this: Value, _args: ()| {
                 let x: String = this.get("_x")?;
                 Ok(x.to_ascii_uppercase())
@@ -82,7 +82,7 @@ fn define_property_get_set() -> Result<()> {
             "x",
             0,
         )?;
-        let setter = ctx.new_function_with(
+        let setter = ctx.new_function_from(
             |_ctx, this: Value, args: (String,)| {
                 this.set("_x", args.0.to_ascii_lowercase())?;
                 Ok(())
@@ -90,7 +90,7 @@ fn define_property_get_set() -> Result<()> {
             "x",
             1,
         )?;
-        obj.define_property_get_set_with("x", getter, setter, PropFlags::empty())?;
+        obj.define_property_get_set_from("x", getter, setter, PropFlags::empty())?;
         let x = ctx.eval("obj.x", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("HELLO", x.to_string()?);
         ctx.eval("obj.x = 'foo'", "<input>", EvalFlags::TYPE_GLOBAL)?;

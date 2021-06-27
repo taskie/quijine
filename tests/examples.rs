@@ -23,7 +23,7 @@ fn example_call_rust_func_from_js() -> quijine::Result<()> {
 
     quijine::context(|ctx| {
         let global = ctx.global_object()?;
-        let foo = ctx.new_function_with(|_ctx, _this: Value, (x, y): (i32, i32)| Ok(x + y), "foo", 2)?;
+        let foo = ctx.new_function_from(|_ctx, _this: Value, (x, y): (i32, i32)| Ok(x + y), "foo", 2)?;
         global.set("foo", foo)?;
         let result: i32 = ctx.eval_into("foo(5, 3)", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!(8, result, "call foo (Rust) from JS");
@@ -41,7 +41,7 @@ fn example_use_rust_rand_from_js() -> quijine::Result<()> {
 
     let rng = RefCell::new(XorShiftRng::from_seed([0; 16]));
     let sum = quijine::context(|ctx| {
-        let rand = ctx.new_function_with(
+        let rand = ctx.new_function_from(
             move |_ctx, _this: Value, _args: ()| Ok(rng.borrow_mut().gen::<u16>() as i32),
             "rand",
             0,
