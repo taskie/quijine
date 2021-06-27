@@ -1,1 +1,4 @@
-pub use crate::ffi::{JSContext, JSFreeArrayBufferDataFunc, JSRuntime, JSValue};
+pub use crate::ffi::{
+    JSContext, JSFreeArrayBufferDataFunc, JSHostPromiseRejectionTracker, JSInterruptHandler, JSJobFunc, JSRuntime,
+    JSValue,
+};

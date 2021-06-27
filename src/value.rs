@@ -477,6 +477,7 @@ impl fmt::Debug for Value<'_> {
         f.write_str(format!("Qj({}, {:?})", self._debug_count, self.value).as_str())
     }
 }
+
 pub struct PropertyDescriptor<'q> {
     flags: PropFlags,
     value: Value<'q>,

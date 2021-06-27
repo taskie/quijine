@@ -3,13 +3,15 @@ use crate::{
     convert::{AsJsClassId, AsJsValue, AsMutPtr, AsPtr},
     ffi::{self, c_size_t},
     marker::Covariant,
+    raw,
     value::Value,
+    Context,
 };
 use std::{
     ffi::{c_void, CStr},
     fmt,
     marker::PhantomData,
-    ptr::NonNull,
+    ptr::{null_mut, NonNull},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -120,6 +122,41 @@ impl<'q> Runtime<'q> {
             let res = ffi::JS_DupValueRT(self.0.as_ptr(), value.as_js_value());
             Value::from_raw_with_runtime(res, self)
         }
+    }
+
+    // Promise
+
+    // QuickJS C library doesn't dereference an opaque.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[inline]
+    pub fn set_host_promise_rejection_tracker(self, cb: raw::JSHostPromiseRejectionTracker, opaque: *mut c_void) {
+        unsafe { ffi::JS_SetHostPromiseRejectionTracker(self.0.as_ptr(), cb, opaque) }
+    }
+
+    // QuickJS C library doesn't dereference an opaque.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    #[inline]
+    pub fn set_interrupt_handler(self, cb: raw::JSInterruptHandler, opaque: *mut c_void) {
+        unsafe { ffi::JS_SetInterruptHandler(self.0.as_ptr(), cb, opaque) }
+    }
+
+    #[inline]
+    pub fn is_job_pending(self) -> bool {
+        unsafe { ffi::JS_IsJobPending(self.0.as_ptr()) != 0 }
+    }
+
+    /// return < 0 if exception, 0 if no job pending, 1 if a job was
+    /// executed successfully.
+    #[inline]
+    pub fn execute_pending_job(self) -> (i32, Option<Context<'q>>) {
+        let mut pctx: *mut ffi::JSContext = null_mut();
+        let ret = unsafe { ffi::JS_ExecutePendingJob(self.0.as_ptr(), &mut pctx) as i32 };
+        let ctx = if pctx.is_null() {
+            None
+        } else {
+            Some(unsafe { Context::from_raw(pctx) })
+        };
+        (ret, ctx)
     }
 }
 

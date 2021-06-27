@@ -8,6 +8,7 @@ use crate::{
     function::{convert_function_arguments, convert_function_result},
     internal::ref_sized_to_slice,
     marker::Covariant,
+    raw,
     runtime::Runtime,
     string::CString as QcCString,
     value::Value,
@@ -650,6 +651,30 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn add_enable_bigint_ext(self, enable: bool) {
         unsafe { ffi::JS_EnableBignumExt(self.0.as_ptr(), enable as c_int) }
+    }
+
+    // Promise
+
+    #[inline]
+    pub fn new_promise_capability(self) -> (Value<'q>, [Value<'q>; 2]) {
+        let mut resolving_funcs: [ffi::JSValue; 2] = [ffi::JS_UNDEFINED, ffi::JS_UNDEFINED];
+        unsafe {
+            let val = ffi::JS_NewPromiseCapability(self.0.as_ptr(), resolving_funcs.as_mut_ptr());
+            (
+                Value::from_raw(val, self),
+                [
+                    Value::from_raw(resolving_funcs[0], self),
+                    Value::from_raw(resolving_funcs[1], self),
+                ],
+            )
+        }
+    }
+
+    /// return 0 if OK, < 0 if exception
+    #[inline]
+    pub fn enqueue_job(self, job_func: raw::JSJobFunc, args: &[Value]) -> i32 {
+        let mut js_args: Vec<_> = args.iter().map(|v| v.as_js_value()).collect();
+        unsafe { ffi::JS_EnqueueJob(self.0.as_ptr(), job_func, args.len() as c_int, js_args.as_mut_ptr()) as i32 }
     }
 
     // Object Writer/Reader
