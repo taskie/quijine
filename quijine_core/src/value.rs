@@ -6,7 +6,7 @@ use crate::{
     enums::ValueTag,
     error::Error,
     ffi::{self, c_size_t},
-    flags::{GPNFlags, PropFlags},
+    flags::{GpnFlags, PropFlags},
     internal::{ref_sized_from_bytes, ref_sized_to_vec},
     marker::Covariant,
     runtime::Runtime,
@@ -311,7 +311,7 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn own_property_names(self, mut ctx: Context<'q>, flags: GPNFlags) -> Result<Vec<PropertyEnum<'q>>, Error> {
+    pub fn own_property_names(self, mut ctx: Context<'q>, flags: GpnFlags) -> Result<Vec<PropertyEnum<'q>>, Error> {
         let mut ptab: *mut ffi::JSPropertyEnum = null_mut();
         let mut plen: u32 = 0;
         let ret = unsafe {

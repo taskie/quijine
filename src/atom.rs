@@ -184,7 +184,7 @@ impl fmt::Debug for PropertyEnum<'_> {
 #[cfg(test)]
 mod tests {
     use crate::{context, Result};
-    use quijine_core::{EvalFlags, GPNFlags};
+    use quijine_core::{EvalFlags, GpnFlags};
     #[test]
     fn test() -> Result<()> {
         context(|ctx| {
@@ -197,7 +197,7 @@ mod tests {
             assert!(foo.has_key(k_bar)?);
             let v: i32 = foo.get(k_bar)?;
             assert_eq!(42, v);
-            let prop_enums = foo.own_property_names(GPNFlags::STRING_MASK)?;
+            let prop_enums = foo.own_property_names(GpnFlags::STRING_MASK)?;
             assert_eq!(1, prop_enums.len());
             let k_bar2: String = prop_enums[0].atom().to_string()?.into();
             assert_eq!("bar", &k_bar2);

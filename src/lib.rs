@@ -4,6 +4,7 @@ mod context;
 mod context_ext;
 mod convert;
 mod error;
+mod flags;
 mod function;
 mod result;
 mod runtime;
@@ -15,7 +16,7 @@ mod value;
 #[macro_use]
 pub mod macros;
 
-pub use quijine_core::{raw, EvalFlags, GPNFlags, PropFlags, ReadObjFlags, WriteObjFlags};
+pub use quijine_core::raw;
 
 pub use atom::{Atom, PropertyEnum};
 pub use class::{Class, ClassProperties};
@@ -23,6 +24,7 @@ pub use context::{Context, ContextScope};
 pub use context_ext::ContextAddIntrinsicExt;
 pub use convert::{FromQj, FromQjMulti, IntoQj, IntoQjAtom, IntoQjMulti};
 pub use error::{Error, ErrorKind, ErrorValue, ExternalError};
+pub use flags::{EvalFlags, GpnFlags, PropFlags, ReadObjFlags, WriteObjFlags};
 pub use function::{convert_function_arguments, convert_function_result};
 pub use result::{ExternalResult, Result};
 pub use runtime::{Runtime, RuntimeScope};

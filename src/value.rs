@@ -9,7 +9,7 @@ use crate::{
     string::CString as QjCString,
     types::{Tag, Variant},
 };
-use qc::{GPNFlags, PropFlags};
+use qc::{GpnFlags, PropFlags};
 use quijine_core as qc;
 #[cfg(feature = "debug_leak")]
 use std::sync::atomic;
@@ -290,7 +290,7 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn own_property_names(&self, flags: GPNFlags) -> Result<Vec<PropertyEnum<'q>>> {
+    pub fn own_property_names(&self, flags: GpnFlags) -> Result<Vec<PropertyEnum<'q>>> {
         if let Ok(vs) = self.value.own_property_names(self.context, flags) {
             Ok(vs
                 .iter()

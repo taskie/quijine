@@ -4,7 +4,7 @@ use crate::{
     convert::{AsJsClassId, AsJsValue, AsMutPtr, AsPtr},
     enums::CFunctionEnum,
     ffi::{self, c_size_t},
-    flags::{EvalFlags, ParseJSONFlags, ReadObjFlags, WriteObjFlags},
+    flags::{EvalFlags, ParseJsonFlags, ReadObjFlags, WriteObjFlags},
     function::{convert_function_arguments, convert_function_result},
     internal::ref_sized_to_slice,
     marker::Covariant,
@@ -382,7 +382,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn parse_json2(self, buf: &str, filename: &str, flags: ParseJSONFlags) -> Value<'q> {
+    pub fn parse_json2(self, buf: &str, filename: &str, flags: ParseJsonFlags) -> Value<'q> {
         let c_buf = CString::new(buf).expect("buf");
         let c_filename = CString::new(filename).expect("filename");
         unsafe {

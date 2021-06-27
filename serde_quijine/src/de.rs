@@ -1,5 +1,5 @@
 use crate::error::{Error, Result};
-use quijine::{Atom, Context, GPNFlags, Value};
+use quijine::{Atom, Context, GpnFlags, Value};
 use serde::{
     de::{self, Error as _},
     Deserialize,
@@ -255,7 +255,7 @@ impl<'q, 'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'q> {
     {
         let prop_names = self
             .input
-            .own_property_names(GPNFlags::STRING_MASK | GPNFlags::ENUM_ONLY)?;
+            .own_property_names(GpnFlags::STRING_MASK | GpnFlags::ENUM_ONLY)?;
         let keys: Vec<_> = prop_names
             .into_iter()
             .map(|v| v.atom())
@@ -299,7 +299,7 @@ impl<'q, 'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'q> {
             Err(_) => {
                 let prop_names = self
                     .input
-                    .own_property_names(GPNFlags::STRING_MASK | GPNFlags::ENUM_ONLY)?;
+                    .own_property_names(GpnFlags::STRING_MASK | GpnFlags::ENUM_ONLY)?;
                 if prop_names.len() != 1 {
                     return Err(Error::custom("multiple keys in variant object"));
                 }

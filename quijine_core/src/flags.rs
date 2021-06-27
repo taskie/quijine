@@ -67,13 +67,13 @@ bitflags! {
 }
 
 bitflags! {
-    pub struct ParseJSONFlags: u32 {
+    pub struct ParseJsonFlags: u32 {
         const EXT = 0b0001;
     }
 }
 
 bitflags! {
-    pub struct GPNFlags: u32 {
+    pub struct GpnFlags: u32 {
         const STRING_MASK = ffi::JS_GPN_STRING_MASK;
         const SYMBOL_MASK = ffi::JS_GPN_SYMBOL_MASK;
         const PRIVATE_MASK = ffi::JS_GPN_PRIVATE_MASK;
