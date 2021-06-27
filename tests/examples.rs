@@ -1,10 +1,7 @@
-use quijine::{Class, ClassProperties, EvalFlags, Object, Result, Value};
-use rand::{Rng, SeedableRng};
-use rand_xorshift::XorShiftRng;
-use std::cell::RefCell;
-
 #[test]
-fn example_call_js_func_from_rust() -> Result<()> {
+fn example_call_js_func_from_rust() -> quijine::Result<()> {
+    use quijine::{EvalFlags, Object};
+
     quijine::context(|ctx| {
         ctx.eval(
             "function foo(x, y) { return x + y; }",
@@ -16,11 +13,14 @@ fn example_call_js_func_from_rust() -> Result<()> {
         let result: i32 = ctx.call_into(foo, global, (5, 3))?;
         assert_eq!(8, result, "call foo (JS) from Rust");
         Ok(())
-    })
+    })?;
+    Ok(())
 }
 
 #[test]
-fn example_call_rust_func_from_js() -> Result<()> {
+fn example_call_rust_func_from_js() -> quijine::Result<()> {
+    use quijine::{EvalFlags, Value};
+
     quijine::context(|ctx| {
         let global = ctx.global_object()?;
         let foo = ctx.new_function_with(|_ctx, _this: Value, (x, y): (i32, i32)| Ok(x + y), "foo", 2)?;
@@ -28,11 +28,17 @@ fn example_call_rust_func_from_js() -> Result<()> {
         let result: i32 = ctx.eval_into("foo(5, 3)", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!(8, result, "call foo (Rust) from JS");
         Ok(())
-    })
+    })?;
+    Ok(())
 }
 
 #[test]
-fn example_use_rust_rand_from_js() -> Result<()> {
+fn example_use_rust_rand_from_js() -> quijine::Result<()> {
+    use quijine::{EvalFlags, Value};
+    use rand::{Rng, SeedableRng};
+    use rand_xorshift::XorShiftRng;
+    use std::cell::RefCell;
+
     let rng = RefCell::new(XorShiftRng::from_seed([0; 16]));
     let sum = quijine::context(|ctx| {
         let rand = ctx.new_function_with(
@@ -59,7 +65,11 @@ fn example_use_rust_rand_from_js() -> Result<()> {
 }
 
 #[test]
-fn example_use_rust_struct_from_js() -> Result<()> {
+fn example_use_rust_struct_from_js() -> quijine::Result<()> {
+    use quijine::{Class, ClassProperties, EvalFlags, Result};
+    use rand::{Rng, SeedableRng};
+    use rand_xorshift::XorShiftRng;
+
     struct Random {
         rng: XorShiftRng,
     }
@@ -83,8 +93,8 @@ fn example_use_rust_struct_from_js() -> Result<()> {
             "Random"
         }
 
-        fn define_properties<'q, P: ClassProperties<'q, Self>>(properties: &mut P) -> Result<()> {
-            properties.define_method_mut("genU16", |v, _ctx, _this, _args: ()| Ok(v.gen_u16() as i32), 0)?;
+        fn define_properties<'q, P: ClassProperties<'q, Self>>(ps: &mut P) -> Result<()> {
+            ps.define_method_mut("genU16", |v, _ctx, _this, _args: ()| Ok(v.gen_u16() as i32), 0)?;
             Ok(())
         }
     }
