@@ -7,7 +7,7 @@ use crate::{
 };
 use qc::AsJsAtom;
 use quijine_core as qc;
-use std::{fmt, result::Result as StdResult};
+use std::{convert::TryInto, fmt, result::Result as StdResult};
 
 /// `Atom` is a atom holder with a context.
 pub struct Atom<'q> {
@@ -16,6 +16,7 @@ pub struct Atom<'q> {
 }
 
 impl<'q> Atom<'q> {
+    #[inline]
     pub(crate) fn from_raw_parts(atom: qc::Atom<'q>, context: qc::Context<'q>) -> Atom<'q> {
         Atom { atom, context }
     }
@@ -46,22 +47,26 @@ impl<'q> Atom<'q> {
 
     // data
 
+    #[inline]
     pub fn to_data(&self) -> Result<Value<'q>> {
-        self.context().atom_to_data(self)
+        self.context().atom_to_value(self)
     }
 
+    #[inline]
     pub fn to_string(&self) -> Result<QjString<'q>> {
         self.context().atom_to_string(self)
     }
 }
 
 impl Drop for Atom<'_> {
+    #[inline]
     fn drop(&mut self) {
         unsafe { Self::free(self) }
     }
 }
 
 impl Clone for Atom<'_> {
+    #[inline]
     fn clone(&self) -> Self {
         let atom = Atom {
             atom: self.atom,
@@ -85,26 +90,34 @@ impl fmt::Debug for Atom<'_> {
 }
 
 impl<'q, T: AsRef<Value<'q>>> IntoQjAtom<'q> for T {
+    #[inline]
     fn into_qj_atom(self, _ctx: Context<'q>) -> Result<Atom<'q>> {
         self.as_ref().to_atom()
     }
 }
 
 impl<'q> IntoQjAtom<'q> for &str {
+    #[inline]
     fn into_qj_atom(self, ctx: Context<'q>) -> Result<Atom<'q>> {
         ctx.new_atom(self)
     }
 }
 
 impl<'q> IntoQjAtom<'q> for String {
+    #[inline]
     fn into_qj_atom(self, ctx: Context<'q>) -> Result<Atom<'q>> {
         ctx.new_atom(&self)
     }
 }
 
 impl<'q> IntoQjAtom<'q> for i32 {
+    #[inline]
     fn into_qj_atom(self, ctx: Context<'q>) -> Result<Atom<'q>> {
-        ctx.new_int32(self).to_atom()
+        let n: StdResult<u32, _> = self.try_into();
+        match n {
+            Ok(n) => ctx.new_atom_with_u32(n),
+            Err(_) => ctx.new_int32(self).to_atom(),
+        }
     }
 }
 

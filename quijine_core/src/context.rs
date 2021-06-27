@@ -237,6 +237,12 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
+    pub fn new_atom_u_int32(self, n: u32) -> Atom<'q> {
+        let atom = unsafe { ffi::JS_NewAtomUInt32(self.0.as_ptr(), n) };
+        unsafe { Atom::from_raw(atom, self) }
+    }
+
+    #[inline]
     pub fn dup_atom(self, atom: Atom<'q>) -> Atom<'q> {
         let atom = unsafe { ffi::JS_DupAtom(self.0.as_ptr(), atom.as_js_atom()) };
         unsafe { Atom::from_raw(atom, self) }

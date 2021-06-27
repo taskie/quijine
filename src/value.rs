@@ -222,8 +222,9 @@ impl<'q> Value<'q> {
 
     // atom
 
+    #[inline]
     pub fn to_atom(&self) -> Result<Atom<'q>> {
-        self.context().data_to_atom(self)
+        self.context().value_to_atom(self)
     }
 
     // object

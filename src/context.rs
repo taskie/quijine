@@ -274,7 +274,12 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub(crate) fn atom_to_data(self, atom: &Atom<'q>) -> Result<Value<'q>> {
+    pub fn new_atom_with_u32(self, n: u32) -> Result<Atom<'q>> {
+        unsafe { self.wrap_result_atom(self.0.new_atom_u_int32(n)) }
+    }
+
+    #[inline]
+    pub(crate) fn atom_to_value(self, atom: &Atom<'q>) -> Result<Value<'q>> {
         unsafe { self.wrap_result(self.0.atom_to_value(*atom.as_raw())) }
     }
 
@@ -284,7 +289,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub(crate) fn data_to_atom(self, v: &Value<'q>) -> Result<Atom<'q>> {
+    pub(crate) fn value_to_atom(self, v: &Value<'q>) -> Result<Atom<'q>> {
         unsafe { self.wrap_result_atom(self.0.value_to_atom(*v.as_raw())) }
     }
 
