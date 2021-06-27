@@ -5,7 +5,7 @@ use crate::{
     convert::{AsJsAtom, AsJsClassId, AsJsValue, AsMutPtr},
     enums::ValueTag,
     error::Error,
-    ffi,
+    ffi::{self, c_size_t},
     flags::{GPNFlags, PropFlags},
     internal::{ref_sized_from_bytes, ref_sized_to_vec},
     marker::Covariant,
@@ -466,7 +466,12 @@ impl<'q> Value<'q> {
         unsafe { ffi::JS_SetOpaque(self.0, opaque) }
     }
 
-    // array buffer
+    // ArrayBuffer
+
+    #[inline]
+    pub fn detach_array_buffer(self, mut ctx: Context<'q>) {
+        unsafe { ffi::JS_DetachArrayBuffer(ctx.as_mut_ptr(), self.0) };
+    }
 
     #[inline]
     pub fn array_buffer(self, mut ctx: Context<'q>) -> Option<&[u8]> {
@@ -476,6 +481,23 @@ impl<'q> Value<'q> {
             return None;
         }
         Some(unsafe { slice::from_raw_parts(bs, len as usize) })
+    }
+
+    #[inline]
+    pub fn typed_array_buffer(self, mut ctx: Context<'q>) -> Value<'q> {
+        let mut byte_offset: c_size_t = 0;
+        let mut byte_length: c_size_t = 0;
+        let mut bytes_per_element: c_size_t = 0;
+        unsafe {
+            let value = ffi::JS_GetTypedArrayBuffer(
+                ctx.as_mut_ptr(),
+                self.0,
+                &mut byte_offset,
+                &mut byte_length,
+                &mut bytes_per_element,
+            );
+            Value::from_raw(value, ctx)
+        }
     }
 
     /// # Safety

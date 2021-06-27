@@ -410,7 +410,7 @@ impl<'q> Context<'q> {
         }
     }
 
-    // array buffer
+    // ArrayBuffer
 
     /// # Safety
     /// `buf`, `len` and `free_func` must match

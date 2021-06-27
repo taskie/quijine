@@ -124,6 +124,18 @@ impl<'q> Runtime<'q> {
         }
     }
 
+    // ArrayBuffer
+
+    #[inline]
+    pub fn set_shared_array_buffer_functions(self, sf: &raw::JSSharedArrayBufferFunctions) {
+        unsafe { ffi::JS_SetSharedArrayBufferFunctions(self.0.as_ptr(), sf) }
+    }
+
+    #[inline]
+    pub fn set_can_block(self, can_block: bool) {
+        unsafe { ffi::JS_SetCanBlock(self.0.as_ptr(), can_block.into()) }
+    }
+
     // Promise
 
     // QuickJS C library doesn't dereference an opaque.
