@@ -22,6 +22,7 @@ rand = "0.8"
 rand_xorshift = "0.3"
 
 [features]
+c_function_list = []
 debug_leak = []
 
 [workspace]

@@ -1,10 +1,5 @@
-use crate::{
-    convert::{AsJsCFunctionListEntry, AsJsValue},
-    ffi,
-    marker::Invariant,
-    Context, Value,
-};
-use std::{ffi::CString, marker::PhantomData, os::raw::c_int, slice};
+use crate::{convert::AsJsValue, ffi, raw, Context, PropFlags, Value};
+use std::{ffi::CStr, os::raw::c_int, slice};
 
 /// This function is used by js_c_function macro.
 /// # Safety
@@ -31,48 +26,187 @@ pub fn convert_function_result(res: Value) -> ffi::JSValue {
 }
 
 #[derive(Clone)]
-pub struct CFunctionListEntry<'q>(ffi::JSCFunctionListEntry, CString, Invariant<'q>);
+#[repr(transparent)]
+pub struct CFunctionListEntry(ffi::JSCFunctionListEntry);
 
-impl<'q> CFunctionListEntry<'q> {
+impl CFunctionListEntry {
     /// # Safety
     /// The content of JSCFunctionListEntry must have a valid lifetime.
     #[inline]
-    pub unsafe fn from_raw(raw: ffi::JSCFunctionListEntry) -> CFunctionListEntry<'q> {
-        CFunctionListEntry(raw, CString::from_raw(raw.name as *mut i8), PhantomData)
+    pub unsafe fn from_raw(raw: ffi::JSCFunctionListEntry) -> CFunctionListEntry {
+        CFunctionListEntry(raw)
     }
 
     /// # Safety
-    /// The content of JSCFunctionListEntry must have a valid lifetime.
+    /// The function pointer must be valid.
+    #[deny(unsafe_op_in_unsafe_fn)]
     #[inline]
-    pub unsafe fn from_raw_with_name(raw: ffi::JSCFunctionListEntry, name: CString) -> CFunctionListEntry<'q> {
-        CFunctionListEntry(raw, name, PhantomData)
+    pub unsafe fn cfunc_def(name: &CStr, length: u8, func1: ffi::JSCFunction) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_CFUNC_DEF(name.as_ptr(), length, func1)) }
+    }
+
+    /// # Safety
+    /// The function pointer must be valid.
+    #[deny(unsafe_op_in_unsafe_fn)]
+    #[inline]
+    pub unsafe fn cfunc_magic_def(
+        name: &CStr,
+        length: u8,
+        func1: ffi::JSCFunctionMagic,
+        magic: i16,
+    ) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_CFUNC_MAGIC_DEF(name.as_ptr(), length, func1, magic)) }
+    }
+
+    /// # Safety
+    /// The function pointer must be valid.
+    #[deny(unsafe_op_in_unsafe_fn)]
+    #[inline]
+    pub unsafe fn cfunc_constructor_def(name: &CStr, length: u8, func1: ffi::JSCFunction) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_CFUNC_CONSTRUCTOR_DEF(name.as_ptr(), length, func1)) }
+    }
+
+    /// # Safety
+    /// The function pointer must be valid.
+    #[deny(unsafe_op_in_unsafe_fn)]
+    #[inline]
+    pub unsafe fn cfunc_constructor_or_func_def(
+        name: &CStr,
+        length: u8,
+        func1: ffi::JSCFunction,
+    ) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_CFUNC_CONSTRUCTOR_OR_FUNC_DEF(name.as_ptr(), length, func1)) }
+    }
+
+    /// # Safety
+    /// The function pointer must be valid.
+    #[deny(unsafe_op_in_unsafe_fn)]
+    #[inline]
+    pub unsafe fn cfunc_f_f_def(
+        name: &CStr,
+        length: u8,
+        func1: Option<unsafe extern "C" fn(f64) -> f64>,
+    ) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_CFUNC_F_F_DEF(name.as_ptr(), length, func1)) }
+    }
+
+    /// # Safety
+    /// The function pointer must be valid.
+    #[deny(unsafe_op_in_unsafe_fn)]
+    #[inline]
+    pub unsafe fn cfunc_f_f_f_def(
+        name: &CStr,
+        length: u8,
+        func1: Option<unsafe extern "C" fn(f64, f64) -> f64>,
+    ) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_CFUNC_F_F_F_DEF(name.as_ptr(), length, func1)) }
+    }
+
+    /// # Safety
+    /// The function pointer must be valid.
+    #[deny(unsafe_op_in_unsafe_fn)]
+    #[inline]
+    pub unsafe fn iterator_next_def(
+        name: &CStr,
+        length: u8,
+        func1: Option<
+            unsafe extern "C" fn(
+                *mut raw::JSContext,
+                raw::JSValue,
+                c_int,
+                *mut raw::JSValue,
+                *mut c_int,
+                c_int,
+            ) -> raw::JSValue,
+        >,
+        magic: i16,
+    ) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_ITERATOR_NEXT_DEF(name.as_ptr(), length, func1, magic)) }
+    }
+
+    /// # Safety
+    /// The function pointer must be valid.
+    #[deny(unsafe_op_in_unsafe_fn)]
+    #[inline]
+    pub unsafe fn cgetset_def(
+        name: &CStr,
+        fgetter: Option<unsafe extern "C" fn(*mut raw::JSContext, raw::JSValue) -> raw::JSValue>,
+        fsetter: Option<unsafe extern "C" fn(*mut raw::JSContext, raw::JSValue, raw::JSValue) -> raw::JSValue>,
+    ) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_CGETSET_DEF(name.as_ptr(), fgetter, fsetter)) }
+    }
+
+    /// # Safety
+    /// The function pointer must be valid.
+    #[deny(unsafe_op_in_unsafe_fn)]
+    #[inline]
+    pub unsafe fn cgetset_magic_def(
+        name: &CStr,
+        fgetter: Option<unsafe extern "C" fn(*mut raw::JSContext, raw::JSValue, c_int) -> raw::JSValue>,
+        fsetter: Option<unsafe extern "C" fn(*mut raw::JSContext, raw::JSValue, raw::JSValue, c_int) -> raw::JSValue>,
+        magic: i16,
+    ) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_CGETSET_MAGIC_DEF(name.as_ptr(), fgetter, fsetter, magic)) }
     }
 
     #[inline]
-    pub fn new(name: &str, length: u8, func1: ffi::JSCFunction) -> CFunctionListEntry<'q> {
-        let c_name = CString::new(name).unwrap();
-        let c_def = unsafe { ffi::JS_CFUNC_DEF(c_name.as_ptr(), length, func1) };
-        unsafe { CFunctionListEntry::from_raw_with_name(c_def, c_name) }
+    pub fn prop_string_def(name: &CStr, cstr: &CStr, prop_flags: PropFlags) -> CFunctionListEntry {
+        unsafe {
+            CFunctionListEntry::from_raw(ffi::JS_PROP_STRING_DEF(name.as_ptr(), cstr.as_ptr(), prop_flags.bits()))
+        }
     }
 
     #[inline]
-    pub fn new_magic(name: &str, length: u8, func1: ffi::JSCFunctionMagic, magic: i16) -> CFunctionListEntry<'q> {
-        let c_name = CString::new(name).unwrap();
-        let c_def = unsafe { ffi::JS_CFUNC_MAGIC_DEF(c_name.as_ptr(), length, func1, magic) };
-        unsafe { CFunctionListEntry::from_raw_with_name(c_def, c_name) }
+    pub fn prop_int32_def(name: &CStr, val: i32, prop_flags: PropFlags) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_PROP_INT32_DEF(name.as_ptr(), val, prop_flags.bits())) }
     }
 
     #[inline]
-    pub fn new_constructor(name: &str, length: u8, func1: ffi::JSCFunction) -> CFunctionListEntry<'q> {
-        let c_name = CString::new(name).unwrap();
-        let c_def = unsafe { ffi::JS_CFUNC_SPECIAL_DEF_constructor(c_name.as_ptr(), length, func1) };
-        unsafe { CFunctionListEntry::from_raw_with_name(c_def, c_name) }
+    pub fn prop_int64_def(name: &CStr, val: i64, prop_flags: PropFlags) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_PROP_INT64_DEF(name.as_ptr(), val, prop_flags.bits())) }
+    }
+
+    #[inline]
+    pub fn prop_double_def(name: &CStr, val: f64, prop_flags: PropFlags) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_PROP_DOUBLE_DEF(name.as_ptr(), val, prop_flags.bits())) }
+    }
+
+    #[inline]
+    pub fn prop_undefined_def(name: &CStr, prop_flags: PropFlags) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_PROP_UNDEFINED_DEF(name.as_ptr(), prop_flags.bits())) }
+    }
+
+    #[inline]
+    pub fn object_def(name: &CStr, tab: &[CFunctionListEntry], prop_flags: PropFlags) -> CFunctionListEntry {
+        unsafe {
+            CFunctionListEntry::from_raw(ffi::JS_OBJECT_DEF(
+                name.as_ptr(),
+                c_function_list_as_ptr(tab),
+                tab.len() as i32,
+                prop_flags.bits(),
+            ))
+        }
+    }
+
+    #[inline]
+    pub fn alias_def(name: &CStr, from: &CStr) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_ALIAS_DEF(name.as_ptr(), from.as_ptr())) }
+    }
+
+    #[inline]
+    pub fn alias_base_def(name: &CStr, from: &CStr, base: i32) -> CFunctionListEntry {
+        unsafe { CFunctionListEntry::from_raw(ffi::JS_ALIAS_BASE_DEF(name.as_ptr(), from.as_ptr(), base)) }
     }
 }
 
-impl<'q> AsJsCFunctionListEntry<'q> for CFunctionListEntry<'q> {
+pub(crate) fn c_function_list_as_ptr(list: &[CFunctionListEntry]) -> *const ffi::JSCFunctionListEntry {
+    // this operation is safe because of repr(transparent)
+    list.as_ptr() as *const _
+}
+
+impl AsRef<ffi::JSCFunctionListEntry> for CFunctionListEntry {
     #[inline]
-    fn as_js_c_function_list_entry(&self) -> ffi::JSCFunctionListEntry {
-        self.0
+    fn as_ref(&self) -> &ffi::JSCFunctionListEntry {
+        &self.0
     }
 }

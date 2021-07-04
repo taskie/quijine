@@ -1,15 +1,21 @@
-use std::ffi::CString;
+use std::{ffi::CString, ptr::null_mut};
 
-use quijine_core::{AsJsValue, ClassDef, ClassId, Context, Runtime};
+use quijine_core::{raw, AsJsValue, ClassDef, ClassId, Context, Runtime};
 
 #[test]
 fn test() {
     let rt = Runtime::new();
-    // Define Class
     let ctx = Context::new(rt);
-    let test_class_def = ClassDef {
-        class_name: CString::new("Test").unwrap(),
-        ..Default::default()
+    // Define Class
+    let class_name = CString::new("Test").unwrap();
+    let test_class_def = unsafe {
+        ClassDef::from_raw(raw::JSClassDef {
+            class_name: class_name.as_ptr(),
+            finalizer: None,
+            gc_mark: None,
+            call: None,
+            exotic: null_mut(),
+        })
     };
     let test_class_id = ClassId::generate();
     rt.new_class(test_class_id, &test_class_def);
@@ -34,11 +40,17 @@ fn test() {
 #[test]
 fn test_another_context() {
     let rt = Runtime::new();
-    // Define Class
     let ctx = Context::new(rt);
-    let test_class_def = ClassDef {
-        class_name: CString::new("Test").unwrap(),
-        ..Default::default()
+    // Define Class
+    let class_name = CString::new("Test").unwrap();
+    let test_class_def = unsafe {
+        ClassDef::from_raw(raw::JSClassDef {
+            class_name: class_name.as_ptr(),
+            finalizer: None,
+            gc_mark: None,
+            call: None,
+            exotic: null_mut(),
+        })
     };
     let test_class_id = ClassId::generate();
     rt.new_class(test_class_id, &test_class_def);

@@ -6,7 +6,7 @@ use crate::{
     result::Result,
     runtime::Runtime,
     types::{Bool, ClassObject, Float64, Int, Null, Object, String as QjString, Undefined},
-    Error, ErrorKind, EvalFlags, Exception, PropFlags, RuntimeScope, Value,
+    Error, ErrorKind, EvalFlags, Exception, ModuleDef, PropFlags, RuntimeScope, Value,
 };
 use qc::{ReadObjFlags, WriteObjFlags};
 use quijine_core::{self as qc, raw, AsJsValue};
@@ -309,7 +309,7 @@ impl<'q> Context<'q> {
     where
         F: Fn(Context<'q>, T, A) -> Result<R> + 'q,
         T: FromQj<'q>,
-        A: FromQjMulti<'q, 'q>,
+        A: FromQjMulti<'q>,
         R: IntoQj<'q> + 'q,
     {
         self.new_function(
@@ -477,6 +477,13 @@ impl<'q> Context<'q> {
         register_class::<T>(self.0, class_id)?;
         self.opaque_mut().registered_classes.insert(type_id);
         Ok(class_id)
+    }
+
+    // Module
+
+    #[inline]
+    pub fn new_c_module(self, name_str: &str, func: raw::JSModuleInitFunc) -> ModuleDef<'q> {
+        unsafe { ModuleDef::from_raw_parts(self.0.new_c_module(name_str, func), self.0) }
     }
 
     // object writer/reader

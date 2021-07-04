@@ -23,7 +23,7 @@ pub mod raw;
 pub use atom::{Atom, PropertyEnum};
 pub use class::{ClassDef, ClassId};
 pub use context::Context;
-pub use convert::{AsJsAtom, AsJsCFunctionListEntry, AsJsClassId, AsJsValue, AsMutPtr, AsPtr};
+pub use convert::{AsJsAtom, AsJsClassId, AsJsValue, AsMutPtr, AsPtr};
 pub use enums::ValueTag;
 pub use flags::{EvalFlags, GpnFlags, PropFlags, ReadObjFlags, WriteObjFlags};
 pub use function::{convert_function_arguments, convert_function_result, CFunctionListEntry};

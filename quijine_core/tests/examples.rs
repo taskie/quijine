@@ -1,6 +1,5 @@
 use quijine_core::{
-    js_c_function, js_class_finalizer, AsJsCFunctionListEntry, CFunctionListEntry, ClassDef, ClassId, Context,
-    EvalFlags, Runtime, Value,
+    js_c_function, js_class_finalizer, raw, CFunctionListEntry, ClassDef, ClassId, Context, EvalFlags, Runtime, Value,
 };
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
@@ -18,13 +17,13 @@ struct PRNG {
     rng: XorShiftRng,
 }
 
-unsafe fn prng_generate<'q, 'a>(ctx: Context<'q>, this: Value<'q>, _values: &'a [Value<'q>]) -> Value<'q> {
+fn prng_generate<'q, 'a>(ctx: Context<'q>, this: Value<'q>, _values: &'a [Value<'q>]) -> Value<'q> {
     let mut prng = NonNull::new(PRNG_CLASS_ID.with(|id| this.opaque(*id.borrow()) as *mut PRNG)).unwrap();
-    let res: i32 = prng.as_mut().rng.gen();
+    let res: i32 = unsafe { prng.as_mut() }.rng.gen();
     ctx.new_int32(res)
 }
 
-unsafe fn prng_new<'q, 'a>(ctx: Context<'q>, _this: Value<'q>, _values: &'a [Value<'q>]) -> Value<'q> {
+fn prng_new<'q, 'a>(ctx: Context<'q>, _this: Value<'q>, _values: &'a [Value<'q>]) -> Value<'q> {
     let obj = PRNG_CLASS_ID.with(|id| ctx.new_object_class(*id.borrow()));
     let prng = Box::new(PRNG {
         rng: XorShiftRng::from_seed([0; 16]),
@@ -38,25 +37,38 @@ unsafe fn prng_finalizer<'q, 'a>(_rt: Runtime<'q>, val: Value<'q>) {
     Box::from_raw(obj);
 }
 
+#[allow(non_snake_case)]
+fn C(s: &str) -> CString {
+    CString::new(s).unwrap()
+}
+
 #[test]
 fn test() {
     let rt = Runtime::new();
     let ctx = Context::new(rt);
-    let prng_class = ClassDef {
-        class_name: CString::new("PRNG").unwrap(),
-        finalizer: js_class_finalizer!(prng_finalizer),
-        ..Default::default()
+    let class_name = C("PRNG");
+    let prng_class = unsafe {
+        ClassDef::from_raw(raw::JSClassDef {
+            class_name: class_name.as_ptr(),
+            finalizer: js_class_finalizer!(prng_finalizer),
+            gc_mark: None,
+            call: None,
+            exotic: null_mut(),
+        })
     };
-    let prng_proto_funcs = &[CFunctionListEntry::new("generate", 0, js_c_function!(prng_generate))];
-    let prng_proto_js_funcs: Vec<_> = prng_proto_funcs
-        .iter()
-        .map(|v| v.as_js_c_function_list_entry())
-        .collect();
+    let generate_name = C("generate");
+    let prng_proto_funcs = unsafe {
+        &[CFunctionListEntry::cfunc_def(
+            &generate_name,
+            0,
+            js_c_function!(prng_generate),
+        )]
+    };
     PRNG_CLASS_ID.with(|id| {
         *id.borrow_mut() = ClassId::generate();
         rt.new_class(*id.borrow(), &prng_class);
         let prng_proto = ctx.new_object();
-        prng_proto.set_property_function_list(ctx, prng_proto_js_funcs.as_ref());
+        prng_proto.set_property_function_list(ctx, prng_proto_funcs);
         prng_proto.set_property_str(ctx, "answer", ctx.new_int32(42)).unwrap();
         ctx.set_class_proto(*id.borrow(), prng_proto);
         eprintln!("{:?}", prng_proto);

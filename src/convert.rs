@@ -37,23 +37,17 @@ where
     }
 }
 
-pub trait FromQjMulti<'q, 'a>: Sized {
-    fn from_qj_multi(v: &'a [Value<'q>]) -> Result<Self>;
+pub trait FromQjMulti<'q>: Sized {
+    fn from_qj_multi(v: &[Value<'q>]) -> Result<Self>;
 }
 
-impl<'q, 'a> FromQjMulti<'q, 'a> for &'a [Value<'q>] {
-    fn from_qj_multi(v: &'a [Value<'q>]) -> Result<Self> {
-        Ok(v)
-    }
-}
-
-impl<'q, 'a> FromQjMulti<'q, 'a> for Vec<Value<'q>> {
+impl<'q> FromQjMulti<'q> for Vec<Value<'q>> {
     fn from_qj_multi(v: &[Value<'q>]) -> Result<Self> {
         Ok(v.to_vec())
     }
 }
 
-impl<'q, 'a> FromQjMulti<'q, 'a> for () {
+impl<'q> FromQjMulti<'q> for () {
     fn from_qj_multi(_v: &[Value<'q>]) -> Result<Self> {
         Ok(())
     }
@@ -61,7 +55,7 @@ impl<'q, 'a> FromQjMulti<'q, 'a> for () {
 
 macro_rules! impl_from_qj_multi_for_tuple {
     { for ($($k:expr => $t:ident),+) } => {
-        impl<'q, 'a, $($t),+> FromQjMulti<'q, 'a> for ($($t,)+)
+        impl<'q, $($t),+> FromQjMulti<'q> for ($($t,)+)
         where
             $($t: FromQj<'q>),+
         {

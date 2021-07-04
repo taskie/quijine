@@ -5,19 +5,19 @@ use crate::{
     Context, PropFlags, Result, Runtime,
 };
 use log::trace;
-use quijine_core as qc;
-use std::ffi::CString;
+use quijine_core::{self as qc, raw};
+use std::{ffi::CString, ptr::null_mut};
 
 pub trait ClassProperties<'q, C: Class> {
     fn define_method<F, A, R>(&mut self, name: &str, method: F, length: i32) -> Result<Object<'q>>
     where
         F: Fn(&C, Context<'q>, ClassObject<'q, C>, A) -> Result<R> + 'static,
-        A: FromQjMulti<'q, 'q>,
+        A: FromQjMulti<'q>,
         R: IntoQj<'q> + 'q;
     fn define_method_mut<F, A, R>(&mut self, name: &str, method: F, length: i32) -> Result<Object<'q>>
     where
         F: Fn(&mut C, Context<'q>, ClassObject<'q, C>, A) -> Result<R> + 'static,
-        A: FromQjMulti<'q, 'q>,
+        A: FromQjMulti<'q>,
         R: IntoQj<'q> + 'q;
     fn define_get_set_mut<G, R1, S, A, R2>(
         &mut self,
@@ -70,7 +70,7 @@ pub trait Class: Sized {
     fn define_properties<'q, P: ClassProperties<'q, Self>>(properties: &mut P) -> Result<()> {
         Ok(())
     }
-    fn setup_proto<'q>(ctx: Context<'q>, proto: &Object<'q>) -> Result<()> {
+    fn setup_proto<'q>(ctx: Context<'q>, proto: Object<'q>) -> Result<()> {
         Ok(())
     }
 }
@@ -100,7 +100,7 @@ impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
     fn define_method<F, A, R>(&mut self, name: &str, method: F, length: i32) -> Result<Object<'q>>
     where
         F: Fn(&C, Context<'q>, ClassObject<'q, C>, A) -> Result<R> + 'static,
-        A: FromQjMulti<'q, 'q>,
+        A: FromQjMulti<'q>,
         R: IntoQj<'q> + 'q,
     {
         self.define_method_mut(name, move |v, ctx, this, args| method(v, ctx, this, args), length)
@@ -109,7 +109,7 @@ impl<'q, C: Class + 'static> ClassProperties<'q, C> for Properties<'q> {
     fn define_method_mut<F, A, R>(&mut self, name: &str, method: F, length: i32) -> Result<Object<'q>>
     where
         F: Fn(&mut C, Context<'q>, ClassObject<'q, C>, A) -> Result<R> + 'static,
-        A: FromQjMulti<'q, 'q>,
+        A: FromQjMulti<'q>,
         R: IntoQj<'q> + 'q,
     {
         let ctx = self.context;
@@ -223,7 +223,7 @@ where
     R: IntoQj<'q> + 'q,
 {
     ctx.new_function_from(
-        move |ctx, this: Value<'q>, _args: &[Value]| {
+        move |ctx, this: Value<'q>, _args: Vec<Value<'q>>| {
             let mut cloned = this.clone();
             let v = cloned.opaque_mut::<C>().unwrap();
             (getter)(v, ctx, unsafe { Value::copy_unchecked(this) })
@@ -241,7 +241,7 @@ where
     R: IntoQj<'q> + 'q,
 {
     ctx.new_function_from(
-        move |ctx, this: Value<'q>, args: &[Value]| {
+        move |ctx, this: Value<'q>, args: Vec<Value<'q>>| {
             let arg = args.get(0).cloned().unwrap_or_else(|| ctx.undefined().into());
             let mut cloned = this.clone();
             let v = cloned.opaque_mut::<C>().unwrap();
@@ -256,10 +256,7 @@ pub(crate) fn register_class<C: Class + 'static>(rctx: qc::Context, clz: qc::Cla
     trace!("registering class: {} ({:?})", C::name(), clz);
     let ctx = Context::from_raw(rctx);
     let mut rt = ctx.runtime();
-    unsafe extern "C" fn finalizer<C: Class + 'static>(
-        rt: *mut quijine_core::raw::JSRuntime,
-        val: quijine_core::raw::JSValue,
-    ) {
+    unsafe extern "C" fn finalizer<C: Class + 'static>(rt: *mut raw::JSRuntime, val: raw::JSValue) {
         let rt = qc::Runtime::from_raw(rt);
         let val = qc::Value::from_raw_with_runtime(val, rt);
         finalize::<C>(rt, val)
@@ -268,10 +265,16 @@ pub(crate) fn register_class<C: Class + 'static>(rctx: qc::Context, clz: qc::Cla
         // nop
     } else {
         // per Runtime
-        let class_def = qc::ClassDef {
-            class_name: CString::new(C::name()).unwrap(),
-            finalizer: Some(finalizer::<C>),
-            ..Default::default()
+        let class_name = CString::new(C::name()).unwrap();
+        rt.register_class_name(class_name.clone());
+        let class_def = unsafe {
+            qc::ClassDef::from_raw(raw::JSClassDef {
+                class_name: rt.class_name(&class_name).unwrap().as_ptr(),
+                finalizer: Some(finalizer::<C>),
+                gc_mark: None,
+                call: None,
+                exotic: null_mut(),
+            })
         };
         rt.register_class_def(clz, class_def);
         let class_def = rt.class_def(clz).unwrap();
@@ -286,6 +289,6 @@ pub(crate) fn register_class<C: Class + 'static>(rctx: qc::Context, clz: qc::Cla
         proto: &proto,
     };
     C::define_properties(&mut properties)?;
-    C::setup_proto(ctx, &proto)?;
+    C::setup_proto(ctx, proto.clone())?;
     Ok(proto)
 }

@@ -21,6 +21,9 @@ use std::{
     result::Result as StdResult,
 };
 
+#[cfg(feature = "c_function_list")]
+use crate::{function::c_function_list_as_raw, CFunctionListEntry};
+
 #[cfg(feature = "debug_leak")]
 static DEBUG_GLOBAL_COUNT: atomic::AtomicU16 = atomic::AtomicU16::new(0);
 
@@ -444,6 +447,15 @@ impl<'q> Value<'q> {
         // this Box will be dropped in class::finalize.
         let p = Box::into_raw(v);
         self.value.set_opaque(p as *mut c_void);
+    }
+
+    // C property
+
+    #[cfg(feature = "c_function_list")]
+    #[inline]
+    pub fn set_property_function_list(self, tab: &[CFunctionListEntry]) {
+        self.value
+            .set_property_function_list(self.context, c_function_list_as_raw(tab))
     }
 }
 

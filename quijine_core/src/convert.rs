@@ -61,14 +61,3 @@ impl AsJsAtom<'_> for ffi::JSAtom {
         *self
     }
 }
-
-pub trait AsJsCFunctionListEntry<'q> {
-    fn as_js_c_function_list_entry(&self) -> ffi::JSCFunctionListEntry;
-}
-
-impl AsJsCFunctionListEntry<'_> for ffi::JSCFunctionListEntry {
-    #[inline]
-    fn as_js_c_function_list_entry(&self) -> ffi::JSCFunctionListEntry {
-        *self
-    }
-}

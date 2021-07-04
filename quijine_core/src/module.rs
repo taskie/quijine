@@ -3,10 +3,10 @@ use crate::{
     context::Context,
     convert::{AsMutPtr, AsPtr},
     ffi,
+    function::c_function_list_as_ptr,
     marker::Covariant,
-    raw,
     value::Value,
-    AsJsValue,
+    AsJsValue, CFunctionListEntry,
 };
 use std::{ffi::CString, marker::PhantomData, ptr::NonNull};
 
@@ -42,8 +42,15 @@ impl<'q> ModuleDef<'q> {
 
     /// can only be called before the module is instantiated
     #[inline]
-    pub fn add_module_export_list(self, mut ctx: Context<'q>, tab: &[raw::JSCFunctionListEntry]) -> i32 {
-        unsafe { ffi::JS_AddModuleExportList(ctx.as_mut_ptr(), self.0.as_ptr(), tab.as_ptr(), tab.len() as i32) as i32 }
+    pub fn add_module_export_list(self, mut ctx: Context<'q>, tab: &[CFunctionListEntry]) -> i32 {
+        unsafe {
+            ffi::JS_AddModuleExportList(
+                ctx.as_mut_ptr(),
+                self.0.as_ptr(),
+                c_function_list_as_ptr(tab),
+                tab.len() as i32,
+            ) as i32
+        }
     }
 
     /// can only be called before the module is instantiated
@@ -62,8 +69,15 @@ impl<'q> ModuleDef<'q> {
 
     /// can only be called before the module is instantiated
     #[inline]
-    pub fn set_module_export_list(self, mut ctx: Context<'q>, tab: &[raw::JSCFunctionListEntry]) -> i32 {
-        unsafe { ffi::JS_SetModuleExportList(ctx.as_mut_ptr(), self.0.as_ptr(), tab.as_ptr(), tab.len() as i32) as i32 }
+    pub fn set_module_export_list(self, mut ctx: Context<'q>, tab: &[CFunctionListEntry]) -> i32 {
+        unsafe {
+            ffi::JS_SetModuleExportList(
+                ctx.as_mut_ptr(),
+                self.0.as_ptr(),
+                c_function_list_as_ptr(tab),
+                tab.len() as i32,
+            ) as i32
+        }
     }
 }
 

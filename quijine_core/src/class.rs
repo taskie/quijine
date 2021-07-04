@@ -1,6 +1,6 @@
 use crate::{convert::AsJsClassId, ffi};
 use lazy_static::lazy_static;
-use std::{ffi::CString, ptr::null_mut, sync::Mutex};
+use std::sync::Mutex;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(transparent)]
@@ -45,38 +45,20 @@ lazy_static! {
     static ref NEW_CLASS_ID_LOCK: Mutex<()> = Mutex::new(());
 }
 
-#[derive(Debug)]
-pub struct ClassDef {
-    pub class_name: CString,
-    pub finalizer: ffi::JSClassFinalizer,
-    pub gc_mark: ffi::JSClassGCMark,
-    #[doc(hidden)]
-    pub call: ffi::JSClassCall,
-    #[doc(hidden)]
-    pub exotic: *mut ffi::JSClassExoticMethods,
-}
+#[derive(Clone, Debug)]
+pub struct ClassDef(ffi::JSClassDef);
 
 impl ClassDef {
-    pub(crate) fn c_def(&self) -> ffi::JSClassDef {
-        ffi::JSClassDef {
-            class_name: self.class_name.as_ptr(),
-            finalizer: self.finalizer,
-            gc_mark: self.gc_mark,
-            call: self.call,
-            exotic: self.exotic,
-        }
+    /// # Safety
+    /// class must have the same lifetime as a runtime.
+    #[inline]
+    pub unsafe fn from_raw(c: ffi::JSClassDef) -> ClassDef {
+        ClassDef(c)
     }
 }
 
-impl Default for ClassDef {
-    #[inline]
-    fn default() -> Self {
-        ClassDef {
-            class_name: CString::default(),
-            finalizer: None,
-            gc_mark: None,
-            call: None,
-            exotic: null_mut(),
-        }
+impl AsRef<ffi::JSClassDef> for ClassDef {
+    fn as_ref(&self) -> &ffi::JSClassDef {
+        &self.0
     }
 }

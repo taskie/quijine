@@ -283,11 +283,11 @@ pub unsafe fn JS_NewCFunctionMagic(
 
 #[allow(non_snake_case)]
 macro_rules! JS_CFUNC_INTERNAL_DEF {
-    ($name: expr, $length: expr, $cproto: expr, $field: ident, $func1: expr, $magic: expr) => {
+    ($name: expr, $prop_flags: expr, $def_type: expr, $magic: expr, u: { func: { $length: expr, $cproto: expr, { $field: ident: $func1: expr } } }) => {
         JSCFunctionListEntry {
             name: $name,
-            prop_flags: (JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE) as u8,
-            def_type: JS_DEF_CFUNC as u8,
+            prop_flags: $prop_flags as u8,
+            def_type: $def_type as u8,
             magic: $magic as i16,
             u: JSCFunctionListEntry__bindgen_ty_1 {
                 func: JSCFunctionListEntry__bindgen_ty_1__bindgen_ty_1 {
@@ -300,10 +300,73 @@ macro_rules! JS_CFUNC_INTERNAL_DEF {
     };
 }
 
+macro_rules! JS_CGETSET_INTERNAL_DEF {
+    ($name: expr, $prop_flags: expr, $def_type: expr, $magic: expr, u: { getset: { get: { $get_field:ident: $get_value:expr }, set: { $set_field:ident: $set_value:expr } } }) => {
+        JSCFunctionListEntry {
+            name: $name,
+            prop_flags: $prop_flags as u8,
+            def_type: $def_type as u8,
+            magic: $magic as i16,
+            u: JSCFunctionListEntry__bindgen_ty_1 {
+                getset: JSCFunctionListEntry__bindgen_ty_1__bindgen_ty_2 {
+                    get: JSCFunctionType { $get_field: $get_value },
+                    set: JSCFunctionType { $set_field: $set_value },
+                },
+            },
+        }
+    };
+}
+
+macro_rules! JS_PROP_INTERNAL_DEF {
+    ($name: expr, $prop_flags: expr, $def_type: expr, $magic: expr, u: { $prop_field:ident : $prop_value:expr }) => {
+        JSCFunctionListEntry {
+            name: $name,
+            prop_flags: $prop_flags as u8,
+            def_type: $def_type as u8,
+            magic: $magic as i16,
+            u: JSCFunctionListEntry__bindgen_ty_1 {
+                $prop_field: $prop_value,
+            },
+        }
+    };
+}
+
+macro_rules! JS_OBJECT_INTERNAL_DEF {
+    ($name: expr, $prop_flags: expr, $def_type: expr, $magic: expr, u: { prop_list: { $tab: expr, $len: expr } }) => {
+        JSCFunctionListEntry {
+            name: $name,
+            prop_flags: $prop_flags as u8,
+            def_type: $def_type as u8,
+            magic: $magic as i16,
+            u: JSCFunctionListEntry__bindgen_ty_1 {
+                prop_list: JSCFunctionListEntry__bindgen_ty_1__bindgen_ty_4 { tab: $tab, len: $len },
+            },
+        }
+    };
+}
+
+macro_rules! JS_ALIAS_INTERNAL_DEF {
+    ($name: expr, $prop_flags: expr, $def_type: expr, $magic: expr, u: { alias: { $alias_name: expr, $base: expr } }) => {
+        JSCFunctionListEntry {
+            name: $name,
+            prop_flags: $prop_flags as u8,
+            def_type: $def_type as u8,
+            magic: $magic as i16,
+            u: JSCFunctionListEntry__bindgen_ty_1 {
+                alias: JSCFunctionListEntry__bindgen_ty_1__bindgen_ty_3 {
+                    name: $alias_name,
+                    base: $base,
+                },
+            },
+        }
+    };
+}
+
 #[inline]
 #[allow(non_snake_case)]
 pub unsafe fn JS_CFUNC_DEF(name: *const c_char, length: u8, func1: JSCFunction) -> JSCFunctionListEntry {
-    JS_CFUNC_INTERNAL_DEF!(name, length, JSCFunctionEnum_JS_CFUNC_generic, generic, func1, 0)
+    // #define JS_CFUNC_DEF(name, length, func1) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_CFUNC, 0, .u = { .func = { length, JS_CFUNC_generic, { .generic = func1 } } } }
+    JS_CFUNC_INTERNAL_DEF! { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_CFUNC, 0, u: { func: { length, JSCFunctionEnum_JS_CFUNC_generic, { generic: func1 } } } }
 }
 
 #[inline]
@@ -314,29 +377,143 @@ pub unsafe fn JS_CFUNC_MAGIC_DEF(
     func1: JSCFunctionMagic,
     magic: i16,
 ) -> JSCFunctionListEntry {
-    JS_CFUNC_INTERNAL_DEF!(
-        name,
-        length,
-        JSCFunctionEnum_JS_CFUNC_generic_magic,
-        generic_magic,
-        func1,
-        magic
-    )
+    // #define JS_CFUNC_MAGIC_DEF(name, length, func1, magic) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_CFUNC, magic, .u = { .func = { length, JS_CFUNC_generic_magic, { .generic_magic = func1 } } } }
+    JS_CFUNC_INTERNAL_DEF! { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_CFUNC,  magic, u: { func: { length, JSCFunctionEnum_JS_CFUNC_generic_magic, { generic_magic: func1 } } } }
+}
+
+#[allow(non_snake_case)]
+macro_rules! def_JS_CFUNC_SPECIAL_DEF {
+    ($name: ident, $cproto: ident, $field: ident, $func_type: ty) => {
+        #[inline]
+        #[allow(non_snake_case)]
+        pub unsafe fn $name(
+            name: *const c_char,
+            length: u8,
+            func1: $func_type,
+        ) -> JSCFunctionListEntry {
+            // #define JS_CFUNC_SPECIAL_DEF(name, length, cproto, func1) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_CFUNC, 0, .u = { .func = { length, JS_CFUNC_ ## cproto, { .cproto = func1 } } } }
+            JS_CFUNC_INTERNAL_DEF! { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_CFUNC, 0, u: { func: { length, $cproto, { $field: func1 } } } }
+        }
+    }
+}
+
+def_JS_CFUNC_SPECIAL_DEF!(
+    JS_CFUNC_CONSTRUCTOR_DEF,
+    JSCFunctionEnum_JS_CFUNC_constructor,
+    constructor,
+    JSCFunction
+);
+def_JS_CFUNC_SPECIAL_DEF!(
+    JS_CFUNC_CONSTRUCTOR_OR_FUNC_DEF,
+    JSCFunctionEnum_JS_CFUNC_constructor_or_func,
+    constructor_or_func,
+    JSCFunction
+);
+def_JS_CFUNC_SPECIAL_DEF!(
+    JS_CFUNC_F_F_DEF,
+    JSCFunctionEnum_JS_CFUNC_f_f,
+    f_f,
+    Option<unsafe extern "C" fn(f64) -> f64>
+);
+def_JS_CFUNC_SPECIAL_DEF!(
+    JS_CFUNC_F_F_F_DEF,
+    JSCFunctionEnum_JS_CFUNC_f_f_f,
+    f_f_f,
+    Option<unsafe extern "C" fn(f64, f64) -> f64>
+);
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_ITERATOR_NEXT_DEF(
+    name: *const c_char,
+    length: u8,
+    func1: Option<unsafe extern "C" fn(*mut JSContext, JSValue, c_int, *mut JSValue, *mut c_int, c_int) -> JSValue>,
+    magic: i16,
+) -> JSCFunctionListEntry {
+    // #define JS_ITERATOR_NEXT_DEF(name, length, func1, magic) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_CFUNC, magic, .u = { .func = { length, JS_CFUNC_iterator_next, { .iterator_next = func1 } } } }
+    JS_CFUNC_INTERNAL_DEF! { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_CFUNC,  magic, u: { func: { length, JSCFunctionEnum_JS_CFUNC_iterator_next, { iterator_next: func1 } } } }
 }
 
 #[inline]
 #[allow(non_snake_case)]
-pub unsafe fn JS_CFUNC_SPECIAL_DEF_constructor(
+pub unsafe fn JS_CGETSET_DEF(
     name: *const c_char,
-    length: u8,
-    func1: JSCFunction,
+    fgetter: Option<unsafe extern "C" fn(*mut JSContext, JSValue) -> JSValue>,
+    fsetter: Option<unsafe extern "C" fn(*mut JSContext, JSValue, JSValue) -> JSValue>,
 ) -> JSCFunctionListEntry {
-    JS_CFUNC_INTERNAL_DEF!(
-        name,
-        length,
-        JSCFunctionEnum_JS_CFUNC_constructor,
-        constructor,
-        func1,
-        0
-    )
+    // #define JS_CGETSET_DEF(name, fgetter, fsetter) { name, JS_PROP_CONFIGURABLE, JS_DEF_CGETSET, 0, .u = { .getset = { .get = { .getter = fgetter }, .set = { .setter = fsetter } } } }
+    JS_CGETSET_INTERNAL_DEF! { name, JS_PROP_CONFIGURABLE, JS_DEF_CGETSET,  0, u: { getset: { get: { getter: fgetter }, set: { setter: fsetter } } } }
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_CGETSET_MAGIC_DEF(
+    name: *const c_char,
+    fgetter: Option<unsafe extern "C" fn(*mut JSContext, JSValue, c_int) -> JSValue>,
+    fsetter: Option<unsafe extern "C" fn(*mut JSContext, JSValue, JSValue, c_int) -> JSValue>,
+    magic: i16,
+) -> JSCFunctionListEntry {
+    // #define JS_CGETSET_MAGIC_DEF(name, fgetter, fsetter, magic) { name, JS_PROP_CONFIGURABLE, JS_DEF_CGETSET_MAGIC, magic, .u = { .getset = { .get = { .getter_magic = fgetter }, .set = { .setter_magic = fsetter } } } }
+    JS_CGETSET_INTERNAL_DEF! { name, JS_PROP_CONFIGURABLE, JS_DEF_CGETSET_MAGIC, magic, u: { getset: { get: { getter_magic: fgetter }, set: { setter_magic: fsetter } } } }
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_PROP_STRING_DEF(name: *const c_char, cstr: *const c_char, prop_flags: u32) -> JSCFunctionListEntry {
+    // #define JS_PROP_STRING_DEF(name, cstr, prop_flags) { name, prop_flags, JS_DEF_PROP_STRING, 0, .u = { .str = cstr } }
+    JS_PROP_INTERNAL_DEF! { name, prop_flags, JS_DEF_PROP_STRING, 0, u: { str_: cstr } }
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_PROP_INT32_DEF(name: *const c_char, val: i32, prop_flags: u32) -> JSCFunctionListEntry {
+    // #define JS_PROP_INT32_DEF(name, val, prop_flags) { name, prop_flags, JS_DEF_PROP_INT32, 0, .u = { .i32 = val } }
+    JS_PROP_INTERNAL_DEF! { name, prop_flags, JS_DEF_PROP_INT32, 0, u: { i32_: val } }
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_PROP_INT64_DEF(name: *const c_char, val: i64, prop_flags: u32) -> JSCFunctionListEntry {
+    // #define JS_PROP_INT64_DEF(name, val, prop_flags) { name, prop_flags, JS_DEF_PROP_INT64, 0, .u = { .i64 = val } }
+    JS_PROP_INTERNAL_DEF! { name, prop_flags, JS_DEF_PROP_INT64, 0, u: { i64_: val } }
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_PROP_DOUBLE_DEF(name: *const c_char, val: f64, prop_flags: u32) -> JSCFunctionListEntry {
+    // #define JS_PROP_DOUBLE_DEF(name, val, prop_flags) { name, prop_flags, JS_DEF_PROP_DOUBLE, 0, .u = { .f64 = val } }
+    JS_PROP_INTERNAL_DEF! { name, prop_flags, JS_DEF_PROP_DOUBLE, 0, u: { f64_: val } }
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_PROP_UNDEFINED_DEF(name: *const c_char, prop_flags: u32) -> JSCFunctionListEntry {
+    // #define JS_PROP_UNDEFINED_DEF(name, prop_flags) { name, prop_flags, JS_DEF_PROP_UNDEFINED, 0, .u = { .i32 = 0 } }
+    JS_PROP_INTERNAL_DEF! { name, prop_flags, JS_DEF_PROP_UNDEFINED, 0, u: { i32_: 0 } }
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_OBJECT_DEF(
+    name: *const c_char,
+    tab: *const JSCFunctionListEntry,
+    len: i32,
+    prop_flags: u32,
+) -> JSCFunctionListEntry {
+    // #define JS_OBJECT_DEF(name, tab, len, prop_flags) { name, prop_flags, JS_DEF_OBJECT, 0, .u = { .prop_list = { tab, len } } }
+    JS_OBJECT_INTERNAL_DEF! { name, prop_flags, JS_DEF_OBJECT, 0, u: { prop_list: { tab, len } } }
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_ALIAS_DEF(name: *const c_char, from: *const c_char) -> JSCFunctionListEntry {
+    // #define JS_ALIAS_DEF(name, from) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_ALIAS, 0, .u = { .alias = { from, -1 } } }
+    JS_ALIAS_INTERNAL_DEF! { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_ALIAS, 0, u: { alias: { from, -1 } } }
+}
+
+#[inline]
+#[allow(non_snake_case)]
+pub unsafe fn JS_ALIAS_BASE_DEF(name: *const c_char, from: *const c_char, base: i32) -> JSCFunctionListEntry {
+    // #define JS_ALIAS_BASE_DEF(name, from, base) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_ALIAS, 0, .u = { .alias = { from, base } } }
+    JS_ALIAS_INTERNAL_DEF! { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, JS_DEF_ALIAS, 0, u: { alias: { from, base } } }
 }

@@ -5,7 +5,7 @@ mod context_ext;
 mod convert;
 mod error;
 mod flags;
-mod function;
+mod module;
 mod result;
 mod runtime;
 mod string;
@@ -13,8 +13,15 @@ mod types;
 mod util;
 mod value;
 
+#[cfg(feature = "c_function_list")]
+mod arena;
+#[cfg(feature = "c_function_list")]
+mod function;
+
 #[macro_use]
 pub mod macros;
+#[doc(hidden)]
+pub mod internal;
 
 pub use quijine_core::raw;
 
@@ -25,7 +32,7 @@ pub use context_ext::ContextAddIntrinsicExt;
 pub use convert::{FromQj, FromQjMulti, IntoQj, IntoQjAtom, IntoQjMulti};
 pub use error::{Error, ErrorKind, ErrorValue, ExternalError};
 pub use flags::{EvalFlags, GpnFlags, PropFlags, ReadObjFlags, WriteObjFlags};
-pub use function::{convert_function_arguments, convert_function_result};
+pub use module::ModuleDef;
 pub use result::{ExternalResult, Result};
 pub use runtime::{Runtime, RuntimeScope};
 pub use types::{
@@ -33,6 +40,11 @@ pub use types::{
     Null, Object, String, Symbol, Undefined, Uninitialized, Variant,
 };
 pub use value::Value;
+
+#[cfg(feature = "c_function_list")]
+pub use arena::{CStringArena, DefArena};
+#[cfg(feature = "c_function_list")]
+pub use function::{CFunctionListBuilder, CFunctionListEntry};
 
 #[inline]
 pub fn run<F, R>(f: F) -> Result<R>

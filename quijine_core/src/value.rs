@@ -7,10 +7,12 @@ use crate::{
     error::Error,
     ffi::{self, c_size_t},
     flags::{GpnFlags, PropFlags},
+    function::c_function_list_as_ptr,
     internal::{ref_sized_from_bytes, ref_sized_to_vec},
     marker::Covariant,
     runtime::Runtime,
     string::CString as QcCString,
+    CFunctionListEntry,
 };
 use log::trace;
 use std::{
@@ -82,6 +84,11 @@ impl<'q> Value<'q> {
     #[inline]
     pub unsafe fn from_raw_static(value: ffi::JSValue) -> Value<'static> {
         Value(value, PhantomData)
+    }
+
+    #[inline]
+    pub fn into_raw(this: Value) -> ffi::JSValue {
+        this.0
     }
 
     #[inline]
@@ -520,9 +527,16 @@ impl<'q> Value<'q> {
     // C property
 
     #[inline]
-    pub fn set_property_function_list(self, mut ctx: Context, tab: &[ffi::JSCFunctionListEntry]) {
+    pub fn set_property_function_list(self, mut ctx: Context, tab: &[CFunctionListEntry]) {
         trace!("length: {}", tab.len());
-        unsafe { ffi::JS_SetPropertyFunctionList(ctx.as_mut_ptr(), self.0, tab.as_ptr(), tab.len() as c_int) }
+        unsafe {
+            ffi::JS_SetPropertyFunctionList(
+                ctx.as_mut_ptr(),
+                self.0,
+                c_function_list_as_ptr(tab),
+                tab.len() as c_int,
+            )
+        }
     }
 
     // Others

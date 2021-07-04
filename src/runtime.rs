@@ -4,11 +4,19 @@ use crate::{
     result::Result,
 };
 use quijine_core as qc;
-use std::{any::TypeId, collections::HashMap, ffi::c_void, fmt, ptr::null_mut, result::Result as StdResult};
+use std::{
+    any::TypeId,
+    collections::{HashMap, HashSet},
+    ffi::{c_void, CString},
+    fmt,
+    ptr::null_mut,
+    result::Result as StdResult,
+};
 
 pub struct RuntimeOpaque {
     registered_classes: HashMap<TypeId, qc::ClassId>,
     class_defs: HashMap<qc::ClassId, qc::ClassDef>,
+    class_names: HashSet<CString>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -79,6 +87,14 @@ impl<'r> Runtime<'r> {
         class_id
     }
 
+    pub(crate) fn register_class_name(&mut self, class_name: CString) {
+        self.opaque_mut().class_names.insert(class_name);
+    }
+
+    pub(crate) fn class_name(&self, class_name: &CString) -> Option<&std::ffi::CString> {
+        self.opaque().class_names.get(class_name)
+    }
+
     pub(crate) fn register_class_def(&mut self, class_id: qc::ClassId, class_def: qc::ClassDef) {
         self.opaque_mut().class_defs.insert(class_id, class_def);
     }
@@ -97,6 +113,7 @@ impl RuntimeScope {
         let opaque = Box::new(RuntimeOpaque {
             registered_classes: HashMap::new(),
             class_defs: HashMap::new(),
+            class_names: HashSet::new(),
         });
         rt.set_opaque(Box::into_raw(opaque) as *mut c_void);
         RuntimeScope(Runtime::from(rt))

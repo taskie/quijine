@@ -116,7 +116,7 @@ impl<'q> Runtime<'q> {
     #[inline]
     pub fn new_class(self, id: ClassId, class_def: &ClassDef) {
         unsafe {
-            let result = ffi::JS_NewClass(self.0.as_ptr(), id.as_js_class_id(), &class_def.c_def());
+            let result = ffi::JS_NewClass(self.0.as_ptr(), id.as_js_class_id(), class_def.as_ref());
             assert_eq!(0, result)
         }
     }
