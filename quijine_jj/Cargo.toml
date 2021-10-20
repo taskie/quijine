@@ -18,7 +18,7 @@ path = "src/main.rs"
 anyhow = "1.0"
 atty = "0.2"
 colored_json = "2.1"
-env_logger = "0.8"
+env_logger = "0.9"
 log = "0.4"
 quijine = { path = "../" }
 serde = "1.0"
@@ -28,4 +28,4 @@ structopt = "0.3"
 thiserror = "1.0"
 
 [dev-dependencies]
-assert_cmd = "1.0.5"
+assert_cmd = "2.0"
