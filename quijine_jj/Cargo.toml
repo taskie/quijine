@@ -8,7 +8,7 @@ readme = "README.md"
 repository = "https://github.com/taskie/quijine/tree/main/quijine_jj"
 categories = ["command-line-utilities"]
 description = "Genuine JavaScript Object Notation processor."
-edition = "2018"
+edition = "2021"
 
 [[bin]]
 name = "jj"

@@ -8,7 +8,7 @@ readme = "README.md"
 repository = "https://github.com/taskie/quijine/tree/main/quijine_core"
 categories = ["api-bindings"]
 description = "Low-level bindings between Rust and QuickJS."
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 log = "0.4"

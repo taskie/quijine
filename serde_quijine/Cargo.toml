@@ -8,7 +8,7 @@ readme = "README.md"
 repository = "https://github.com/taskie/quijine/tree/main/serde_quijine"
 categories = ["encoding"]
 description = "(De)serialization library of QuickJS values."
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 log = "0.4"

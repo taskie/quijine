@@ -50,7 +50,7 @@ macro_rules! impl_as_ref_value {
 }
 
 macro_rules! impl_from {
-    { $source:ident for $type:ty: |$v:pat| $implementation:expr } => {
+    { $source:ident for $type:ty: |$v:pat_param| $implementation:expr } => {
         impl<'q> From<$source<'q>> for $type {
             fn from($v: $source<'q>) -> Self {
                 $implementation
@@ -60,7 +60,7 @@ macro_rules! impl_from {
 }
 
 macro_rules! impl_try_from {
-    { $source:ident for $type:ty: |$v:pat| $implementation:expr } => {
+    { $source:ident for $type:ty: |$v:pat_param| $implementation:expr } => {
         impl<'q> TryFrom<$source<'q>> for $type {
             type Error = Error;
             fn try_from($v: $source<'q>) -> Result<Self> {
@@ -71,7 +71,7 @@ macro_rules! impl_try_from {
 }
 
 macro_rules! impl_into_qj {
-    { for $type:ty: |$v: pat, $ctx:pat| $implementation:expr } => {
+    { for $type:ty: |$v: pat_param, $ctx:pat_param| $implementation:expr } => {
         impl<'q> IntoQj<'q> for $type {
             fn into_qj(self, $ctx: Context<'q>) -> Result<Value<'q>> {
                 let $v = self;
