@@ -1,7 +1,7 @@
 use anyhow::Result;
 use colored_json::ColoredFormatter;
 use quijine::{
-    self, Context, EvalFlags, ExternalResult, FunctionBytecode, Object, Result as QjResult, Value as QjValue,
+    self, Bool, Context, EvalFlags, ExternalResult, FunctionBytecode, Object, Result as QjResult, Value as QjValue,
 };
 use serde::Serialize;
 use serde_json::{
@@ -36,6 +36,9 @@ pub struct Opt {
 
     #[structopt(short = "c", long)]
     compact_output: bool,
+
+    #[structopt(short = "i", long)]
+    iter: bool,
 
     #[structopt(short = "M", long, overrides_with = "color-output")]
     monochrome_output: bool,
@@ -125,21 +128,24 @@ fn define_print<'q>(opt: Arc<Opt>) -> Handler<'q> {
     Box::new(move |ctx: Context<'q>, this, args| print(&opt, ctx, this, args))
 }
 
-fn process_one<'q>(
-    opt: &Arc<Opt>,
+struct ProcessOneArgs<'q, 'a> {
+    opt: &'a Arc<Opt>,
     ctx: Context<'q>,
-    bytecode: &FunctionBytecode<'q>,
-    filename: &str,
-    global: &Object,
-    print_obj: &Object,
+    bytecode: &'a FunctionBytecode<'q>,
+    filename: &'a str,
+    global: &'a Object<'q>,
+    print_obj: &'a Object<'q>,
+    symbol_iterator: &'a QjValue<'q>,
     i: usize,
-    result: QjValue,
-) -> QjResult<()> {
-    global.set("_", result)?;
-    global.set("_F", filename)?;
-    global.set("_I", i as i32)?;
-    global.set("_P", print_obj.clone())?;
-    let result = ctx.eval_function(bytecode.clone().into());
+    result: QjValue<'q>,
+}
+
+fn process_one<'q>(a: &ProcessOneArgs) -> QjResult<()> {
+    a.global.set("_", a.result.clone())?;
+    a.global.set("_F", a.filename)?;
+    a.global.set("_I", a.i as i32)?;
+    a.global.set("_P", a.print_obj.clone())?;
+    let result = a.ctx.eval_function(a.bytecode.clone().into());
     let result = match result {
         Ok(v) => v,
         Err(e) => {
@@ -147,8 +153,25 @@ fn process_one<'q>(
             return Ok(());
         }
     };
-    if !opt.silent {
-        print(opt, ctx, global.clone().into(), &[result])?;
+    if !a.opt.silent {
+        if a.opt.iter {
+            let iterator_fn: QjValue = result.get(a.symbol_iterator)?;
+            if iterator_fn.is_undefined() {
+                return Ok(());
+            }
+            let iterator: QjValue = a.ctx.call(iterator_fn.clone(), result, &[])?;
+            let next: QjValue = iterator.get("next")?;
+            loop {
+                let iter_result = a.ctx.call(next.clone(), iterator.clone(), &[])?;
+                let done: Bool = iter_result.get("done")?;
+                if done.to_bool()? {
+                    break;
+                }
+                print(a.opt, a.ctx, a.global.clone().into(), &[iter_result.get("value")?])?;
+            }
+        } else {
+            print(a.opt, a.ctx, a.global.clone().into(), &[result])?;
+        }
     }
     Ok(())
 }
@@ -162,6 +185,19 @@ fn process<'q, R: BufRead>(
 ) -> QjResult<()> {
     let global = ctx.global_object()?;
     let print_obj = ctx.new_function(define_print(opt.clone()), "_P", 0)?;
+    let symbol: QjValue = global.get("Symbol")?;
+    let symbol_iterator: QjValue = symbol.get("iterator")?;
+    let mut args = ProcessOneArgs {
+        opt: &opt,
+        ctx,
+        bytecode: &bytecode,
+        filename,
+        global: &global,
+        print_obj: &print_obj,
+        symbol_iterator: &symbol_iterator,
+        i: 0,
+        result: ctx.undefined().into(),
+    };
     if opt.raw_input {
         if opt.slurp {
             let mut value = String::new();
@@ -169,8 +205,9 @@ fn process<'q, R: BufRead>(
                 eprintln!("IOError: {}: {}", filename, e);
                 exit(4);
             };
-            let result: QjValue = ctx.new_string(&value)?.into();
-            process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, 0, result)?;
+            args.i = 0;
+            args.result = ctx.new_string(&value)?.into();
+            process_one(&args)?;
         } else {
             for (i, value) in r.lines().enumerate() {
                 let value = match value {
@@ -180,8 +217,9 @@ fn process<'q, R: BufRead>(
                         exit(4);
                     }
                 };
-                let result: QjValue = ctx.new_string(&value)?.into();
-                process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, i, result)?;
+                args.i = i;
+                args.result = ctx.new_string(&value)?.into();
+                process_one(&args)?;
             }
         }
     } else {
@@ -197,15 +235,19 @@ fn process<'q, R: BufRead>(
                     exit(4);
                 }
             };
-            let result: QjValue = to_qj(ctx, value)?;
+            let result = to_qj(ctx, value)?;
             if opt.slurp {
                 ctx.call(array_push.clone(), values.clone(), &[result])?;
             } else {
-                process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, i, result)?;
+                args.i = i;
+                args.result = result;
+                process_one(&args)?;
             }
         }
         if opt.slurp {
-            process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, 0, values)?;
+            args.i = 0;
+            args.result = values;
+            process_one(&args)?;
         }
     }
     Ok(())
