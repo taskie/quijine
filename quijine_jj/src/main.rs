@@ -49,6 +49,9 @@ pub struct Opt {
     #[structopt(short = "r", long)]
     raw_output: bool,
 
+    #[structopt(short = "s", long)]
+    slurp: bool,
+
     #[structopt(long)]
     unbuffered: bool,
 
@@ -154,26 +157,38 @@ fn process<'q, R: BufRead>(
     opt: Arc<Opt>,
     ctx: Context<'q>,
     bytecode: FunctionBytecode<'q>,
-    r: R,
+    mut r: R,
     filename: &str,
 ) -> QjResult<()> {
     let global = ctx.global_object()?;
     let print_obj = ctx.new_function(define_print(opt.clone()), "_P", 0)?;
     if opt.raw_input {
-        for (i, value) in r.lines().enumerate() {
-            let value = match value {
-                Ok(v) => v,
-                Err(e) => {
-                    eprintln!("IOError: {}: {}", filename, e);
-                    exit(4);
-                }
+        if opt.slurp {
+            let mut value = String::new();
+            if let Err(e) = r.read_to_string(&mut value) {
+                eprintln!("IOError: {}: {}", filename, e);
+                exit(4);
             };
             let result: QjValue = ctx.new_string(&value)?.into();
-            process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, i, result)?;
+            process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, 0, result)?;
+        } else {
+            for (i, value) in r.lines().enumerate() {
+                let value = match value {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("IOError: {}: {}", filename, e);
+                        exit(4);
+                    }
+                };
+                let result: QjValue = ctx.new_string(&value)?.into();
+                process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, i, result)?;
+            }
         }
     } else {
         let de = serde_json::Deserializer::from_reader(r);
         let stream = de.into_iter::<Value>();
+        let values: QjValue = ctx.new_array()?.into();
+        let array_push: QjValue = values.get("push")?;
         for (i, value) in stream.enumerate() {
             let value = match value {
                 Ok(v) => v,
@@ -183,7 +198,14 @@ fn process<'q, R: BufRead>(
                 }
             };
             let result: QjValue = to_qj(ctx, value)?;
-            process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, i, result)?;
+            if opt.slurp {
+                ctx.call(array_push.clone(), values.clone(), &[result])?;
+            } else {
+                process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, i, result)?;
+            }
+        }
+        if opt.slurp {
+            process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, 0, values)?;
         }
     }
     Ok(())
