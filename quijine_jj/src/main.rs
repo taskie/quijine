@@ -1,6 +1,8 @@
 use anyhow::Result;
 use colored_json::ColoredFormatter;
-use quijine::{self, Context, EvalFlags, ExternalResult, FunctionBytecode, Result as QjResult, Value as QjValue};
+use quijine::{
+    self, Context, EvalFlags, ExternalResult, FunctionBytecode, Object, Result as QjResult, Value as QjValue,
+};
 use serde::Serialize;
 use serde_json::{
     ser::{CompactFormatter, PrettyFormatter},
@@ -9,7 +11,7 @@ use serde_json::{
 use serde_quijine::to_qj;
 use std::{
     fs::File,
-    io::{self, BufReader, BufWriter, Read, Write},
+    io::{self, BufRead, BufReader, BufWriter, Write},
     process::exit,
     sync::Arc,
 };
@@ -40,6 +42,9 @@ pub struct Opt {
 
     #[structopt(short = "n", long)]
     silent: bool,
+
+    #[structopt(short = "R", long)]
+    raw_input: bool,
 
     #[structopt(short = "r", long)]
     raw_output: bool,
@@ -117,40 +122,68 @@ fn define_print<'q>(opt: Arc<Opt>) -> Handler<'q> {
     Box::new(move |ctx: Context<'q>, this, args| print(&opt, ctx, this, args))
 }
 
-fn process<'q, R: Read>(
+fn process_one<'q>(
+    opt: &Arc<Opt>,
+    ctx: Context<'q>,
+    bytecode: &FunctionBytecode<'q>,
+    filename: &str,
+    global: &Object,
+    print_obj: &Object,
+    i: usize,
+    result: QjValue,
+) -> QjResult<()> {
+    global.set("_", result)?;
+    global.set("_F", filename)?;
+    global.set("_I", i as i32)?;
+    global.set("_P", print_obj.clone())?;
+    let result = ctx.eval_function(bytecode.clone().into());
+    let result = match result {
+        Ok(v) => v,
+        Err(e) => {
+            eprint!("{}", e);
+            return Ok(());
+        }
+    };
+    if !opt.silent {
+        print(opt, ctx, global.clone().into(), &[result])?;
+    }
+    Ok(())
+}
+
+fn process<'q, R: BufRead>(
     opt: Arc<Opt>,
     ctx: Context<'q>,
     bytecode: FunctionBytecode<'q>,
     r: R,
     filename: &str,
 ) -> QjResult<()> {
-    let de = serde_json::Deserializer::from_reader(r);
-    let stream = de.into_iter::<Value>();
     let global = ctx.global_object()?;
     let print_obj = ctx.new_function(define_print(opt.clone()), "_P", 0)?;
-    for (i, value) in stream.enumerate() {
-        let value = match value {
-            Ok(v) => v,
-            Err(e) => {
-                eprintln!("ParseError: {}: {}", filename, e);
-                exit(4);
-            }
-        };
-        let result: QjValue = to_qj(ctx, value)?;
-        global.set("_", result)?;
-        global.set("_F", filename)?;
-        global.set("_I", i as i32)?;
-        global.set("_P", print_obj.clone())?;
-        let result = ctx.eval_function(bytecode.clone().into());
-        let result = match result {
-            Ok(v) => v,
-            Err(e) => {
-                eprint!("{}", e);
-                continue;
-            }
-        };
-        if !opt.silent {
-            print(&opt, ctx, global.clone().into(), &[result])?;
+    if opt.raw_input {
+        for (i, value) in r.lines().enumerate() {
+            let value = match value {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("IOError: {}: {}", filename, e);
+                    exit(4);
+                }
+            };
+            let result: QjValue = ctx.new_string(&value)?.into();
+            process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, i, result)?;
+        }
+    } else {
+        let de = serde_json::Deserializer::from_reader(r);
+        let stream = de.into_iter::<Value>();
+        for (i, value) in stream.enumerate() {
+            let value = match value {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("ParseError: {}: {}", filename, e);
+                    exit(4);
+                }
+            };
+            let result: QjValue = to_qj(ctx, value)?;
+            process_one(&opt, ctx, &bytecode, filename, &global, &print_obj, i, result)?;
         }
     }
     Ok(())
