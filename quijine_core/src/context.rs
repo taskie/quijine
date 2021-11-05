@@ -730,7 +730,12 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn read_object(self, buf: &[u8], flags: ReadObjFlags) -> Value<'q> {
         unsafe {
-            let value = ffi::JS_ReadObject(self.0.as_ptr(), buf.as_ptr(), buf.len() as u64, flags.bits() as i32);
+            let value = ffi::JS_ReadObject(
+                self.0.as_ptr(),
+                buf.as_ptr(),
+                buf.len() as c_size_t,
+                flags.bits() as i32,
+            );
             Value::from_raw(value, self)
         }
     }

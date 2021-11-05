@@ -9,7 +9,6 @@ use std::{
     collections::{HashMap, HashSet},
     ffi::{c_void, CString},
     fmt,
-    ptr::null_mut,
     result::Result as StdResult,
 };
 
@@ -109,7 +108,10 @@ pub struct RuntimeScope(Runtime<'static>);
 impl RuntimeScope {
     #[inline]
     pub fn new() -> Self {
-        let rt = qc::Runtime::new_2(&qc::alloc::GLOBAL_ALLOCATOR_MALLOC_FUNCTIONS, null_mut());
+        #[cfg(target_os = "windows")]
+        let rt = qc::Runtime::new();
+        #[cfg(not(target_os = "windows"))]
+        let rt = qc::Runtime::new_2(&qc::alloc::GLOBAL_ALLOCATOR_MALLOC_FUNCTIONS, std::ptr::null_mut());
         let opaque = Box::new(RuntimeOpaque {
             registered_classes: HashMap::new(),
             class_defs: HashMap::new(),
