@@ -10,7 +10,7 @@ use serde_json::{
 };
 use serde_quijine::to_qj;
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{self, BufRead, BufReader, BufWriter, Write},
     process::exit,
     sync::Arc,
@@ -36,6 +36,9 @@ pub struct Opt {
 
     #[structopt(short = "c", long)]
     compact_output: bool,
+
+    #[structopt(short = "f", long)]
+    from_file: Option<String>,
 
     #[structopt(short = "i", long)]
     iter: bool,
@@ -271,23 +274,43 @@ fn main() -> Result<()> {
     #[cfg(windows)]
     let _enabled = colored_json::enable_ansi_support();
     let opt = Arc::new(Opt::from_args());
+    let script = match opt.from_file {
+        // jj -f FILTERFILE FILE [FILES...]
+        Some(ref s) => fs::read_to_string(s)?,
+        None => match opt.script {
+            // jj FILTER [FILES...]
+            Some(ref s) => s.clone(),
+            // jj
+            None => "_".to_owned(),
+        },
+    };
+    let files = match opt.from_file {
+        Some(_) => match opt.script.as_ref() {
+            // jj -f FILTERFILE FILE [FILES...]
+            Some(s) => [vec![s.clone()], opt.files.clone()].concat(),
+            // jj -f FILTERFILE
+            None => vec![],
+        },
+        // jj FILTER [FILES...]
+        None => opt.files.clone(),
+    };
     quijine::context(move |ctx| {
-        let script = match opt.script {
-            Some(ref s) => s.as_str(),
-            None => "_",
-        };
         // check a syntax error
         let bytecode: FunctionBytecode = ctx
-            .eval_into(script, "<input>", EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY)
+            .eval_into(
+                &script,
+                "<input>",
+                EvalFlags::TYPE_GLOBAL | EvalFlags::FLAG_COMPILE_ONLY,
+            )
             .unwrap_or_else(|e| {
                 eprint!("{}", e);
                 exit(3)
             });
         // read stdin
-        if opt.files.is_empty() {
+        if files.is_empty() {
             process_stdin(opt, ctx, bytecode)?;
         } else {
-            for file in opt.files.iter() {
+            for file in files.iter() {
                 if file == "-" {
                     process_stdin(opt.clone(), ctx, bytecode.clone())?;
                 } else {
