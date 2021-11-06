@@ -53,3 +53,55 @@ fn example_de() -> QjResult<()> {
     })?;
     Ok(())
 }
+
+#[derive(Serialize, Deserialize)]
+struct S2 {
+    v: Option<String>,
+}
+
+#[test]
+fn example_option_ser() -> QjResult<()> {
+    quijine::context(|ctx| {
+        // Some
+        let s2 = S2 {
+            v: Some("hello".to_owned()),
+        };
+        ctx.global_object()?.set("s2", to_qj(ctx, s2)?)?;
+        let code = r#"
+            const assertEq = (a, b) => { if (a !== b) { throw Error(`${a} !== ${b}`); } };
+            assertEq("string", typeof s2.v);
+            assertEq("hello", s2.v);
+        "#;
+        ctx.eval(code, "<input>", EvalFlags::TYPE_GLOBAL)?;
+        // None
+        let s2 = S2 { v: None };
+        ctx.global_object()?.set("s2", to_qj(ctx, s2)?)?;
+        let code = r#"
+            assertEq("object", typeof s2.v);
+            assertEq(null, s2.v);
+        "#;
+        ctx.eval(code, "<input>", EvalFlags::TYPE_GLOBAL)?;
+        Ok(())
+    })?;
+    Ok(())
+}
+
+#[test]
+fn example_option_de() -> QjResult<()> {
+    quijine::context(|ctx| {
+        // Some
+        let s2_value = ctx.eval(r#"({"v":"hello"})"#, "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let s2: S2 = from_qj(s2_value)?;
+        assert_eq!(Some("hello".to_owned()), s2.v);
+        // None (null)
+        let s2_value = ctx.eval(r#"({"v":null})"#, "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let s2: S2 = from_qj(s2_value)?;
+        assert_eq!(None, s2.v);
+        // None (uninitialized)
+        let s2_value = ctx.eval(r#"({})"#, "<input>", EvalFlags::TYPE_GLOBAL)?;
+        let s2: S2 = from_qj(s2_value)?;
+        assert_eq!(None, s2.v);
+        Ok(())
+    })?;
+    Ok(())
+}

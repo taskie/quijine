@@ -142,6 +142,11 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
+    pub(crate) fn is_nullish(&self) -> bool {
+        matches!(self.tag(), Tag::Null | Tag::Undefined | Tag::Uninitialized)
+    }
+
+    #[inline]
     pub fn is_array(&self) -> bool {
         self.value.is_array(self.context)
     }

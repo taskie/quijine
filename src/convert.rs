@@ -18,6 +18,16 @@ impl<'q, T: Into<Value<'q>>> IntoQj<'q> for T {
     }
 }
 
+impl<'q, T: IntoQj<'q>> IntoQj<'q> for Option<T> {
+    fn into_qj(self, ctx: Context<'q>) -> Result<Value<'q>> {
+        match self {
+            Some(v) => v.into_qj(ctx),
+            // for compatibility with serde_quijine
+            None => Ok(ctx.null().into()),
+        }
+    }
+}
+
 pub trait FromQj<'q>: Sized {
     fn from_qj(v: Value<'q>) -> Result<Self>;
 }
@@ -34,6 +44,16 @@ where
 {
     fn from_qj(v: Value<'q>) -> Result<Self> {
         T::try_from(v)
+    }
+}
+
+impl<'q, T: FromQj<'q>> FromQj<'q> for Option<T> {
+    fn from_qj(v: Value<'q>) -> Result<Self> {
+        if v.is_nullish() {
+            Ok(None)
+        } else {
+            T::from_qj(v).map(Some)
+        }
     }
 }
 
