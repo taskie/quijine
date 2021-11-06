@@ -199,7 +199,7 @@ impl<'q> Context<'q> {
         let f = self.new_function_raw(
             move |ctx, this, args| {
                 let mut obj = ctx.new_object_with_opaque(f(ctx, this.clone(), args))?;
-                C::constructor(&mut obj.opaque_mut().unwrap(), ctx, this, args)?;
+                C::constructor(obj.opaque_mut().unwrap(), ctx, this, args)?;
                 Ok(obj.into())
             },
             C::name(),

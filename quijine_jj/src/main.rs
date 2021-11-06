@@ -141,7 +141,7 @@ struct ProcessOneArgs<'q, 'a> {
     result: QjValue<'q>,
 }
 
-fn process_one<'q>(a: &ProcessOneArgs) -> QjResult<()> {
+fn process_one(a: &ProcessOneArgs) -> QjResult<()> {
     a.global.set("_", a.result.clone())?;
     a.global.set("_F", a.filename)?;
     a.global.set("_I", a.i as i32)?;
