@@ -1,4 +1,4 @@
-use quijine::{EvalFlags, IntoQjAtom, PropFlags, Result, Value};
+use quijine::{EvalFlags, PropFlags, Result, Value};
 
 #[test]
 fn prevent_extensions() -> Result<()> {
@@ -29,7 +29,7 @@ fn define_property_value() -> Result<()> {
     quijine::context(|ctx| {
         let obj = ctx.new_object()?;
         let val = ctx.new_string("hello")?;
-        obj.define_property_value_from("x", val, PropFlags::empty())?;
+        obj.define_property_value("x", val, PropFlags::empty())?;
         ctx.global_object()?.set("obj", obj.clone())?;
         let x = ctx.eval("obj.x", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("hello", x.to_string()?);
@@ -49,10 +49,10 @@ fn define_property_value_raw() -> Result<()> {
         let obj = ctx.new_object()?;
         let val = ctx.new_string("hello")?;
         obj.define_property(
-            "x".into_qj_atom(ctx)?,
-            val.into(),
-            ctx.undefined().into(),
-            ctx.undefined().into(),
+            "x",
+            val,
+            ctx.undefined(),
+            ctx.undefined(),
             PropFlags::HAS_VALUE | PropFlags::HAS_CONFIGURABLE | PropFlags::HAS_WRITABLE | PropFlags::HAS_ENUMERABLE,
         )?;
         ctx.global_object()?.set("obj", obj.clone())?;
@@ -74,9 +74,9 @@ fn define_property_get_set() -> Result<()> {
         let obj = ctx.new_object()?;
         obj.set("_x", "hello")?;
         ctx.global_object()?.set("obj", obj.clone())?;
-        let getter = ctx.new_function_from(
-            |_ctx, this: Value, _args: ()| {
-                let x: String = this.get("_x")?;
+        let getter = ctx.new_function(
+            |_ctx, this, _args| {
+                let x: String = this.get_into("_x")?;
                 Ok(x.to_ascii_uppercase())
             },
             "x",
@@ -90,13 +90,13 @@ fn define_property_get_set() -> Result<()> {
             "x",
             1,
         )?;
-        obj.define_property_get_set_from("x", getter, setter, PropFlags::empty())?;
+        obj.define_property_get_set("x", getter, setter, PropFlags::empty())?;
         let x = ctx.eval("obj.x", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("HELLO", x.to_string()?);
         ctx.eval("obj.x = 'foo'", "<input>", EvalFlags::TYPE_GLOBAL)?;
         let x = ctx.eval("obj.x", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("FOO", x.to_string()?);
-        let x: String = obj.get("_x")?;
+        let x: String = obj.get_into("_x")?;
         assert_eq!("foo", x);
         Ok(())
     })
@@ -110,8 +110,8 @@ fn define_property_get_set_raw() -> Result<()> {
         ctx.global_object()?.set("obj", obj.clone())?;
         let getter = ctx.new_function(
             |ctx, this, _args| {
-                let x: String = this.get("_x")?;
-                Ok(ctx.new_string(&x.to_ascii_uppercase())?.into())
+                let x: String = this.get_into("_x")?;
+                Ok(ctx.new_string(&x.to_ascii_uppercase())?)
             },
             "x",
             0,
@@ -119,16 +119,16 @@ fn define_property_get_set_raw() -> Result<()> {
         let setter = ctx.new_function(
             |ctx, this, args| {
                 this.set("_x", args[0].to_string()?.to_ascii_lowercase())?;
-                Ok(ctx.undefined().into())
+                Ok(ctx.undefined())
             },
             "x",
             1,
         )?;
         obj.define_property(
-            "x".into_qj_atom(ctx)?,
-            ctx.undefined().into(),
-            getter.into(),
-            setter.into(),
+            "x",
+            ctx.undefined(),
+            getter,
+            setter,
             PropFlags::HAS_GET | PropFlags::HAS_SET | PropFlags::HAS_CONFIGURABLE | PropFlags::HAS_ENUMERABLE,
         )?;
         let x = ctx.eval("obj.x", "<input>", EvalFlags::TYPE_GLOBAL)?;
@@ -136,7 +136,7 @@ fn define_property_get_set_raw() -> Result<()> {
         ctx.eval("obj.x = 'foo'", "<input>", EvalFlags::TYPE_GLOBAL)?;
         let x = ctx.eval("obj.x", "<input>", EvalFlags::TYPE_GLOBAL)?;
         assert_eq!("FOO", x.to_string()?);
-        let x: String = obj.get("_x")?;
+        let x: String = obj.get_into("_x")?;
         assert_eq!("foo", x);
         Ok(())
     })

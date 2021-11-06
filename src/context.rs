@@ -117,45 +117,35 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    pub fn eval_function(self, func_obj: Value<'q>) -> Result<Value<'q>> {
+    fn eval_function_raw(self, func_obj: Value<'q>) -> Result<Value<'q>> {
         Value::dup(&func_obj);
         unsafe { self.wrap_result(self.0.eval_function(*func_obj.as_raw())) }
     }
 
     #[inline]
-    pub fn eval_function_into<F: IntoQj<'q>, R: FromQj<'q>>(self, func_obj: F) -> Result<R> {
-        R::from_qj(self.eval_function(func_obj.into_qj(self)?)?)
+    pub fn eval_function<F: Into<Value<'q>>>(self, func_obj: F) -> Result<Value<'q>> {
+        self.eval_function_raw(func_obj.into_qj(self)?)
     }
 
     #[inline]
-    pub fn call(self, func_obj: Value<'q>, this_obj: Value<'q>, args: &[Value<'q>]) -> Result<Value<'q>> {
+    fn call_raw(self, func_obj: Value<'q>, this_obj: Value<'q>, args: &[Value<'q>]) -> Result<Value<'q>> {
         let qc_args: Vec<_> = args.iter().map(|v| *v.as_raw()).collect();
         let val = self.0.call(*func_obj.as_raw(), *this_obj.as_raw(), &qc_args);
         unsafe { self.wrap_result(val) }
     }
 
     #[inline]
-    pub fn call_into<F, T, A, R>(self, func_obj: F, this_obj: T, args: A) -> Result<R>
+    pub fn call<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> Result<Value<'q>>
     where
-        F: IntoQj<'q>,
-        T: IntoQj<'q>,
-        A: IntoQjMulti<'q>,
-        R: FromQj<'q>,
-    {
-        let qj_args = args.into_qj_multi(self)?;
-        R::from_qj(self.call(func_obj.into_qj(self)?, this_obj.into_qj(self)?, qj_args.as_ref())?)
-    }
-
-    #[inline]
-    pub fn call_into_void<F, T, A>(self, func_obj: F, this_obj: T, args: A) -> Result<()>
-    where
-        F: IntoQj<'q>,
+        F: Into<Value<'q>>,
         T: IntoQj<'q>,
         A: IntoQjMulti<'q>,
     {
-        let qj_args = args.into_qj_multi(self)?;
-        self.call(func_obj.into_qj(self)?, this_obj.into_qj(self)?, qj_args.as_ref())?;
-        Ok(())
+        self.call_raw(
+            func_obj.into_qj(self)?,
+            this_obj.into_qj(self)?,
+            args.into_qj_multi(self)?.as_ref(),
+        )
     }
 
     #[inline]
@@ -171,7 +161,7 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_global_constructor<C: Class + Default + 'static>(self) -> Result<Object<'q>> {
         let ctor = self.new_class_constructor::<C>()?;
-        self.global_object()?.define_property_value_from(
+        self.global_object()?.define_property_value(
             C::name(),
             ctor.clone(),
             PropFlags::WRITABLE | PropFlags::CONFIGURABLE,
@@ -186,7 +176,7 @@ impl<'q> Context<'q> {
         F: Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> C + 'q,
     {
         let ctor = self.new_class_constructor_with_new::<C, F>(f)?;
-        self.global_object()?.define_property_value_from(
+        self.global_object()?.define_property_value(
             C::name(),
             ctor.clone(),
             PropFlags::WRITABLE | PropFlags::CONFIGURABLE,
@@ -206,7 +196,7 @@ impl<'q> Context<'q> {
         F: Fn(Context<'q>, Value<'q>, &[Value<'q>]) -> C + 'q,
     {
         self.register_class::<C>()?;
-        let f = self.new_function(
+        let f = self.new_function_raw(
             move |ctx, this, args| {
                 let mut obj = ctx.new_object_with_opaque(f(ctx, this.clone(), args))?;
                 C::constructor(&mut obj.opaque_mut().unwrap(), ctx, this, args)?;
@@ -297,11 +287,20 @@ impl<'q> Context<'q> {
     // callback
 
     #[inline]
-    pub fn new_function<F>(self, func: F, name: &str, length: i32) -> Result<Object<'q>>
+    fn new_function_raw<F>(self, func: F, name: &str, length: i32) -> Result<Object<'q>>
     where
         F: Fn(Context<'q>, Value<'q>, &'q [Value<'q>]) -> Result<Value<'q>> + 'q,
     {
         self.new_callback(Box::new(func), name, length)
+    }
+
+    #[inline]
+    pub fn new_function<F, R>(self, func: F, name: &str, length: i32) -> Result<Object<'q>>
+    where
+        F: Fn(Context<'q>, Value<'q>, &'q [Value<'q>]) -> Result<R> + 'q,
+        R: IntoQj<'q> + 'q,
+    {
+        self.new_function_raw(move |ctx, this, args| func(ctx, this, args)?.into_qj(ctx), name, length)
     }
 
     #[inline]
@@ -440,11 +439,7 @@ impl<'q> Context<'q> {
         unsafe { self.wrap_result(self.0.parse_json(buf, filename)) }
     }
 
-    pub fn parse_json_into<R: FromQj<'q>>(self, buf: &str, filename: &str) -> Result<R> {
-        R::from_qj(self.parse_json(buf, filename)?)
-    }
-
-    pub fn json_stringify(self, obj: Value<'q>, replacer: Value<'q>, space0: Value<'q>) -> Result<QjString<'q>> {
+    fn json_stringify_raw(self, obj: Value<'q>, replacer: Value<'q>, space0: Value<'q>) -> Result<QjString<'q>> {
         unsafe {
             self.wrap_result::<QjString>(
                 self.0
@@ -453,17 +448,13 @@ impl<'q> Context<'q> {
         }
     }
 
-    pub fn json_stringify_into<O, P, S, R>(self, obj: O, replacer: P, space0: S) -> Result<R>
+    pub fn json_stringify<O, P, S>(self, obj: O, replacer: P, space0: S) -> Result<QjString<'q>>
     where
-        O: IntoQj<'q>,
+        O: Into<Value<'q>>,
         P: IntoQj<'q>,
         S: IntoQj<'q>,
-        R: FromQj<'q>,
     {
-        R::from_qj(
-            self.json_stringify(obj.into_qj(self)?, replacer.into_qj(self)?, space0.into_qj(self)?)?
-                .into(),
-        )
+        self.json_stringify_raw(obj.into_qj(self)?, replacer.into_qj(self)?, space0.into_qj(self)?)
     }
 
     // class

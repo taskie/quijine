@@ -28,7 +28,7 @@ fn example_ser() -> QjResult<()> {
             assertEq(4, s1.pos[1]);
         "#;
         ctx.eval(code, "<input>", EvalFlags::TYPE_GLOBAL)?;
-        let s1_json: String = ctx.json_stringify_into(s1_qj, ctx.undefined(), ctx.undefined())?;
+        let s1_json: String = ctx.json_stringify(s1_qj, ctx.undefined(), ctx.undefined())?.into();
         assert_eq!(r#"{"name":"foo","pos":[3,4]}"#, s1_json);
         Ok(())
     })?;

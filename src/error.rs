@@ -104,11 +104,11 @@ impl Error {
     pub fn from_value<'q, T: Into<Value<'q>>>(kind: ErrorKind, value: T) -> Error {
         let value: Value<'q> = value.into();
         let ctx = value.context();
-        let json = ctx.json_stringify_into(value, ctx.undefined(), ctx.undefined());
+        let json = ctx.json_stringify(value, ctx.undefined(), ctx.undefined());
         Error {
             kind,
             value: ErrorValue::String(match json {
-                Ok(s) => s,
+                Ok(s) => s.into(),
                 Err(e) => format!(r##"{{"name":"SystemError","message":"can't convert error: {}"}}"##, e),
             }),
         }
@@ -117,11 +117,11 @@ impl Error {
     pub fn from_js_error<'q, T: Into<Value<'q>>>(kind: ErrorKind, value: T) -> Error {
         let value: Value<'q> = value.into();
         let value = JsErrorData {
-            name: value.get("name").ok(),
-            message: value.get("message").ok(),
-            file_name: value.get("fileName").ok(),
-            line_number: value.get("lineNumber").ok(),
-            stack: value.get("stack").ok(),
+            name: value.get_into("name").ok(),
+            message: value.get_into("message").ok(),
+            file_name: value.get_into("fileName").ok(),
+            line_number: value.get_into("lineNumber").ok(),
+            stack: value.get_into("stack").ok(),
         };
         Error {
             kind,

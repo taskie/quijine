@@ -241,7 +241,15 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn get<K, R>(&self, key: K) -> Result<R>
+    pub fn get<K>(&self, key: K) -> Result<Value<'q>>
+    where
+        K: IntoQjAtom<'q>,
+    {
+        self.property(key.into_qj_atom(self.context())?)
+    }
+
+    #[inline]
+    pub fn get_into<K, R>(&self, key: K) -> Result<R>
     where
         K: IntoQjAtom<'q>,
         R: FromQj<'q>,
@@ -318,7 +326,7 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn define_property(
+    fn define_property_raw(
         &self,
         prop: Atom<'q>,
         val: Value<'q>,
@@ -338,7 +346,26 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn define_property_value(&self, prop: Atom<'q>, val: Value<'q>, flags: PropFlags) -> Result<bool> {
+    pub fn define_property<K: IntoQjAtom<'q>, V: IntoQj<'q>, G: Into<Value<'q>>, S: Into<Value<'q>>>(
+        &self,
+        prop: K,
+        val: V,
+        getter: G,
+        setter: S,
+        flags: PropFlags,
+    ) -> Result<bool> {
+        let ctx = self.context();
+        self.define_property_raw(
+            prop.into_qj_atom(ctx)?,
+            val.into_qj(ctx)?,
+            getter.into(),
+            setter.into(),
+            flags,
+        )
+    }
+
+    #[inline]
+    fn define_property_value_raw(&self, prop: Atom<'q>, val: Value<'q>, flags: PropFlags) -> Result<bool> {
         Value::dup(&val);
         let ret = self
             .value
@@ -347,17 +374,17 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn define_property_value_from<K: IntoQjAtom<'q>, V: IntoQj<'q>>(
+    pub fn define_property_value<K: IntoQjAtom<'q>, V: IntoQj<'q>>(
         &self,
         prop: K,
         val: V,
         flags: PropFlags,
     ) -> Result<bool> {
-        self.define_property_value(prop.into_qj_atom(self.context())?, val.into_qj(self.context())?, flags)
+        self.define_property_value_raw(prop.into_qj_atom(self.context())?, val.into_qj(self.context())?, flags)
     }
 
     #[inline]
-    pub fn define_property_get_set(
+    pub fn define_property_get_set_raw(
         &self,
         prop: Atom<'q>,
         getter: Value<'q>,
@@ -373,19 +400,14 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn define_property_get_set_from<K: IntoQjAtom<'q>, G: IntoQj<'q>, S: IntoQj<'q>>(
+    pub fn define_property_get_set<K: IntoQjAtom<'q>, G: Into<Value<'q>>, S: Into<Value<'q>>>(
         &self,
         prop: K,
         getter: G,
         setter: S,
         flags: PropFlags,
     ) -> Result<bool> {
-        self.define_property_get_set(
-            prop.into_qj_atom(self.context())?,
-            getter.into_qj(self.context())?,
-            setter.into_qj(self.context())?,
-            flags,
-        )
+        self.define_property_get_set_raw(prop.into_qj_atom(self.context())?, getter.into(), setter.into(), flags)
     }
 
     // function

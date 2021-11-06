@@ -1,6 +1,6 @@
 #[test]
 fn example_call_js_func_from_rust() -> quijine::Result<()> {
-    use quijine::{EvalFlags, Object};
+    use quijine::EvalFlags;
 
     quijine::context(|ctx| {
         ctx.eval(
@@ -9,8 +9,8 @@ fn example_call_js_func_from_rust() -> quijine::Result<()> {
             EvalFlags::TYPE_GLOBAL,
         )?;
         let global = ctx.global_object()?;
-        let foo: Object = global.get("foo")?;
-        let result: i32 = ctx.call_into(foo, global, (5, 3))?;
+        let foo = global.get("foo")?;
+        let result: i32 = ctx.call(foo, global, (5, 3))?.try_into()?;
         assert_eq!(8, result, "call foo (JS) from Rust");
         Ok(())
     })?;

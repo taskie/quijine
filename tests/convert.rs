@@ -14,10 +14,10 @@ fn rust_to_js() -> Result<()> {
             "<input>",
             EvalFlags::TYPE_GLOBAL,
         )?;
-        ctx.call_into_void(js_assert_eq.clone(), ctx.undefined(), ("hello", "\"hello\""))?;
-        ctx.call_into_void(js_assert_eq.clone(), ctx.undefined(), (true, "true"))?;
-        ctx.call_into_void(js_assert_eq.clone(), ctx.undefined(), (42, "42"))?;
-        ctx.call_into_void(js_assert_eq.clone(), ctx.undefined(), (0.25, "0.25"))?;
+        ctx.call(js_assert_eq.clone(), ctx.undefined(), ("hello", "\"hello\""))?;
+        ctx.call(js_assert_eq.clone(), ctx.undefined(), (true, "true"))?;
+        ctx.call(js_assert_eq.clone(), ctx.undefined(), (42, "42"))?;
+        ctx.call(js_assert_eq.clone(), ctx.undefined(), (0.25, "0.25"))?;
         Ok(())
     })?;
     Ok(())
@@ -26,13 +26,13 @@ fn rust_to_js() -> Result<()> {
 #[test]
 fn js_to_rust() -> Result<()> {
     quijine::context(|ctx| {
-        let v: String = ctx.parse_json_into("\"hello\"", "<input>")?;
+        let v: String = ctx.parse_json("\"hello\"", "<input>")?.try_into()?;
         assert_eq!("hello", v);
-        let v: bool = ctx.parse_json_into("true", "<input>")?;
+        let v: bool = ctx.parse_json("true", "<input>")?.try_into()?;
         assert_eq!(true, v);
-        let v: i32 = ctx.parse_json_into("42", "<input>")?;
+        let v: i32 = ctx.parse_json("42", "<input>")?.try_into()?;
         assert_eq!(42, v);
-        let v: f64 = ctx.parse_json_into("0.25", "<input>")?;
+        let v: f64 = ctx.parse_json("0.25", "<input>")?.try_into()?;
         assert_eq!(0.25, v);
         Ok(())
     })?;
