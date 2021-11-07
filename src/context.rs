@@ -6,7 +6,7 @@ use crate::{
     result::Result,
     runtime::Runtime,
     types::{Bool, ClassObject, Float64, Int, Null, Object, String as QjString, Undefined},
-    Error, ErrorKind, EvalFlags, Exception, ModuleDef, PropFlags, RuntimeScope, Value,
+    Error, ErrorKind, EvalFlags, Exception, IntoQjAtom, ModuleDef, PropFlags, RuntimeScope, Value,
 };
 use qc::{ReadObjFlags, WriteObjFlags};
 use quijine_core::{self as qc, raw, AsJsValue};
@@ -156,6 +156,29 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn new_object(self) -> Result<Object<'q>> {
         unsafe { self.wrap_result(self.0.new_object()) }
+    }
+
+    #[inline]
+    fn new_object_from_entries_raw<T: IntoIterator<Item = (Atom<'q>, Value<'q>)>>(self, vs: T) -> Result<Object<'q>> {
+        let a = self.new_object()?;
+        for (k, v) in vs.into_iter() {
+            a.set(k, v)?;
+        }
+        Ok(a)
+    }
+
+    #[inline]
+    pub fn new_object_from_entries<K, V, T>(self, vs: T) -> Result<Object<'q>>
+    where
+        K: IntoQjAtom<'q>,
+        V: IntoQj<'q>,
+        T: IntoIterator<Item = (K, V)>,
+    {
+        let entries = vs
+            .into_iter()
+            .map(|(k, v)| Ok((k.into_qj_atom(self)?, v.into_qj(self)?)))
+            .collect::<Result<Vec<_>>>()?;
+        self.new_object_from_entries_raw(entries)
     }
 
     #[inline]

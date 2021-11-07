@@ -1,4 +1,6 @@
+use maplit::{btreemap, hashmap};
 use quijine::{EvalFlags, FromQj, Result};
+use std::collections::{BTreeMap, HashMap};
 
 #[test]
 fn rust_to_js() -> Result<()> {
@@ -30,6 +32,14 @@ fn rust_to_js() -> Result<()> {
         ctx.call(js_assert_eq.clone(), (), (None as Option<i32>, "null"))?;
         ctx.call(js_assert_eq.clone(), (), (Vec::<i32>::new(), "[]"))?;
         ctx.call(js_assert_eq.clone(), (), (vec![2, 3, 5, 7], "[2,3,5,7]"))?;
+        ctx.call(js_assert_eq.clone(), (), (HashMap::<String, i32>::new(), "{}"))?;
+        ctx.call(js_assert_eq.clone(), (), (hashmap! {"H" => 1}, r#"{"H":1}"#))?;
+        ctx.call(js_assert_eq.clone(), (), (BTreeMap::<String, i32>::new(), "{}"))?;
+        ctx.call(
+            js_assert_eq.clone(),
+            (),
+            (btreemap! {"H" => 1, "He" => 2}, r#"{"H":1,"He":2}"#),
+        )?;
         Ok(())
     })?;
     Ok(())
@@ -54,6 +64,14 @@ fn js_to_rust() -> Result<()> {
         assert_eq!(Vec::<i32>::new(), v);
         let v = Vec::from_qj(ctx.parse_json("[2, 3, 5, 7]", "<input>")?)?;
         assert_eq!(vec![2, 3, 5, 7], v);
+        let v = HashMap::from_qj(ctx.parse_json("{}", "<input>")?)?;
+        assert_eq!(HashMap::<String, i32>::new(), v);
+        let v = HashMap::from_qj(ctx.parse_json(r#"{"H":1}"#, "<input>")?)?;
+        assert_eq!(hashmap! {"H".to_owned() => 1}, v);
+        let v = BTreeMap::from_qj(ctx.parse_json("{}", "<input>")?)?;
+        assert_eq!(BTreeMap::<String, i32>::new(), v);
+        let v = BTreeMap::from_qj(ctx.parse_json(r#"{"H":1,"He":2}"#, "<input>")?)?;
+        assert_eq!(btreemap! {"H".to_owned() => 1, "He".to_owned() => 2}, v);
         Ok(())
     })?;
     Ok(())

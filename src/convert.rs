@@ -1,4 +1,10 @@
-use std::convert::TryFrom;
+use std::{
+    collections::{BTreeMap, HashMap},
+    convert::TryFrom,
+    hash::{BuildHasher, Hash},
+};
+
+use quijine_core::GpnFlags;
 
 use crate::{atom::Atom, context::Context, result::Result, value::Value, Error, ErrorKind};
 
@@ -31,6 +37,18 @@ impl<'q, T: IntoQj<'q>> IntoQj<'q> for Option<T> {
 impl<'q, T: IntoQj<'q>> IntoQj<'q> for Vec<T> {
     fn into_qj(self, ctx: Context<'q>) -> Result<Value<'q>> {
         ctx.new_array_from(self).map(|v| v.into())
+    }
+}
+
+impl<'q, K: Eq + Hash + IntoQjAtom<'q>, V: IntoQj<'q>, S: BuildHasher> IntoQj<'q> for HashMap<K, V, S> {
+    fn into_qj(self, ctx: Context<'q>) -> Result<Value<'q>> {
+        ctx.new_object_from_entries(self).map(|v| v.into())
+    }
+}
+
+impl<'q, K: Ord + IntoQjAtom<'q>, V: IntoQj<'q>> IntoQj<'q> for BTreeMap<K, V> {
+    fn into_qj(self, ctx: Context<'q>) -> Result<Value<'q>> {
+        ctx.new_object_from_entries(self).map(|v| v.into())
     }
 }
 
@@ -73,6 +91,38 @@ impl<'q, T: FromQj<'q>> FromQj<'q> for Vec<T> {
         } else {
             Err(Error::with_str(ErrorKind::TypeError, "not array"))
         }
+    }
+}
+
+impl<'q, K: Eq + Hash + FromQj<'q>, V: FromQj<'q>, S: BuildHasher + Default> FromQj<'q> for HashMap<K, V, S> {
+    fn from_qj(v: Value<'q>) -> Result<Self> {
+        let prop_names = v.own_property_names(GpnFlags::STRING_MASK | GpnFlags::ENUM_ONLY)?;
+        let keys: Vec<_> = prop_names
+            .into_iter()
+            .map(|v| v.atom())
+            .filter(|k| !v.property(k.clone()).unwrap().is_undefined())
+            .collect();
+        let mut result = HashMap::with_hasher(S::default());
+        for k in keys {
+            result.insert(K::from_qj(k.to_value()?)?, V::from_qj(v.property(k)?)?);
+        }
+        Ok(result)
+    }
+}
+
+impl<'q, K: Ord + FromQj<'q>, V: FromQj<'q>> FromQj<'q> for BTreeMap<K, V> {
+    fn from_qj(v: Value<'q>) -> Result<Self> {
+        let prop_names = v.own_property_names(GpnFlags::STRING_MASK | GpnFlags::ENUM_ONLY)?;
+        let keys: Vec<_> = prop_names
+            .into_iter()
+            .map(|v| v.atom())
+            .filter(|k| !v.property(k.clone()).unwrap().is_undefined())
+            .collect();
+        let mut result = BTreeMap::new();
+        for k in keys {
+            result.insert(K::from_qj(k.to_value()?)?, V::from_qj(v.property(k)?)?);
+        }
+        Ok(result)
     }
 }
 
