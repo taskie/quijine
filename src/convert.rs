@@ -28,6 +28,12 @@ impl<'q, T: IntoQj<'q>> IntoQj<'q> for Option<T> {
     }
 }
 
+impl<'q, T: IntoQj<'q>> IntoQj<'q> for Vec<T> {
+    fn into_qj(self, ctx: Context<'q>) -> Result<Value<'q>> {
+        ctx.new_array_from(self).map(|v| v.into())
+    }
+}
+
 pub trait FromQj<'q>: Sized {
     fn from_qj(v: Value<'q>) -> Result<Self>;
 }
@@ -53,6 +59,19 @@ impl<'q, T: FromQj<'q>> FromQj<'q> for Option<T> {
             Ok(None)
         } else {
             T::from_qj(v).map(Some)
+        }
+    }
+}
+
+impl<'q, T: FromQj<'q>> FromQj<'q> for Vec<T> {
+    fn from_qj(v: Value<'q>) -> Result<Self> {
+        if v.is_array() {
+            let len: i32 = v.get_into("length")?;
+            (0..len)
+                .map(|i| v.get(i).and_then(T::from_qj))
+                .collect::<Result<Vec<_>>>()
+        } else {
+            Err(Error::with_str(ErrorKind::TypeError, "not array"))
         }
     }
 }

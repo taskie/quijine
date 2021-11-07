@@ -228,6 +228,21 @@ impl<'q> Context<'q> {
         unsafe { self.wrap_result(self.0.new_array()) }
     }
 
+    #[inline]
+    fn new_array_from_raw<T: IntoIterator<Item = Value<'q>>>(self, vs: T) -> Result<Object<'q>> {
+        let a = self.new_array()?;
+        for (i, v) in vs.into_iter().enumerate() {
+            a.set(i as i32, v)?;
+        }
+        Ok(a)
+    }
+
+    #[inline]
+    pub fn new_array_from<I: IntoQj<'q>, T: IntoIterator<Item = I>>(self, vs: T) -> Result<Object<'q>> {
+        let values = vs.into_iter().map(|v| v.into_qj(self)).collect::<Result<Vec<_>>>()?;
+        self.new_array_from_raw(values)
+    }
+
     unsafe fn new_value<T: AsRef<Value<'q>>>(self, v: qc::Value<'q>) -> T {
         Value::from_raw_parts(v, self.0).into_unchecked()
     }
