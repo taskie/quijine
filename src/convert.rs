@@ -4,8 +4,6 @@ use std::{
     hash::{BuildHasher, Hash},
 };
 
-use quijine_core::GpnFlags;
-
 use crate::{atom::Atom, context::Context, result::Result, value::Value, Error, ErrorKind};
 
 impl<'q> AsRef<Value<'q>> for Value<'q> {
@@ -96,15 +94,10 @@ impl<'q, T: FromQj<'q>> FromQj<'q> for Vec<T> {
 
 impl<'q, K: Eq + Hash + FromQj<'q>, V: FromQj<'q>, S: BuildHasher + Default> FromQj<'q> for HashMap<K, V, S> {
     fn from_qj(v: Value<'q>) -> Result<Self> {
-        let prop_names = v.own_property_names(GpnFlags::STRING_MASK | GpnFlags::ENUM_ONLY)?;
-        let keys: Vec<_> = prop_names
-            .into_iter()
-            .map(|v| v.atom())
-            .filter(|k| !v.property(k.clone()).unwrap().is_undefined())
-            .collect();
         let mut result = HashMap::with_hasher(S::default());
-        for k in keys {
-            result.insert(K::from_qj(k.to_value()?)?, V::from_qj(v.property(k)?)?);
+        for entry in v.entries()? {
+            let (k, v) = entry?;
+            result.insert(K::from_qj(k)?, V::from_qj(v)?);
         }
         Ok(result)
     }
@@ -112,15 +105,10 @@ impl<'q, K: Eq + Hash + FromQj<'q>, V: FromQj<'q>, S: BuildHasher + Default> Fro
 
 impl<'q, K: Ord + FromQj<'q>, V: FromQj<'q>> FromQj<'q> for BTreeMap<K, V> {
     fn from_qj(v: Value<'q>) -> Result<Self> {
-        let prop_names = v.own_property_names(GpnFlags::STRING_MASK | GpnFlags::ENUM_ONLY)?;
-        let keys: Vec<_> = prop_names
-            .into_iter()
-            .map(|v| v.atom())
-            .filter(|k| !v.property(k.clone()).unwrap().is_undefined())
-            .collect();
         let mut result = BTreeMap::new();
-        for k in keys {
-            result.insert(K::from_qj(k.to_value()?)?, V::from_qj(v.property(k)?)?);
+        for entry in v.entries()? {
+            let (k, v) = entry?;
+            result.insert(K::from_qj(k)?, V::from_qj(v)?);
         }
         Ok(result)
     }

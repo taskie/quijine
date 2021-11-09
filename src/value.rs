@@ -8,6 +8,7 @@ use crate::{
     runtime::Runtime,
     string::CString as QjCString,
     types::{Tag, Variant},
+    IntoQjMulti,
 };
 use qc::{GpnFlags, PropFlags};
 use quijine_core as qc;
@@ -484,6 +485,79 @@ impl<'q> Value<'q> {
         self.value
             .set_property_function_list(self.context, c_function_list_as_raw(tab))
     }
+
+    // function
+
+    #[inline]
+    fn apply<T, A>(&self, this_obj: T, args: A) -> Result<Value<'q>>
+    where
+        T: IntoQj<'q>,
+        A: IntoQjMulti<'q>,
+    {
+        self.context().call(self.clone(), this_obj, args)
+    }
+
+    #[inline]
+    fn call_method<K, A>(&self, key: K, args: A) -> Result<Value<'q>>
+    where
+        K: IntoQjAtom<'q>,
+        A: IntoQjMulti<'q>,
+    {
+        let f = self.get(key)?;
+        f.apply(self.clone(), args)
+    }
+
+    // enumeration
+
+    #[inline]
+    fn iterator_raw(&self) -> Result<Value<'q>> {
+        let symbol_iterator = self.context().global_object()?.get("Symbol")?.get("iterator")?;
+        self.call_method(symbol_iterator, &[])
+    }
+
+    #[inline]
+    pub fn iterator(&self) -> Result<impl Iterator<Item = Result<Value<'q>>>> {
+        let iterator = self.iterator_raw()?;
+        Ok(ValueIterator {
+            iterator: iterator.clone(),
+            next: iterator.get("next")?,
+        })
+    }
+
+    #[inline]
+    fn enumerate_properties(&self) -> Result<impl Iterator<Item = PropertyEnum<'q>>> {
+        Ok(self
+            .own_property_names(GpnFlags::ENUM_ONLY | GpnFlags::STRING_MASK | GpnFlags::SYMBOL_MASK)?
+            .into_iter())
+    }
+
+    #[inline]
+    pub fn keys(&self) -> Result<impl Iterator<Item = Result<Value<'q>>>> {
+        Ok(self.enumerate_properties()?.map(|e| e.atom().to_value()))
+    }
+
+    #[inline]
+    pub fn values(&self) -> Result<impl Iterator<Item = Result<Value<'q>>>> {
+        let this = self.clone();
+        Ok(self.enumerate_properties()?.map(move |e| this.property(e.atom())))
+    }
+
+    #[inline]
+    pub fn entries(&self) -> Result<impl Iterator<Item = Result<(Value<'q>, Value<'q>)>>> {
+        let this = self.clone();
+        Ok(self.enumerate_properties()?.map(move |e| {
+            let a = e.atom();
+            let k = match a.to_value() {
+                Ok(k) => k,
+                Err(e) => return Err(e),
+            };
+            let v = match this.property(a) {
+                Ok(v) => v,
+                Err(e) => return Err(e),
+            };
+            Ok((k, v))
+        }))
+    }
 }
 
 impl Drop for Value<'_> {
@@ -553,5 +627,33 @@ impl<'q> PropertyDescriptor<'q> {
     #[inline]
     pub fn setter(&self) -> &Value<'q> {
         &self.setter
+    }
+}
+
+pub struct ValueIterator<'q> {
+    iterator: Value<'q>,
+    next: Value<'q>,
+}
+
+impl<'q> ValueIterator<'q> {
+    fn next_impl(&mut self) -> Result<Option<Value<'q>>> {
+        let result = self.next.clone().apply(self.iterator.clone(), &[])?;
+        let done = result.get("done")?;
+        if done.to_bool()? {
+            return Ok(None);
+        }
+        Ok(Some(result.get("value")?))
+    }
+}
+
+impl<'q> Iterator for ValueIterator<'q> {
+    type Item = Result<Value<'q>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.next_impl() {
+            Ok(Some(v)) => Some(Ok(v)),
+            Ok(None) => None,
+            Err(e) => Some(Err(e)),
+        }
     }
 }

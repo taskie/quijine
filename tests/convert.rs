@@ -76,3 +76,50 @@ fn js_to_rust() -> Result<()> {
     })?;
     Ok(())
 }
+
+#[test]
+fn js_to_rust_iterable() -> Result<()> {
+    quijine::context(|ctx| {
+        let v = ctx.eval(
+            r#"
+            const a = [0];
+            a.x = 42;
+            a;
+        "#,
+            "<input>",
+            EvalFlags::TYPE_GLOBAL,
+        )?;
+        assert_eq!(r#"[0]"#, ctx.json_stringify(v.clone(), (), ())?.to_string()?);
+        assert_eq!(vec![0], Vec::from_qj(v.clone())?);
+        assert_eq!(
+            btreemap! {"0".to_owned() => 0, "x".to_owned() => 42},
+            BTreeMap::from_qj(v.clone())?
+        );
+        assert_eq!(btreemap! {0 => 42}, BTreeMap::from_qj(v)?);
+        Ok(())
+    })?;
+    Ok(())
+}
+
+#[test]
+fn js_to_rust_proto() -> Result<()> {
+    quijine::context(|ctx| {
+        let v = ctx.eval(
+            r#"
+            const c = Object.create(null);
+            c.c = 3;
+            const b = Object.create(c);
+            b.b = 2;
+            const a = Object.create(b);
+            a.a = 1;
+            a;
+        "#,
+            "<input>",
+            EvalFlags::TYPE_GLOBAL,
+        )?;
+        assert_eq!(r#"{"a":1}"#, ctx.json_stringify(v.clone(), (), ())?.to_string()?);
+        assert_eq!(btreemap! {"a".to_owned() => 1}, BTreeMap::from_qj(v)?);
+        Ok(())
+    })?;
+    Ok(())
+}

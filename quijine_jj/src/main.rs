@@ -136,7 +136,6 @@ struct ProcessOneArgs<'q, 'a> {
     filename: &'a str,
     global: &'a QjValue<'q>,
     print_obj: &'a QjValue<'q>,
-    symbol_iterator: &'a QjValue<'q>,
     i: usize,
     result: QjValue<'q>,
 }
@@ -156,19 +155,8 @@ fn process_one(a: &ProcessOneArgs) -> QjResult<()> {
     };
     if !a.opt.silent {
         if a.opt.iter {
-            let iterator_fn: QjValue = result.get(a.symbol_iterator)?;
-            if iterator_fn.is_undefined() {
-                return Ok(());
-            }
-            let iterator: QjValue = a.ctx.call(iterator_fn.clone(), result, &[])?;
-            let next: QjValue = iterator.get("next")?;
-            loop {
-                let iter_result = a.ctx.call(next.clone(), iterator.clone(), &[])?;
-                let done = iter_result.get("done")?;
-                if done.to_bool()? {
-                    break;
-                }
-                print(a.opt, a.ctx, a.global.clone(), &[iter_result.get("value")?])?;
+            for v in result.iterator()? {
+                print(a.opt, a.ctx, a.global.clone(), &[v?])?;
             }
         } else {
             print(a.opt, a.ctx, a.global.clone(), &[result])?;
@@ -186,8 +174,6 @@ fn process<'q, R: BufRead>(
 ) -> QjResult<()> {
     let global = ctx.global_object()?;
     let print_obj = ctx.new_function(define_print(opt.clone()), "_P", 0)?;
-    let symbol: QjValue = global.get("Symbol")?;
-    let symbol_iterator: QjValue = symbol.get("iterator")?;
     let mut args = ProcessOneArgs {
         opt: &opt,
         ctx,
@@ -195,7 +181,6 @@ fn process<'q, R: BufRead>(
         filename,
         global: &global,
         print_obj: &print_obj,
-        symbol_iterator: &symbol_iterator,
         i: 0,
         result: ctx.undefined().into(),
     };
