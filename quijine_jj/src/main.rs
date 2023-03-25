@@ -27,39 +27,51 @@ pub enum JjError {
 #[derive(Clone, Debug, Parser)]
 #[clap(author, version, about, long_about = None)]
 pub struct Opt {
+    /// Colorize JSON output
     #[clap(short = 'C', long)]
     color_output: bool,
 
+    /// Produce compact output instead of pretty-printed output
     #[clap(short = 'c', long)]
     compact_output: bool,
 
+    /// Use JavaScript from a file instead of SCRIPT argument
     #[clap(short = 'f', long)]
     from_file: Option<String>,
 
+    /// Iterate over the result and print each item as an individual JSON
     #[clap(short = 'i', long)]
     iter: bool,
 
+    /// Don't colorize JSON output
     #[clap(short = 'M', long, overrides_with = "color_output")]
     monochrome_output: bool,
 
+    /// Don't print results automatically
     #[clap(short = 'n', long)]
     silent: bool,
 
+    /// Treat input as raw strings instead of JSON
     #[clap(short = 'R', long)]
     raw_input: bool,
 
+    /// Output results as raw strings instead of JSON
     #[clap(short = 'r', long)]
     raw_output: bool,
 
+    /// Read (slurp) all inputs into an array
     #[clap(short = 's', long)]
     slurp: bool,
 
+    /// Flush the output buffers more often
     #[clap(long)]
     unbuffered: bool,
 
+    /// JavaScript code to process JSON
     #[clap(name = "SCRIPT")]
     script: Option<String>,
 
+    /// JSON files
     #[clap(name = "FILE")]
     files: Vec<String>,
 }
