@@ -155,7 +155,7 @@ fn process_one(a: &ProcessOneArgs) -> QjResult<()> {
     a.global.set("_F", a.filename)?;
     a.global.set("_I", a.i as i32)?;
     a.global.set("_P", a.print_obj.clone())?;
-    let result = a.ctx.eval_function(a.bytecode.clone());
+    let result = a.ctx.eval_function(a.bytecode.clone().into());
     let result = match result {
         Ok(v) => v,
         Err(e) => {
@@ -169,7 +169,7 @@ fn process_one(a: &ProcessOneArgs) -> QjResult<()> {
                 print(a.opt, a.ctx, a.global.clone(), &[v?])?;
             }
         } else {
-            print(a.opt, a.ctx, a.global.clone(), &[result])?;
+            print(a.opt, a.ctx, a.global.clone().into(), &[result])?;
         }
     }
     Ok(())
@@ -221,8 +221,8 @@ fn process<'q, R: BufRead>(
     } else {
         let de = serde_json::Deserializer::from_reader(r);
         let stream = de.into_iter::<Value>();
-        let values = ctx.new_array()?;
-        let array_push = values.get("push")?;
+        let values: QjValue = ctx.new_array()?.into();
+        let array_push: QjValue = values.get("push")?;
         for (i, value) in stream.enumerate() {
             let value = match value {
                 Ok(v) => v,
@@ -242,7 +242,7 @@ fn process<'q, R: BufRead>(
         }
         if opt.slurp {
             args.i = 0;
-            args.result = values.into();
+            args.result = values;
             process_one(&args)?;
         }
     }

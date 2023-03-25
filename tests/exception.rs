@@ -8,7 +8,7 @@ fn exception() -> Result<()> {
         assert!(e.is_null());
         // 1
         let error = ctx.new_error()?;
-        error.define_property_value("message", "HELP!", PropFlags::CONFIGURABLE | PropFlags::WRITABLE)?;
+        error.define_property_value_from("message", "HELP!", PropFlags::CONFIGURABLE | PropFlags::WRITABLE)?;
         let exc = ctx.throw(error.into());
         assert!(exc.is_exception());
         let e = ctx.take_exception();

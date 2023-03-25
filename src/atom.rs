@@ -195,7 +195,7 @@ mod tests {
             assert!(!foo.has_key(k_bar)?);
             foo.set(k_bar, 42)?;
             assert!(foo.has_key(k_bar)?);
-            let v: i32 = foo.get(k_bar)?.try_into()?;
+            let v: i32 = foo.get(k_bar)?;
             assert_eq!(42, v);
             let prop_enums = foo.own_property_names(GpnFlags::STRING_MASK)?;
             assert_eq!(1, prop_enums.len());

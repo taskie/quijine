@@ -1,4 +1,5 @@
-use quijine::{ReadObjFlags, WriteObjFlags};
+use quijine::{Object, ReadObjFlags, WriteObjFlags};
+use std::convert::TryInto;
 
 #[test]
 fn test() {
@@ -13,10 +14,10 @@ fn test() {
             ctx.write_object(a.into(), WriteObjFlags::REFERENCE)?
         };
         eprintln!("{:?}", buf);
-        let a = ctx.read_object(&buf, ReadObjFlags::REFERENCE)?;
-        let b = a.get("b")?;
-        let c = b.get("c")?;
-        let _a2 = c.get("a")?;
+        let a: Object = ctx.read_object(&buf, ReadObjFlags::REFERENCE)?.try_into()?;
+        let b: Object = a.get("b")?;
+        let c: Object = b.get("c")?;
+        let _a2: Object = c.get("a")?;
         Ok(())
     })
     .unwrap();

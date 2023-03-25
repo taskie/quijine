@@ -22,9 +22,7 @@ fn test_serde_json_compatibility() -> QjResult<()> {
             assertEq("hello", json.s);
         "#;
         ctx.eval(code, "<input>", EvalFlags::TYPE_GLOBAL)?;
-        let json_qj_json: String = ctx
-            .json_stringify(json_qj.clone(), ctx.undefined(), ctx.undefined())?
-            .into();
+        let json_qj_json: String = ctx.json_stringify_into(json_qj.clone(), ctx.undefined(), ctx.undefined())?;
         assert_eq!(json, &json_qj_json);
         let json_qj_value: Value = from_qj(json_qj)?;
         let json_qj_value_json = serde_json::to_string(&json_qj_value).map_err_to_qj()?;

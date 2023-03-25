@@ -221,7 +221,7 @@ impl<'q, 'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'q> {
     where
         V: de::Visitor<'de>,
     {
-        let len: i32 = self.input.get_into("length")?;
+        let len: i32 = self.input.get("length")?;
         let seq = SeqAccess {
             object: self.input.clone(),
             len,

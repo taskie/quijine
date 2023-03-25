@@ -82,7 +82,7 @@ impl<'q, T: FromQj<'q>> FromQj<'q> for Option<T> {
 impl<'q, T: FromQj<'q>> FromQj<'q> for Vec<T> {
     fn from_qj(v: Value<'q>) -> Result<Self> {
         if v.is_array() {
-            let len: i32 = v.get_into("length")?;
+            let len: i32 = v.get("length")?;
             (0..len)
                 .map(|i| v.get(i).and_then(T::from_qj))
                 .collect::<Result<Vec<_>>>()
