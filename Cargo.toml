@@ -11,16 +11,16 @@ description = "High-level bindings between Rust and QuickJS."
 edition = "2021"
 
 [dependencies]
-log = "0.4"
-bitflags = { version = "1.2" }
-lazy_static = "1.4"
+log = "0.4.17"
+bitflags = "2.0.2"
+lazy_static = "1.4.0"
 quijine_core = { path = "./quijine_core" }
 
 [dev-dependencies]
-env_logger = "0.9"
+env_logger = "0.10.0"
 maplit = "1.0.2"
-rand = "0.8"
-rand_xorshift = "0.3"
+rand = "0.8.5"
+rand_xorshift = "0.3.0"
 
 [features]
 c_function_list = []

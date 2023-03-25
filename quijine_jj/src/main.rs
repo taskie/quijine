@@ -1,4 +1,5 @@
 use anyhow::Result;
+use clap::Parser;
 use colored_json::ColoredFormatter;
 use quijine::{self, Context, EvalFlags, ExternalResult, FunctionBytecode, Result as QjResult, Value as QjValue};
 use serde::Serialize;
@@ -13,7 +14,6 @@ use std::{
     process::exit,
     sync::Arc,
 };
-use structopt::{clap, StructOpt};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -24,45 +24,43 @@ pub enum JjError {
     Qj(#[from] quijine::Error),
 }
 
-#[derive(Clone, Debug, StructOpt)]
-#[structopt(name = "jj", about = "Genuine JavaScript Object Notation processor")]
-#[structopt(long_version(option_env!("LONG_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"))))]
-#[structopt(setting(clap::AppSettings::ColoredHelp))]
+#[derive(Clone, Debug, Parser)]
+#[clap(author, version, about, long_about = None)]
 pub struct Opt {
-    #[structopt(short = "C", long)]
+    #[clap(short = 'C', long)]
     color_output: bool,
 
-    #[structopt(short = "c", long)]
+    #[clap(short = 'c', long)]
     compact_output: bool,
 
-    #[structopt(short = "f", long)]
+    #[clap(short = 'f', long)]
     from_file: Option<String>,
 
-    #[structopt(short = "i", long)]
+    #[clap(short = 'i', long)]
     iter: bool,
 
-    #[structopt(short = "M", long, overrides_with = "color-output")]
+    #[clap(short = 'M', long, overrides_with = "color_output")]
     monochrome_output: bool,
 
-    #[structopt(short = "n", long)]
+    #[clap(short = 'n', long)]
     silent: bool,
 
-    #[structopt(short = "R", long)]
+    #[clap(short = 'R', long)]
     raw_input: bool,
 
-    #[structopt(short = "r", long)]
+    #[clap(short = 'r', long)]
     raw_output: bool,
 
-    #[structopt(short = "s", long)]
+    #[clap(short = 's', long)]
     slurp: bool,
 
-    #[structopt(long)]
+    #[clap(long)]
     unbuffered: bool,
 
-    #[structopt(name = "SCRIPT")]
+    #[clap(name = "SCRIPT")]
     script: Option<String>,
 
-    #[structopt(name = "FILE")]
+    #[clap(name = "FILE")]
     files: Vec<String>,
 }
 
@@ -256,7 +254,7 @@ fn main() -> Result<()> {
     env_logger::init();
     #[cfg(windows)]
     let _enabled = colored_json::enable_ansi_support();
-    let opt = Arc::new(Opt::from_args());
+    let opt = Arc::new(Opt::parse());
     let script = match opt.from_file {
         // jj -f FILTERFILE FILE [FILES...]
         Some(ref s) => fs::read_to_string(s)?,

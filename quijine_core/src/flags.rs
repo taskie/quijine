@@ -3,6 +3,7 @@ use bitflags::bitflags;
 
 bitflags! {
     /// flags for object properties
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     pub struct PropFlags: u32 {
         const CONFIGURABLE = ffi::JS_PROP_CONFIGURABLE;
         const WRITABLE = ffi::JS_PROP_WRITABLE;
@@ -42,6 +43,7 @@ bitflags! {
 }
 
 bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     pub struct EvalFlags: u32 {
         /// global code (default)
         const TYPE_GLOBAL = ffi::JS_EVAL_TYPE_GLOBAL;
@@ -67,12 +69,14 @@ bitflags! {
 }
 
 bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     pub struct ParseJsonFlags: u32 {
         const EXT = 0b0001;
     }
 }
 
 bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     pub struct GpnFlags: u32 {
         const STRING_MASK = ffi::JS_GPN_STRING_MASK;
         const SYMBOL_MASK = ffi::JS_GPN_SYMBOL_MASK;
@@ -85,6 +89,7 @@ bitflags! {
 }
 
 bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     pub struct WriteObjFlags: u32 {
         /// allow function/module
         const BYTECODE = ffi::JS_WRITE_OBJ_BYTECODE;
@@ -98,6 +103,7 @@ bitflags! {
 }
 
 bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     pub struct ReadObjFlags: u32 {
         /// allow function/module
         const BYTECODE = ffi::JS_READ_OBJ_BYTECODE;
