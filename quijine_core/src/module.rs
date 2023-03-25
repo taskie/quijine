@@ -4,6 +4,7 @@ use crate::{
     convert::{AsMutPtr, AsPtr},
     ffi,
     function::c_function_list_as_ptr,
+    internal::c_int_as_i32,
     marker::Covariant,
     value::Value,
     AsJsValue, CFunctionListEntry,
@@ -37,19 +38,25 @@ impl<'q> ModuleDef<'q> {
     #[inline]
     pub fn add_module_export(self, mut ctx: Context<'q>, name_str: &str) -> i32 {
         let name_str = CString::new(name_str).unwrap();
-        unsafe { ffi::JS_AddModuleExport(ctx.as_mut_ptr(), self.0.as_ptr(), name_str.as_ptr()) as i32 }
+        unsafe {
+            c_int_as_i32(ffi::JS_AddModuleExport(
+                ctx.as_mut_ptr(),
+                self.0.as_ptr(),
+                name_str.as_ptr(),
+            ))
+        }
     }
 
     /// can only be called before the module is instantiated
     #[inline]
     pub fn add_module_export_list(self, mut ctx: Context<'q>, tab: &[CFunctionListEntry]) -> i32 {
         unsafe {
-            ffi::JS_AddModuleExportList(
+            c_int_as_i32(ffi::JS_AddModuleExportList(
                 ctx.as_mut_ptr(),
                 self.0.as_ptr(),
                 c_function_list_as_ptr(tab),
                 tab.len() as i32,
-            ) as i32
+            ))
         }
     }
 
@@ -58,12 +65,12 @@ impl<'q> ModuleDef<'q> {
     pub fn set_module_export(self, mut ctx: Context<'q>, export_name: &str, val: Value<'q>) -> i32 {
         let export_name = CString::new(export_name).unwrap();
         unsafe {
-            ffi::JS_SetModuleExport(
+            c_int_as_i32(ffi::JS_SetModuleExport(
                 ctx.as_mut_ptr(),
                 self.0.as_ptr(),
                 export_name.as_ptr(),
                 val.as_js_value(),
-            ) as i32
+            ))
         }
     }
 
@@ -71,12 +78,12 @@ impl<'q> ModuleDef<'q> {
     #[inline]
     pub fn set_module_export_list(self, mut ctx: Context<'q>, tab: &[CFunctionListEntry]) -> i32 {
         unsafe {
-            ffi::JS_SetModuleExportList(
+            c_int_as_i32(ffi::JS_SetModuleExportList(
                 ctx.as_mut_ptr(),
                 self.0.as_ptr(),
                 c_function_list_as_ptr(tab),
                 tab.len() as i32,
-            ) as i32
+            ))
         }
     }
 }

@@ -61,7 +61,7 @@ pub trait ClassProperties<'q, C: Class> {
 #[allow(unused_variables)]
 pub trait Class: Sized {
     fn name() -> &'static str;
-    fn constructor<'q>(&mut self, ctx: Context<'q>, this: Value, args: &[Value]) -> Result<()> {
+    fn constructor(&mut self, ctx: Context, this: Value, args: &[Value]) -> Result<()> {
         Ok(())
     }
     fn constructor_length() -> i32 {

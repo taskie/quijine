@@ -47,7 +47,7 @@ impl Class for Counter {
     }
 }
 
-fn init_modules<'q>(ctx: Context<'q>, c_string_arena: &mut CStringArena) {
+fn init_modules(ctx: Context<'_>, c_string_arena: &mut CStringArena) {
     {
         // console
         let func_list = CFunctionListBuilder::new(c_string_arena)

@@ -28,12 +28,14 @@ fmt:
 .PHONY: fix
 
 fix:
-	cargo +nightly fix --all --allow-staged
+	cargo fix --all --allow-staged
+	cargo clippy --all --all-features --allow-staged --fix
 
-.PHONY: vet
+.PHONY: lint
 
 lint:
-	cargo +nightly clippy --all --all-features
+	cargo check --all --all-features
+	cargo clippy --all --all-features
 
 .PHONY: doc
 

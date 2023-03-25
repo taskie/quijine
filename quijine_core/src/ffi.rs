@@ -8,6 +8,8 @@ use std::{
     ptr::null_mut,
 };
 
+use crate::internal::i32_as_c_int;
+
 // basic type definitions
 
 #[allow(non_camel_case_types)]
@@ -59,7 +61,9 @@ pub unsafe fn JS_VALUE_GET_PTR(v: JSValue) -> *mut c_void {
 #[allow(non_snake_case)]
 pub const unsafe fn JS_MKVAL(tag: c_int, val: i32) -> JSValue {
     JSValue {
-        u: JSValueUnion { int32: val as i32 },
+        u: JSValueUnion {
+            int32: i32_as_c_int(val),
+        },
         tag: tag as i64,
     }
 }

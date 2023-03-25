@@ -130,7 +130,7 @@ impl Error {
     }
 }
 
-impl<'q> StdError for Error {
+impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self.value {
             ErrorValue::External(ref e) => Some(e.as_ref()),

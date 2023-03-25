@@ -6,7 +6,7 @@ use crate::{
     ffi::{self, c_size_t},
     flags::{EvalFlags, ParseJsonFlags, ReadObjFlags, WriteObjFlags},
     function::{convert_function_arguments, convert_function_result},
-    internal::ref_sized_to_slice,
+    internal::{c_int_as_i32, ref_sized_to_slice},
     marker::Covariant,
     module::ModuleDef,
     raw,
@@ -693,7 +693,14 @@ impl<'q> Context<'q> {
     #[inline]
     pub fn enqueue_job(self, job_func: raw::JSJobFunc, args: &[Value]) -> i32 {
         let mut js_args: Vec<_> = args.iter().map(|v| v.as_js_value()).collect();
-        unsafe { ffi::JS_EnqueueJob(self.0.as_ptr(), job_func, args.len() as c_int, js_args.as_mut_ptr()) as i32 }
+        unsafe {
+            c_int_as_i32(ffi::JS_EnqueueJob(
+                self.0.as_ptr(),
+                job_func,
+                args.len() as c_int,
+                js_args.as_mut_ptr(),
+            ))
+        }
     }
 
     // Module
@@ -708,7 +715,7 @@ impl<'q> Context<'q> {
     /// returns a module.
     #[inline]
     pub fn resolve_module(self, obj: Value<'q>) -> i32 {
-        unsafe { ffi::JS_ResolveModule(self.0.as_ptr(), obj.as_js_value()) as i32 }
+        unsafe { c_int_as_i32(ffi::JS_ResolveModule(self.0.as_ptr(), obj.as_js_value())) }
     }
 
     // Object Writer/Reader

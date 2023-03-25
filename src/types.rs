@@ -74,6 +74,7 @@ macro_rules! impl_into_qj {
     { for $type:ty: |$v: pat_param, $ctx:pat_param| $implementation:expr } => {
         impl<'q> IntoQj<'q> for $type {
             fn into_qj(self, $ctx: Context<'q>) -> Result<Value<'q>> {
+                #[allow(clippy::let_unit_value)]
                 let $v = self;
                 $implementation
             }
@@ -414,7 +415,7 @@ mod tests {
             assert_match!(Variant::Bool(true), v.to_variant());
             let b: Bool = v.try_into()?;
             let b: bool = b.into();
-            assert_eq!(true, b);
+            assert!(b);
 
             let v: Value = ctx.eval("null", "<input>", EvalFlags::TYPE_GLOBAL)?;
             assert_match!(Variant::Null, v.to_variant());

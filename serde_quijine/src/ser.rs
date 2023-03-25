@@ -21,7 +21,7 @@ impl<'q> Serializer<'q> {
     }
 }
 
-impl<'q, 'a> ser::Serializer for Serializer<'q> {
+impl<'q> ser::Serializer for Serializer<'q> {
     type Error = Error;
     type Ok = Value<'q>;
     type SerializeMap = MapSerializer<'q>;

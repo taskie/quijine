@@ -20,7 +20,7 @@ impl Class for S1 {
         "S1"
     }
 
-    fn constructor<'q>(&mut self, _ctx: Context<'q>, _this: Value, args: &[Value]) -> Result<()> {
+    fn constructor(&mut self, _ctx: Context<'_>, _this: Value, args: &[Value]) -> Result<()> {
         self.name = args[0].to_string()?;
         Ok(())
     }

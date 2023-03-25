@@ -10,7 +10,7 @@ fn multiple_runtimes() -> Result<()> {
                 move |_ctx, _this: Value, _args: ()| {
                     let message = rx
                         .recv()
-                        .map_err(|e| Error::with_external(ErrorKind::InternalError, Box::new(e.clone())))?;
+                        .map_err(|e| Error::with_external(ErrorKind::InternalError, Box::new(e)))?;
                     Ok(message)
                 },
                 "recv",
@@ -29,7 +29,7 @@ fn multiple_runtimes() -> Result<()> {
         let send = ctx.new_function_from(
             move |_ctx, _this: Value, (message,): (String,)| {
                 tx.send(message)
-                    .map_err(|e| Error::with_external(ErrorKind::InternalError, Box::new(e.clone())))?;
+                    .map_err(|e| Error::with_external(ErrorKind::InternalError, Box::new(e)))?;
                 Ok(())
             },
             "send",

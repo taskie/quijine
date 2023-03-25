@@ -3,6 +3,7 @@ use crate::{
     class::{ClassDef, ClassId},
     convert::{AsJsAtom, AsJsClassId, AsJsValue, AsMutPtr, AsPtr},
     ffi::{self, c_size_t},
+    internal::c_int_as_i32,
     marker::Covariant,
     raw,
     value::Value,
@@ -181,7 +182,7 @@ impl<'q> Runtime<'q> {
     #[inline]
     pub fn execute_pending_job(self) -> (i32, Option<Context<'q>>) {
         let mut pctx: *mut ffi::JSContext = null_mut();
-        let ret = unsafe { ffi::JS_ExecutePendingJob(self.0.as_ptr(), &mut pctx) as i32 };
+        let ret = unsafe { c_int_as_i32(ffi::JS_ExecutePendingJob(self.0.as_ptr(), &mut pctx)) };
         let ctx = if pctx.is_null() {
             None
         } else {

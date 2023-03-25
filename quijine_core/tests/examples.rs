@@ -13,28 +13,28 @@ thread_local! {
     static PRNG_CLASS_ID: RefCell<ClassId> = RefCell::new(ClassId::none());
 }
 
-struct PRNG {
+struct Prng {
     rng: XorShiftRng,
 }
 
-fn prng_generate<'q, 'a>(ctx: Context<'q>, this: Value<'q>, _values: &'a [Value<'q>]) -> Value<'q> {
-    let mut prng = NonNull::new(PRNG_CLASS_ID.with(|id| this.opaque(*id.borrow()) as *mut PRNG)).unwrap();
+fn prng_generate<'q>(ctx: Context<'q>, this: Value<'q>, _values: &[Value<'q>]) -> Value<'q> {
+    let mut prng = NonNull::new(PRNG_CLASS_ID.with(|id| this.opaque(*id.borrow()) as *mut Prng)).unwrap();
     let res: i32 = unsafe { prng.as_mut() }.rng.gen();
     ctx.new_int32(res)
 }
 
-fn prng_new<'q, 'a>(ctx: Context<'q>, _this: Value<'q>, _values: &'a [Value<'q>]) -> Value<'q> {
+fn prng_new<'q>(ctx: Context<'q>, _this: Value<'q>, _values: &[Value<'q>]) -> Value<'q> {
     let obj = PRNG_CLASS_ID.with(|id| ctx.new_object_class(*id.borrow()));
-    let prng = Box::new(PRNG {
+    let prng = Box::new(Prng {
         rng: XorShiftRng::from_seed([0; 16]),
     });
     obj.set_opaque(Box::into_raw(prng) as *mut c_void);
     obj
 }
 
-unsafe fn prng_finalizer<'q, 'a>(_rt: Runtime<'q>, val: Value<'q>) {
-    let obj = PRNG_CLASS_ID.with(|id| val.opaque(*id.borrow())) as *mut PRNG;
-    Box::from_raw(obj);
+unsafe fn prng_finalizer<'q>(_rt: Runtime<'q>, val: Value<'q>) {
+    let obj = PRNG_CLASS_ID.with(|id| val.opaque(*id.borrow())) as *mut Prng;
+    drop(Box::from_raw(obj));
 }
 
 #[allow(non_snake_case)]
@@ -46,7 +46,7 @@ fn C(s: &str) -> CString {
 fn test() {
     let rt = Runtime::new();
     let ctx = Context::new(rt);
-    let class_name = C("PRNG");
+    let class_name = C("Prng");
     let prng_class = unsafe {
         ClassDef::from_raw(raw::JSClassDef {
             class_name: class_name.as_ptr(),
@@ -75,10 +75,10 @@ fn test() {
     });
     let global = ctx.global_object();
     global
-        .set_property_str(ctx, "PRNG", ctx.new_c_function(js_c_function!(prng_new), "PRNG", 0))
+        .set_property_str(ctx, "Prng", ctx.new_c_function(js_c_function!(prng_new), "Prng", 0))
         .unwrap();
-    let ret = ctx.eval("var prng = PRNG(); prng", "<input>", EvalFlags::TYPE_GLOBAL);
-    assert_eq!(false, ctx.exception().is_exception(), "no exception");
+    let ret = ctx.eval("var prng = Prng(); prng", "<input>", EvalFlags::TYPE_GLOBAL);
+    assert!(!ctx.exception().is_exception(), "no exception");
     unsafe {
         ctx.free_value(ret);
     }

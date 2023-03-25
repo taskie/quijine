@@ -1,4 +1,5 @@
 use std::{
+    ffi::c_int,
     mem::{self, MaybeUninit},
     ptr, slice,
 };
@@ -37,6 +38,17 @@ pub unsafe fn ref_sized_from_bytes<T>(v: &[u8]) -> &T {
     assert_eq!(mem::size_of::<T>(), v.len());
     let p = v.as_ptr() as *const T;
     unsafe { &*p }
+}
+
+#[inline]
+pub const fn c_int_as_i32(v: c_int) -> i32 {
+    #![allow(clippy::unnecessary_cast)]
+    v as i32
+}
+
+#[inline]
+pub const fn i32_as_c_int(v: i32) -> c_int {
+    v as c_int
 }
 
 #[cfg(test)]

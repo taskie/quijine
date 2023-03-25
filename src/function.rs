@@ -6,7 +6,7 @@ use std::{mem::transmute, os::raw::c_int};
 #[repr(transparent)]
 pub struct CFunctionListEntry(qc::CFunctionListEntry);
 
-impl<'a> CFunctionListEntry {
+impl CFunctionListEntry {
     /// # Safety
     /// The lifetime must be valid.
     pub unsafe fn from_raw(raw: qc::CFunctionListEntry) -> CFunctionListEntry {

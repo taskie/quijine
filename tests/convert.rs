@@ -51,7 +51,7 @@ fn js_to_rust() -> Result<()> {
         let v: String = ctx.parse_json_into("\"hello\"", "<input>")?;
         assert_eq!("hello", v);
         let v: bool = ctx.parse_json_into("true", "<input>")?;
-        assert_eq!(true, v);
+        assert!(v);
         let v: i32 = ctx.parse_json_into("42", "<input>")?;
         assert_eq!(42, v);
         let v: f64 = ctx.parse_json_into("0.25", "<input>")?;

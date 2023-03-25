@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_names)]
+
 #[test]
 fn example_call_js_func_from_rust() -> quijine::Result<()> {
     use quijine::{EvalFlags, Object};
