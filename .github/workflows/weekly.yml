@@ -1,10 +1,13 @@
-on: [push, pull_request]
+on:
+  schedule:
+    - cron: '28 19 * * 6'
+  workflow_dispatch:
 
-name: ci
+name: weekly
 
 jobs:
-  test:
-    name: Test
+  check-oldest:
+    name: Check Oldest
     runs-on: ubuntu-latest
     env:
       CARGO_INCREMENTAL: 0
@@ -14,24 +17,25 @@ jobs:
     strategy:
       matrix:
         rust:
-          - stable
+          - 1.65.0  # MSRV
     steps:
       - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: nightly
+      - run: cargo +nightly update -Z minimal-versions
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
-          components: llvm-tools-preview
-      - uses: taiki-e/install-action@cargo-llvm-cov
-      - run: cargo llvm-cov --all --lcov --output-path lcov.info
-      - run: cargo llvm-cov --all --no-run
-      - uses: codecov/codecov-action@v3
-        with:
-          files: lcov.info
-  lint:
-    name: Lint
+      - run: cargo install --path quijine_jj
+      - run: jj --version
+      - run: jj --help
+      - run: cargo test --all -- --nocapture
+  check-latest:
+    name: Check Latest
     runs-on: ubuntu-latest
     env:
       CARGO_INCREMENTAL: 0
@@ -41,15 +45,17 @@ jobs:
     strategy:
       matrix:
         rust:
-          - stable
+          - beta
     steps:
       - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
-          components: clippy, rustfmt
-      - run: cargo clippy --all
-      - run: cargo fmt --all -- --check
+      - run: cargo update
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - run: cargo install --path quijine_jj
+      - run: jj --version
+      - run: jj --help
+      - run: cargo test --all -- --nocapture
