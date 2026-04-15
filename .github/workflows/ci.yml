@@ -1,22 +1,30 @@
+name: ci
+
 on: [push, pull_request]
 
-name: ci
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+  RUST_BACKTRACE: 1
 
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    env:
-      CARGO_INCREMENTAL: 0
-      CARGO_TERM_COLOR: always
-      RUSTFLAGS: -D warnings
-      RUST_BACKTRACE: 1
     strategy:
       matrix:
         rust:
           - stable
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -25,25 +33,21 @@ jobs:
           toolchain: ${{ matrix.rust }}
           components: llvm-tools-preview
       - uses: taiki-e/install-action@cargo-llvm-cov
-      - run: cargo llvm-cov --all --lcov --output-path lcov.info
-      - run: cargo llvm-cov --all --no-run
-      - uses: codecov/codecov-action@v3
+      - run: cargo llvm-cov --all --locked --lcov --output-path lcov.info
+      - run: cargo llvm-cov --all --locked --no-run
+      - uses: codecov/codecov-action@v4
         with:
           files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    env:
-      CARGO_INCREMENTAL: 0
-      CARGO_TERM_COLOR: always
-      RUSTFLAGS: -D warnings
-      RUST_BACKTRACE: 1
     strategy:
       matrix:
         rust:
           - stable
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -51,5 +55,5 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
           components: clippy, rustfmt
-      - run: cargo clippy --all
+      - run: cargo clippy --all --locked
       - run: cargo fmt --all -- --check

@@ -1,25 +1,29 @@
+name: weekly
+
 on:
   schedule:
     - cron: '28 19 * * 6'
   workflow_dispatch:
 
-name: weekly
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+  RUST_BACKTRACE: 1
 
 jobs:
   check-oldest:
     name: Check Oldest
     runs-on: ubuntu-latest
-    env:
-      CARGO_INCREMENTAL: 0
-      CARGO_TERM_COLOR: always
-      RUSTFLAGS: -D warnings
-      RUST_BACKTRACE: 1
     strategy:
       matrix:
         rust:
           - 1.65.0  # MSRV
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: nightly
@@ -30,24 +34,19 @@ jobs:
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
-      - run: cargo install --path quijine_jj
+      - run: cargo install --path quijine_jj --locked
       - run: jj --version
       - run: jj --help
-      - run: cargo test --all -- --nocapture
+      - run: cargo test --all --locked -- --nocapture
   check-latest:
     name: Check Latest
     runs-on: ubuntu-latest
-    env:
-      CARGO_INCREMENTAL: 0
-      CARGO_TERM_COLOR: always
-      RUSTFLAGS: -D warnings
-      RUST_BACKTRACE: 1
     strategy:
       matrix:
         rust:
           - beta
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
@@ -55,7 +54,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo install --path quijine_jj
+      - run: cargo install --path quijine_jj --locked
       - run: jj --version
       - run: jj --help
-      - run: cargo test --all -- --nocapture
+      - run: cargo test --all --locked -- --nocapture
