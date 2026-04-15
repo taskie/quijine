@@ -491,7 +491,7 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn array_buffer(self, mut ctx: Context<'q>) -> Option<&[u8]> {
+    pub fn array_buffer(self, mut ctx: Context<'q>) -> Option<&'q [u8]> {
         let mut len = 0;
         let bs: *const u8 = unsafe { ffi::JS_GetArrayBuffer(ctx.as_mut_ptr(), &mut len, self.0) };
         if bs.is_null() {
@@ -520,7 +520,7 @@ impl<'q> Value<'q> {
     /// # Safety
     /// The content of ArrayBuffer must be created from `T`.
     #[inline]
-    pub unsafe fn array_buffer_as_ref<T>(self, ctx: Context<'q>) -> Option<&T> {
+    pub unsafe fn array_buffer_as_ref<T>(self, ctx: Context<'q>) -> Option<&'q T> {
         self.array_buffer(ctx).map(|v| ref_sized_from_bytes(v))
     }
 

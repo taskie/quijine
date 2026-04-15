@@ -54,7 +54,6 @@ pub const fn i32_as_c_int(v: i32) -> c_int {
 #[cfg(test)]
 mod tests {
     use crate::internal::*;
-    use std::u8;
 
     #[derive(Debug, PartialEq, Eq)]
     #[repr(packed)]

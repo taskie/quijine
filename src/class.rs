@@ -242,7 +242,7 @@ where
 {
     ctx.new_function_from(
         move |ctx, this: Value<'q>, args: Vec<Value<'q>>| {
-            let arg = args.get(0).cloned().unwrap_or_else(|| ctx.undefined().into());
+            let arg = args.first().cloned().unwrap_or_else(|| ctx.undefined().into());
             let mut cloned = this.clone();
             let v = cloned.opaque_mut::<C>().unwrap();
             (setter)(v, ctx, unsafe { Value::copy_unchecked(this) }, A::from_qj(arg)?)

@@ -15,6 +15,7 @@ macro_rules! qj_vec {
 #[macro_export]
 macro_rules! js_c_function {
     ($f: expr) => {{
+        #[allow(clippy::extra_unused_lifetimes)]
         unsafe extern "C" fn wrap<'q>(
             ctx: *mut $crate::raw::JSContext,
             this_val: $crate::raw::JSValue,
@@ -33,6 +34,7 @@ macro_rules! js_c_function {
 #[macro_export]
 macro_rules! js_c_getter {
     ($f: expr) => {{
+        #[allow(clippy::extra_unused_lifetimes)]
         unsafe extern "C" fn wrap<'q>(
             ctx: *mut $crate::raw::JSContext,
             this: $crate::raw::JSValue,
@@ -50,6 +52,7 @@ macro_rules! js_c_getter {
 #[macro_export]
 macro_rules! js_c_setter {
     ($f: expr) => {{
+        #[allow(clippy::extra_unused_lifetimes)]
         unsafe extern "C" fn wrap<'q>(
             ctx: *mut $crate::raw::JSContext,
             this: $crate::raw::JSValue,
@@ -69,6 +72,7 @@ macro_rules! js_c_setter {
 #[macro_export]
 macro_rules! js_module_init_func {
     ($f: expr) => {{
+        #[allow(clippy::extra_unused_lifetimes)]
         unsafe extern "C" fn wrap<'q>(
             ctx: *mut $crate::raw::JSContext,
             m: *mut $crate::raw::JSModuleDef,

@@ -93,7 +93,7 @@ impl<'q> Context<'q> {
     }
 
     #[inline]
-    unsafe fn wrap_result_atom(self, val: qc::Atom<'q>) -> Result<Atom> {
+    unsafe fn wrap_result_atom(self, val: qc::Atom<'q>) -> Result<Atom<'q>> {
         if val.is_null() {
             Err(Error::with_str(ErrorKind::InternalError, "null atom"))
         } else {
@@ -563,7 +563,7 @@ impl<'r> ContextScope<'r> {
         Self::new_internal(rt, true)
     }
 
-    pub fn new_with_scope(rts: &RuntimeScope) -> ContextScope {
+    pub fn new_with_scope(rts: &RuntimeScope) -> ContextScope<'_> {
         ContextScope::new(rts.get())
     }
 

@@ -156,6 +156,7 @@ impl Class for S2 {
 }
 
 #[test]
+#[allow(clippy::arc_with_non_send_sync)]
 fn new_object_class_arc() -> Result<()> {
     let s2 = S2(Arc::new(RefCell::new(S1 {
         name: "foo".to_owned(),

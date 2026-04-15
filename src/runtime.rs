@@ -127,7 +127,7 @@ impl RuntimeScope {
     }
 
     #[inline]
-    pub fn new_context_scope(&self) -> ContextScope {
+    pub fn new_context_scope(&self) -> ContextScope<'_> {
         ContextScope::new_with_scope(self)
     }
 

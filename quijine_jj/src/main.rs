@@ -86,7 +86,7 @@ type Handler<'q> = Box<dyn Fn(Context<'q>, QjValue<'q>, &[QjValue<'q>]) -> QjRes
 
 fn print<'q>(opt: &Opt, ctx: Context<'q>, _this: QjValue<'q>, args: &[QjValue<'q>]) -> QjResult<QjValue<'q>> {
     let ret = Ok(ctx.undefined().into());
-    let arg = args.get(0);
+    let arg = args.first();
     let arg = match arg {
         Some(v) => v,
         None => return ret,

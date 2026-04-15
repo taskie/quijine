@@ -1,6 +1,7 @@
 #[macro_export]
 macro_rules! js_c_function {
     ($f: expr) => {{
+        #[allow(clippy::extra_unused_lifetimes)]
         unsafe extern "C" fn wrap<'q>(
             ctx: *mut $crate::raw::JSContext,
             this_val: $crate::raw::JSValue,
@@ -19,6 +20,7 @@ macro_rules! js_c_function {
 #[macro_export]
 macro_rules! js_class_finalizer {
     ($f: expr) => {{
+        #[allow(clippy::extra_unused_lifetimes)]
         unsafe extern "C" fn wrap<'r>(rt: *mut $crate::raw::JSRuntime, val: $crate::raw::JSValue) {
             let f: unsafe fn($crate::Runtime<'r>, $crate::Value<'r>) = $f;
             let rt = $crate::Runtime::from_raw(rt);
@@ -32,6 +34,7 @@ macro_rules! js_class_finalizer {
 #[macro_export]
 macro_rules! js_class_gc_mark {
     ($f: expr) => {{
+        #[allow(clippy::extra_unused_lifetimes)]
         unsafe extern "C" fn wrap<'r>(
             rt: *mut $crate::raw::JSRuntime,
             val: $crate::raw::JSValue,
@@ -49,6 +52,7 @@ macro_rules! js_class_gc_mark {
 #[macro_export]
 macro_rules! js_class_call {
     ($f: expr) => {{
+        #[allow(clippy::extra_unused_lifetimes)]
         unsafe extern "C" fn wrap<'q>(
             ctx: *mut $crate::raw::JSContext,
             func_obj: $crate::raw::JSValue,
@@ -77,6 +81,7 @@ macro_rules! js_class_call {
 #[doc(hidden)]
 macro_rules! js_module_init_func {
     ($f: expr) => {{
+        #[allow(clippy::extra_unused_lifetimes)]
         unsafe extern "C" fn wrap<'q>(
             ctx: *mut $crate::raw::JSContext,
             m: *mut $crate::raw::JSModuleDef,

@@ -139,7 +139,7 @@ macro_rules! impl_from_qj_multi_for_tuple {
             fn from_qj_multi(v: &[Value<'q>]) -> Result<Self> {
                 let err = |i: usize| move || Error::with_str(ErrorKind::RangeError, &format!("index: {}", i));
                 Ok((
-                    $($t::from_qj((v.get($k).ok_or_else(err($k))?.clone()))?,)+
+                    $($t::from_qj(v.get($k).ok_or_else(err($k))?.clone())?,)+
                 ))
             }
         }

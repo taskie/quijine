@@ -211,7 +211,7 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn to_c_string(&self) -> Result<QjCString> {
+    pub fn to_c_string(&self) -> Result<QjCString<'_>> {
         self.ok_or_type_error(
             self.value
                 .to_c_string(self.context)
@@ -316,7 +316,7 @@ impl<'q> Value<'q> {
     }
 
     #[inline]
-    pub fn own_property(&self, prop: Atom<'q>) -> Result<Option<PropertyDescriptor>> {
+    pub fn own_property(&self, prop: Atom<'q>) -> Result<Option<PropertyDescriptor<'_>>> {
         let ret = self.value.own_property(self.context, *prop.as_raw());
         self.context()
             .map_err_to_exception(ret)
@@ -420,29 +420,29 @@ impl<'q> Value<'q> {
     // class
 
     #[inline]
-    pub fn prototype(&self) -> Result<Value> {
+    pub fn prototype(&self) -> Result<Value<'_>> {
         unsafe { self.context().wrap_result(self.value.prototype(self.context)) }
     }
 
     #[inline]
-    fn opaque_internal<C: Class + 'static>(&self) -> Option<&mut C> {
+    fn opaque_ptr<C: Class + 'static>(&self) -> Option<*mut C> {
         let rt = Runtime::from(self.context.runtime());
         let clz = rt.class_id::<C>()?;
         let p = self.value.opaque(clz) as *mut C;
         if p.is_null() {
             return None;
         }
-        Some(unsafe { &mut *p })
+        Some(p)
     }
 
     #[inline]
     pub fn opaque<C: Class + 'static>(&self) -> Option<&C> {
-        self.opaque_internal().map(|v| &*v)
+        self.opaque_ptr::<C>().map(|p| unsafe { &*p })
     }
 
     #[inline]
     pub fn opaque_mut<C: Class + 'static>(&mut self) -> Option<&mut C> {
-        self.opaque_internal()
+        self.opaque_ptr::<C>().map(|p| unsafe { &mut *p })
     }
 
     #[inline]
