@@ -13,10 +13,11 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
   RUST_BACKTRACE: 1
+  LIB_PACKAGES: -p quijine -p quijine_core -p serde_quijine
 
 jobs:
   check-oldest:
-    name: Check Oldest
+    name: Check Oldest (libs)
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -34,12 +35,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
-      - run: cargo install --path quijine_jj --locked
-      - run: jj --version
-      - run: jj --help
-      - run: cargo test --all --locked -- --nocapture
+      - run: cargo test ${{ env.LIB_PACKAGES }} --locked -- --nocapture
   check-latest:
-    name: Check Latest
+    name: Check Latest (libs)
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -54,7 +52,24 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - run: cargo test ${{ env.LIB_PACKAGES }} --locked -- --nocapture
+  check-jj:
+    name: Check quijine_jj
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo install --path quijine_jj --locked
       - run: jj --version
       - run: jj --help
-      - run: cargo test --all --locked -- --nocapture
+      - run: cargo test -p quijine_jj --locked -- --nocapture

@@ -12,9 +12,9 @@ edition = "2021"
 rust-version = "1.65"
 
 [dependencies]
-log = "0.4.17"
-bitflags = "2.0.2"
-lazy_static = "1.4.0"
+log = "0.4.29"
+bitflags = "2.11"
+lazy_static = "1.5"
 
 [dependencies.libquickjs-sys]
 version = "0.10"
@@ -23,6 +23,6 @@ version = "0.10"
 #default-features = false
 
 [dev-dependencies]
-env_logger = "0.10.0"
+env_logger = "0.10"
 rand = "0.8.5"
 rand_xorshift = "0.3.0"
